@@ -3,8 +3,7 @@
   "username": "mock-user-1",
   "active": true,
   "roles": [
-    "ROLE_ADMIN",
-    "ROLE_USER"
+    "ROLE_ADMIN"
   ],
   "_links": {
     "self": {

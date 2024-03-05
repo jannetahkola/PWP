@@ -1,6 +1,6 @@
 package fi.jannetahkola.palikka.game.api.status;
 
-import fi.jannetahkola.palikka.game.api.status.model.GameStatus;
+import fi.jannetahkola.palikka.game.api.status.model.GameStatusResponse;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,13 +32,13 @@ class GameStatusControllerIT {
 
     @SneakyThrows
     @Test
-    void givenGetStatusRequest_thenOkResponse(@Autowired ApplicationContext context) {
-        assertThat(context.getBean(WebSecurityConfiguration.class)).isNotNull(); // security should be enabled
+    void givenGetGameStatusRequest_thenOkResponse(@Autowired ApplicationContext context) {
+        assertThat(context.getBean(WebSecurityConfiguration.class)).isNotNull(); // assert security is enabled
 
-        GameStatus gameStatus = new GameStatus();
+        GameStatusResponse gameStatus = new GameStatusResponse();
         gameStatus.setOnline(false);
 
-        when(gameStatusController.getStatus()).thenReturn(gameStatus);
+        when(gameStatusController.getGameStatus()).thenReturn(gameStatus);
 
         mockMvc.perform(get("/game/status")).andExpect(status().isOk());
     }

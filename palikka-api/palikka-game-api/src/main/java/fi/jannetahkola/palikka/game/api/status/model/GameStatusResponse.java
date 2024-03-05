@@ -11,7 +11,7 @@ import java.util.Map;
 @Data
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class GameStatus {
+public class GameStatusResponse {
     private boolean online = true;
     private String version;
     private String description;

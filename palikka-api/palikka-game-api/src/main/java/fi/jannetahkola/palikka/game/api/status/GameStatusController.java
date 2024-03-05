@@ -1,7 +1,7 @@
 package fi.jannetahkola.palikka.game.api.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import fi.jannetahkola.palikka.game.api.status.model.GameStatus;
+import fi.jannetahkola.palikka.game.api.status.model.GameStatusResponse;
 import fi.jannetahkola.palikka.game.config.properties.GameServerProperties;
 import fi.jannetahkola.palikka.game.service.PacketService;
 import fi.jannetahkola.palikka.game.util.VarIntUtil;
@@ -30,11 +30,11 @@ public class GameStatusController {
     private final SocketFactory socketFactory;
 
     @GetMapping
-    public GameStatus getStatus() {
+    public GameStatusResponse getGameStatus() {
         String host = properties.getHost();
         int port = properties.getPort();
 
-        GameStatus status = new GameStatus();
+        GameStatusResponse status = new GameStatusResponse();
         try (Socket socket = socketFactory.newSocket()) {
             socket.connect(new InetSocketAddress(host, port));
             final DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -51,7 +51,7 @@ public class GameStatusController {
         return status;
     }
 
-    private static GameStatus readGameServerStatusFromStream(DataInputStream in) throws IOException {
+    private static GameStatusResponse readGameServerStatusFromStream(DataInputStream in) throws IOException {
         log.debug("Reading server status from stream");
         VarIntUtil.read(in); // Response length (not used)
         final int responsePacketId = VarIntUtil.read(in); // Packet id
@@ -66,6 +66,6 @@ public class GameStatusController {
         in.readFully(buffer);
         String statusString = new String(buffer);
         log.debug("Received status from server={}", statusString);
-        return new ObjectMapper().readValue(statusString, GameStatus.class); // TODO use spring configured jackson?
+        return new ObjectMapper().readValue(statusString, GameStatusResponse.class); // TODO use spring configured jackson?
     }
 }

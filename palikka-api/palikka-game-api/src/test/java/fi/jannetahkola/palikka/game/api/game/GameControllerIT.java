@@ -2,8 +2,10 @@ package fi.jannetahkola.palikka.game.api.game;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
+import fi.jannetahkola.palikka.game.testutils.Stubs;
 import fi.jannetahkola.palikka.game.testutils.TestStompSessionHandlerAdapter;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
+import fi.jannetahkola.palikka.game.testutils.WireMockTest;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -40,14 +42,15 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForAdminUser;
+import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForUserNotFound;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-class GameControllerIT {
+class GameControllerIT extends WireMockTest {
 
     @Autowired
     ObjectMapper objectMapper;
@@ -57,7 +60,6 @@ class GameControllerIT {
 
     final BlockingQueue<Object> responseQueue = new LinkedBlockingDeque<>();
 
-    static WireMockServer wireMockServer;
     static String webSocketUri;
 
     @BeforeEach
@@ -65,21 +67,9 @@ class GameControllerIT {
         webSocketUri = "http://localhost:" + localServerPort + "/ws";
     }
 
-    @BeforeAll
-    static void beforeAll() {
-        wireMockServer = new WireMockServer();
-        wireMockServer.start();
-    }
-
-    @AfterAll
-    static void afterAll() {
-        if (wireMockServer != null) {
-            wireMockServer.stop();
-        }
-    }
-
     @DynamicPropertySource
     static void dynamicPropertySource(DynamicPropertyRegistry registry) {
+        // TODO Nuke
         registry.add("fi.jannetahkola.integration.users-api.base-uri", () -> URI.create("http://localhost:" + wireMockServer.port()));
     }
 
@@ -98,13 +88,8 @@ class GameControllerIT {
     @SneakyThrows
     @Test
     void givenConnectRequest_withUnknownUser_thenForbiddenResponse() {
-        stubFor(
-                get(urlMatching("/users/1"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(HttpStatus.NOT_FOUND.value())
-                                        .withBodyFile("user_notfound.json")
-                                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+        stubForUserNotFound(1);
+
         try {
             WebSocketHttpHeaders headers = newAuthHeaders(1);
             newStompClient().connectAsync(webSocketUri, headers, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
@@ -118,13 +103,7 @@ class GameControllerIT {
     @SneakyThrows
     @Test
     void testEcho2() {
-        stubFor(
-                get(urlMatching("/users/1"))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withBodyFile("user_ok.json")
-                                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+        stubForAdminUser();
 
         StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
         StompSession session = newSession(1, sessionHandler);

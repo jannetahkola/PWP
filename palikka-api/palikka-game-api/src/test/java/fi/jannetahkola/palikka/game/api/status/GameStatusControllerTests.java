@@ -1,6 +1,6 @@
 package fi.jannetahkola.palikka.game.api.status;
 
-import fi.jannetahkola.palikka.game.api.status.model.GameStatus;
+import fi.jannetahkola.palikka.game.api.status.model.GameStatusResponse;
 import fi.jannetahkola.palikka.game.config.properties.GameServerProperties;
 import fi.jannetahkola.palikka.game.service.SocketFactory;
 import lombok.SneakyThrows;
@@ -57,7 +57,7 @@ class GameStatusControllerTests {
 
         out.write(RESPONSE_PAYLOAD.getBytes(StandardCharsets.UTF_8));
 
-        GameStatus gameStatus = CompletableFuture.supplyAsync(controller::getStatus).get(1000, TimeUnit.MILLISECONDS);
+        GameStatusResponse gameStatus = CompletableFuture.supplyAsync(controller::getGameStatus).get(1000, TimeUnit.MILLISECONDS);
         assertThat(gameStatus).isNotNull();
         assertThat(gameStatus.isOnline()).isTrue();
         assertThat(gameStatus.getVersion()).isEqualTo("1.20.4");
@@ -78,7 +78,7 @@ class GameStatusControllerTests {
         gameServerProperties.setHost("127.0.0.1");
         gameServerProperties.setPort(25565);
         GameStatusController controller = new GameStatusController(gameServerProperties, socketFactoryMock);
-        GameStatus gameStatus = controller.getStatus();
+        GameStatusResponse gameStatus = controller.getGameStatus();
         assertThat(gameStatus).isNotNull();
         assertThat(gameStatus.isOnline()).isFalse();
     }

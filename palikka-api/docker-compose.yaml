@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  palikka_game_api:
+    container_name: palikka_game_api
+    build:
+      context: ./palikka-game-api
+      dockerfile: Dockerfile
+    ports:
+      - '8080:8080'
+#    volumes:
+#      - /home/janne/minecraft:/home/minecraft/minecraft
