@@ -1,0 +1,17 @@
+{
+  "id": 1,
+  "username": "mock-user-1",
+  "active": true,
+  "roles": [
+    "ROLE_ADMIN",
+    "ROLE_USER"
+  ],
+  "_links": {
+    "self": {
+      "href": "http://localhost:39981/users/1"
+    },
+    "roles": {
+      "href": "http://localhost:39981/users/1/roles"
+    }
+  }
+}

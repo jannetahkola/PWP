@@ -1,0 +1,76 @@
+package fi.jannetahkola.palikka.game.config;
+
+import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilterConfigurer;
+import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
+import fi.jannetahkola.palikka.core.config.meta.EnableAuthenticationSupport;
+import fi.jannetahkola.palikka.core.config.meta.EnableRemoteUsersIntegration;
+import fi.jannetahkola.palikka.core.integration.users.UsersClient;
+import fi.jannetahkola.palikka.game.config.properties.GameServerProperties;
+import fi.jannetahkola.palikka.game.service.SocketFactory;
+import fi.jannetahkola.palikka.game.websocket.GameControllerHandshakeHandler;
+import fi.jannetahkola.palikka.game.websocket.GameControllerHandshakeInterceptor;
+import fi.jannetahkola.palikka.game.websocket.SessionInterceptor;
+import lombok.SneakyThrows;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.socket.server.HandshakeHandler;
+import org.springframework.web.socket.server.HandshakeInterceptor;
+
+@Configuration
+@EnableWebSecurity
+//@EnableWebSocketSecurity
+@EnableAuthenticationSupport
+@EnableRemoteUsersIntegration
+@Import(GameServerProperties.class)
+public class AppConfig {
+//    @Bean
+//    AuthorizationManager<Message<?>> authorizationManager(MessageMatcherDelegatingAuthorizationManager.Builder messages) {
+//        messages.simpDestMatchers("/info").permitAll()
+//                .anyMessage().authenticated();
+//        return messages.build();
+//    }
+
+    @SneakyThrows
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                            PalikkaAuthenticationFilterConfigurer authenticationFilterConfigurer) {
+        http
+                .sessionManagement(sessions -> sessions.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(requests -> requests
+                        .requestMatchers("/game/status").permitAll()
+                        .anyRequest().authenticated())
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(AbstractHttpConfigurer::disable);
+        authenticationFilterConfigurer.register(http);
+        return http.build();
+    }
+
+    @Bean
+    HandshakeInterceptor handshakeInterceptor() {
+        return new GameControllerHandshakeInterceptor();
+    }
+
+    @Bean
+    HandshakeHandler handshakeHandler(JwtService jwtService, UsersClient usersClient) {
+        return new GameControllerHandshakeHandler(jwtService, usersClient);
+    }
+
+    @Bean
+    SessionInterceptor sessionInterceptor() {
+        return new SessionInterceptor();
+    }
+
+    @Bean
+    SocketFactory socketFactory() {
+        return new SocketFactory();
+    }
+}

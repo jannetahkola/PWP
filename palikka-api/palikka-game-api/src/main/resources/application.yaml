@@ -1,0 +1,17 @@
+palikka:
+  jwt:
+    keystore-path: dev.keystore
+    keystore-pass: password
+    keystore-type: pkcs12
+    token:
+      key-alias: jwt
+      key-pass: password
+      issuer: palikka-dev
+      validity-time: 10s
+  integration:
+    users-api:
+      base-uri: http://localhost:8080
+  game:
+    server:
+      host: 172.25.16.1
+      port: 25565

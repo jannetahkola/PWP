@@ -1,0 +1,26 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+logging:
+  level:
+    fi.jannetahkola.palikka: debug
+    org.springframework.security: debug
+    org.springframework.test.context.jdbc: debug # which sql scripts are executed
+    org.springframework.jdbc.datasource.init: debug # which sql statements are executed
+palikka:
+  jwt:
+    keystore-path: dev.keystore
+    keystore-pass: password
+    keystore-type: pkcs12
+    token:
+      key-alias: jwt
+      key-pass: password
+      issuer: palikka-dev
+      validity-time: 10s

@@ -1,0 +1,24 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+logging:
+  level:
+    fi.jannetahkola.palikka: debug
+    org.springframework.security: debug
+palikka:
+  jwt:
+    keystore-path: dev.keystore
+    keystore-pass: password
+    keystore-type: pkcs12
+    token:
+      key-alias: jwt
+      key-pass: password
+      issuer: palikka-dev
+      validity-time: 10s
+  integration:
+    users-api:
+      base-uri: http://localhost:8080
+  game:
+    server:
+      host: test.com
+      port: 25565
