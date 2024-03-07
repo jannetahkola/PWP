@@ -9,3 +9,13 @@ services:
       - '8080:8080'
     volumes:
       - ./conf/dev.keystore:/app/palikka.keystore
+
+  palikka_mock_file_server:
+    container_name: palikka_mock_file_server
+    build:
+      context: ./mock-game-file-server
+      dockerfile: Dockerfile
+    ports:
+      - '8081:8080'
+    volumes:
+      - ./conf/public/server.jar:/app/public/server.jar

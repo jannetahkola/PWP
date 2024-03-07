@@ -1,0 +1,4 @@
+palikka:
+  mock:
+    game-file:
+      path: public/server.jar

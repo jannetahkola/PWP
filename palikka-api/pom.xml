@@ -16,6 +16,7 @@
         <module>palikka-core</module>
         <module>palikka-users-api</module>
         <module>palikka-game-api</module>
+        <module>palikka-mock-file-server</module>
     </modules>
 
     <groupId>fi.jannetahkola.palikka</groupId>
