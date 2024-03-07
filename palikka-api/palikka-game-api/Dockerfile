@@ -1,21 +1,11 @@
 FROM eclipse-temurin:21
-WORKDIR /
 
-USER root
+RUN mkdir -p /app
+WORKDIR /app
 
-RUN apt-get update && \
-    apt-get -y install sudo
+COPY ["target/palikka-game-api-0.0.1-SNAPSHOT.jar", "app.jar"]
+COPY ["entrypoint.sh", "/entrypoint.sh"]
+RUN chmod +x /entrypoint.sh
 
-RUN adduser --disabled-password --gecos '' minecraft \
-    && adduser minecraft sudo \
-    && echo '%sudo ALL=(ALL:ALL) ALL' >> /etc/sudoers
-
-RUN mkdir -p /home/minecraft/minecraft
-RUN chown minecraft:minecraft /home/minecraft/minecraft
-
-USER minecraft
-
-COPY ["target/palikka-game-api-0.0.1-SNAPSHOT.jar", "/home/minecraft/app.jar"]
-EXPOSE 80
-
-ENTRYPOINT ["java", "-jar", "/home/minecraft/app.jar"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["java", "-jar", "app.jar"]

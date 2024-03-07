@@ -58,7 +58,7 @@ class RemoteUsersClientTests {
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
-                                        .withBodyFile("user_ok_user.json")
+                                        .withBodyFile("user_ok.json")
                                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
         User user = usersClient.getUser(1);
         assertThat(user).isNotNull();

@@ -7,5 +7,5 @@ services:
       dockerfile: Dockerfile
     ports:
       - '8080:8080'
-#    volumes:
-#      - /home/janne/minecraft:/home/minecraft/minecraft
+    volumes:
+      - ./conf/dev.keystore:/app/palikka.keystore

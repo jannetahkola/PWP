@@ -1,6 +1,6 @@
 palikka:
   jwt:
-    keystore-path: dev.keystore
+    keystore-path: file:palikka.keystore  # read from filesystem
     keystore-pass: password
     keystore-type: pkcs12
     token:
@@ -17,5 +17,5 @@ palikka:
       port: 25565
       file:
         name: server.jar
-        path: /home/minecraft/minecraft
-        start-command: java -jar server.jar
+        path: /home/minecraft/minecraft # todo make relative to app?
+        start-command: java -jar server.jar # todo omit name?
