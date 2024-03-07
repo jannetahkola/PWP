@@ -14,6 +14,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForAdminUser;
 import static io.restassured.RestAssured.given;
@@ -38,8 +40,14 @@ class GameServerProcessControllerIT extends WireMockTest {
         RestAssured.port = localServerPort;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
-        stubForAdminUser();
+        stubForAdminUser(wireMockServer);
+
         authorizationHeader = new Header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(1));
+    }
+
+    @DynamicPropertySource
+    static void dynamicPropertySource(DynamicPropertyRegistry registry) {
+        registry.add("palikka.integration.users-api.base-uri", () -> wireMockServer.baseUrl());
     }
 
     @Test

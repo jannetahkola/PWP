@@ -69,8 +69,7 @@ class GameControllerIT extends WireMockTest {
 
     @DynamicPropertySource
     static void dynamicPropertySource(DynamicPropertyRegistry registry) {
-        // TODO Nuke
-        registry.add("fi.jannetahkola.integration.users-api.base-uri", () -> URI.create("http://localhost:" + wireMockServer.port()));
+        registry.add("palikka.integration.users-api.base-uri", () -> wireMockServer.baseUrl());
     }
 
     @SneakyThrows
@@ -88,7 +87,7 @@ class GameControllerIT extends WireMockTest {
     @SneakyThrows
     @Test
     void givenConnectRequest_withUnknownUser_thenForbiddenResponse() {
-        stubForUserNotFound(1);
+        stubForUserNotFound(wireMockServer, 1);
 
         try {
             WebSocketHttpHeaders headers = newAuthHeaders(1);
@@ -103,7 +102,7 @@ class GameControllerIT extends WireMockTest {
     @SneakyThrows
     @Test
     void testEcho2() {
-        stubForAdminUser();
+        stubForAdminUser(wireMockServer);
 
         StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
         StompSession session = newSession(1, sessionHandler);

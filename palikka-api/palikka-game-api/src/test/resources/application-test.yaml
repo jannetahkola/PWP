@@ -15,9 +15,7 @@ palikka:
       key-pass: password
       issuer: palikka-dev
       validity-time: 10s
-  integration:
-    users-api:
-      base-uri: http://localhost:8080
+
   game:
     server:
       host: test.com

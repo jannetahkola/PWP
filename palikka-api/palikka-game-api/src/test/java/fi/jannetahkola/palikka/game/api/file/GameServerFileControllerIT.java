@@ -21,6 +21,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,11 +47,16 @@ class GameServerFileControllerIT extends WireMockTest {
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
     }
 
+    @DynamicPropertySource
+    static void dynamicPropertySource(DynamicPropertyRegistry registry) {
+        registry.add("palikka.integration.users-api.base-uri", () -> wireMockServer.baseUrl());
+    }
+
     @Nested
     class ResourceSecurityIT {
         @Test
         void givenGetDownloadStatusRequest_whenNoTokenOrRole_thenForbiddenResponse() {
-            stubForNormalUser();
+            stubForNormalUser(wireMockServer);
 
             given()
                     .get("/server/download")
@@ -65,7 +72,7 @@ class GameServerFileControllerIT extends WireMockTest {
         @SneakyThrows
         @Test
         void givenStartDownloadRequest_whenNoTokenOrRole_thenForbiddenResponse() {
-            stubForNormalUser();
+            stubForNormalUser(wireMockServer);
 
             JSONObject json = new JSONObject().put("download_uri", "https://test.com");
             given()
@@ -93,7 +100,7 @@ class GameServerFileControllerIT extends WireMockTest {
 
         @BeforeEach
         void beforeEach() {
-            stubForAdminUser();
+            stubForAdminUser(wireMockServer);
             authorizationHeader = new Header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(1));
             ((MockFileDownloaderService) fileDownloaderService).setCountDownLatch(null);
         }
