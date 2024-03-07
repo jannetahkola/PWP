@@ -17,6 +17,7 @@
         <module>palikka-users-api</module>
         <module>palikka-game-api</module>
         <module>palikka-mock-file-server</module>
+        <module>coverage-reporting</module>
     </modules>
 
     <groupId>fi.jannetahkola.palikka</groupId>
@@ -27,11 +28,24 @@
     <description>Palikka API root</description>
 
     <properties>
+        <!-- Java -->
         <java.version>21</java.version>
-        <spring-framework.version>6.1.3</spring-framework.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <!-- Spring Boot 3.1+ uses maven.compiler.release instead of
+        the above, but keeping them too for compatibility -->
+        <maven.compiler.release>${java.version}</maven.compiler.release>
+
+        <!-- Common dependencies -->
         <rest-assured.version>5.4.0</rest-assured.version>
         <wiremock.version>3.4.0</wiremock.version>
         <h2.version>2.2.224</h2.version>
+        <jacoco-plugin.version>0.8.11</jacoco-plugin.version>
+
+        <!-- Coverage -->
+        <sonar.coverage.jacoco.xmlReportPaths>
+            ${maven.multiModuleProjectDirectory}/coverage-reporting/target/site/jacoco-aggregate/jacoco.xml
+        </sonar.coverage.jacoco.xmlReportPaths>
     </properties>
 
     <dependencies>
@@ -59,11 +73,19 @@
                 <artifactId>h2</artifactId>
                 <version>${h2.version}</version>
             </dependency>
-            <!-- Using standalone due to Jetty incompatibility (https://github.com/wiremock/wiremock/issues/2395) -->
             <dependency>
+                <!--
+                Using standalone due to incompatibility with Jetty 12 from Spring Boot 3.2.
+                See https://github.com/wiremock/wiremock/issues/2395
+                -->
                 <groupId>org.wiremock</groupId>
                 <artifactId>wiremock-standalone</artifactId>
                 <version>${wiremock.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco-plugin.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -75,12 +97,61 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>
-                        <!-- Needed when using Mockito on JDK 21, see https://openjdk.org/jeps/451 -->
+                        ${argLine}
+                        <!--
+                        Remove warnings produced by Mockito on JDK 21. See
+                         * https://github.com/mockito/mockito/issues/3037
+                         * https://openjdk.org/jeps/451
+                        -->
                         -XX:+EnableDynamicAgentLoading
                     </argLine>
+                    <includes>
+                        <include>**/*Tests.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <includes>
+                        <include>**/*IT.java</include>
+                    </includes>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>coverage</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
