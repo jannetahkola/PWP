@@ -5,8 +5,7 @@ import fi.jannetahkola.palikka.users.api.user.model.UserModel;
 import fi.jannetahkola.palikka.users.api.user.model.UserModelAssembler;
 import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
-import fi.jannetahkola.palikka.users.exception.ConflictException;
-import fi.jannetahkola.palikka.users.exception.NotFoundException;
+import fi.jannetahkola.palikka.users.exception.UsersNotFoundException;
 import fi.jannetahkola.palikka.users.util.CryptoUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +38,7 @@ public class UserController {
     public ResponseEntity<UserModel> getUser(@PathVariable("id") Integer userId) {
         UserModel userModel = userRepository.findById(userId)
                 .map(userModelAssembler::toModel)
-                .orElseThrow(() -> NotFoundException.ofUser(userId));
+                .orElseThrow(() -> UsersNotFoundException.ofUser(userId));
         return ResponseEntity
                 .ok()
                 .body(userModel);
@@ -76,7 +75,7 @@ public class UserController {
                                              Authentication authentication) {
         UserEntity existingUserEntity = userRepository
                 .findById(userId)
-                .orElseThrow(() -> NotFoundException.ofUser(userId));
+                .orElseThrow(() -> UsersNotFoundException.ofUser(userId));
 
         if (userRepository.existsByUsernameExcept(userToPut.getUsername(), existingUserEntity.getUsername())) {
             throw new ConflictException(

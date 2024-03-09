@@ -5,7 +5,7 @@ import fi.jannetahkola.palikka.users.api.role.model.RoleModel;
 import fi.jannetahkola.palikka.users.api.role.model.RoleModelAssembler;
 import fi.jannetahkola.palikka.users.data.role.RoleEntity;
 import fi.jannetahkola.palikka.users.data.role.RoleRepository;
-import fi.jannetahkola.palikka.users.exception.NotFoundException;
+import fi.jannetahkola.palikka.users.exception.UsersNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.hateoas.CollectionModel;
@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -50,7 +49,7 @@ public class RoleController {
     public ResponseEntity<RoleModel> getRole(@PathVariable("id") Integer roleId, Authentication authentication) {
         RoleModel roleModel = roleRepository.findById(roleId)
                 .map(roleModelAssembler::toModel)
-                .orElseThrow(() -> NotFoundException.ofRole(roleId));
+                .orElseThrow(() -> UsersNotFoundException.ofRole(roleId));
         if (!AuthorizationUtil.hasAnyAuthority(authentication, "USER_ADMIN", roleModel.getName())) {
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN.value())

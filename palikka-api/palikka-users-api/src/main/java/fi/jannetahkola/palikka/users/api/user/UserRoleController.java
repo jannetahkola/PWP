@@ -7,7 +7,7 @@ import fi.jannetahkola.palikka.users.data.role.RoleEntity;
 import fi.jannetahkola.palikka.users.data.role.RoleRepository;
 import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
-import fi.jannetahkola.palikka.users.exception.NotFoundException;
+import fi.jannetahkola.palikka.users.exception.UsersNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +41,7 @@ public class UserRoleController {
     public ResponseEntity<CollectionModel<RoleModel>> getUserRoles(@PathVariable("user-id") Integer userId) {
         Set<RoleEntity> roleEntities = userRepository.findById(userId)
                 .map(UserEntity::getRoles)
-                .orElseThrow(() -> NotFoundException.ofUser(userId));
+                .orElseThrow(() -> UsersNotFoundException.ofUser(userId));
         return ResponseEntity
                 .ok()
                 .body(CollectionModel.of(
@@ -54,7 +54,7 @@ public class UserRoleController {
     public ResponseEntity<CollectionModel<RoleModel>> patchUserRoles(@PathVariable("user-id") Integer userId,
                                                                      @Valid @RequestBody UserRolePatchModel patchModel) {
         UserEntity userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> NotFoundException.ofUser(userId));
+                .orElseThrow(() -> UsersNotFoundException.ofUser(userId));
 
         Map<UserRolePatchModel.Action, List<UserRolePatchModel.UserRolePatch>> patchesByActionMap =
                 patchModel.getPatches().stream()
