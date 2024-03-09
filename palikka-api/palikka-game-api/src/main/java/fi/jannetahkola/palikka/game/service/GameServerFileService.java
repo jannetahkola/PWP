@@ -6,7 +6,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
@@ -17,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class GameServerFileService {
     private static final AtomicReference<DownloadStatus> downloadStatus = new AtomicReference<>(DownloadStatus.IDLE);
 
-    private final FileDownloaderService fileDownloaderService;
+    private final GameServerFileProcessor gameServerFileProcessor;
 
     @Async("threadPoolTaskExecutor")
     public void startDownloadAsync(URI downloadUri, File toFile) {
@@ -29,12 +28,14 @@ public class GameServerFileService {
         try {
             log.info("Server download path={}", toFile.toPath());
 
-            fileDownloaderService.download(downloadUri, toFile);
+            gameServerFileProcessor.downloadFile(downloadUri, toFile);
 
-            downloadStatus.set(DownloadStatus.SUCCESS);
             log.info("Server download done ({} ms)", System.currentTimeMillis() - startTime);
 
-        } catch (IOException e) {
+            gameServerFileProcessor.acceptEula(toFile); // Errors ignored, file was still downloaded
+
+            downloadStatus.set(DownloadStatus.SUCCESS);
+        } catch (Exception e) {
             downloadStatus.set(DownloadStatus.FAILED);
             log.error("Server download failed ({} ms)", System.currentTimeMillis() - startTime, e);
         }

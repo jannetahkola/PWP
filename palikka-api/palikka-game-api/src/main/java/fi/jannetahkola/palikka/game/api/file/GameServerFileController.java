@@ -19,23 +19,22 @@ import java.net.URI;
 @RequestMapping("/server")
 @Validated
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ROLE_ADMIN')")
 public class GameServerFileController {
     private final GameServerProperties gameServerProperties;
     private final GameServerFileService gameServerFileService;
 
     @PostMapping("/download")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public void startDownload(@Valid @RequestBody GameServerFileDownloadRequest request) {
         URI downloadUri = request.getDownloadUri();
 
         log.info("Downloading server from uri={}", downloadUri.toString());
 
         gameServerFileService.startDownloadAsync(
-                downloadUri, gameServerProperties.getFile().getPathToFile().toFile());
+                downloadUri, gameServerProperties.getFile().getPathToJarFile().toFile());
     }
 
     @GetMapping("/download")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<GameServerFileDownloadResponse> getDownloadStatus() {
         GameServerFileDownloadResponse response =
                 GameServerFileDownloadResponse.builder()

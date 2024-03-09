@@ -43,9 +43,7 @@ public class AppConfig {
                                             PalikkaAuthenticationFilterConfigurer authenticationFilterConfigurer) {
         http
                 .sessionManagement(sessions -> sessions.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/game/status").permitAll()
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(requests -> requests.anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)

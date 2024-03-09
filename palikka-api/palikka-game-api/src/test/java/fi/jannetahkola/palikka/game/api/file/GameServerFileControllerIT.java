@@ -1,6 +1,6 @@
 package fi.jannetahkola.palikka.game.api.file;
 
-import fi.jannetahkola.palikka.game.service.FileDownloaderService;
+import fi.jannetahkola.palikka.game.service.GameServerFileProcessor;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import fi.jannetahkola.palikka.game.testutils.WireMockTest;
 import io.restassured.RestAssured;
@@ -94,7 +94,7 @@ class GameServerFileControllerIT extends WireMockTest {
     @Nested
     class ResourceFunctionalityIT {
         @Autowired
-        FileDownloaderService fileDownloaderService;
+        GameServerFileProcessor gameServerFileProcessor;
 
         Header authorizationHeader;
 
@@ -102,7 +102,7 @@ class GameServerFileControllerIT extends WireMockTest {
         void beforeEach() {
             stubForAdminUser(wireMockServer);
             authorizationHeader = new Header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(1));
-            ((MockFileDownloaderService) fileDownloaderService).setCountDownLatch(null);
+            ((MockGameServerFileProcessor) gameServerFileProcessor).setCountDownLatch(null);
         }
 
         @SneakyThrows
@@ -174,7 +174,7 @@ class GameServerFileControllerIT extends WireMockTest {
         @Test
         void givenStartDownloadRequest_thenStatusSwitchedCorrectly_andOkResponse() {
             CountDownLatch countDownLatch = new CountDownLatch(1);
-            ((MockFileDownloaderService) fileDownloaderService).setCountDownLatch(countDownLatch);
+            ((MockGameServerFileProcessor) gameServerFileProcessor).setCountDownLatch(countDownLatch);
 
             JSONObject json = new JSONObject().put("download_uri", "https://test.com");
             given()
@@ -206,17 +206,17 @@ class GameServerFileControllerIT extends WireMockTest {
     public static class GameServerFileControllerTestConfiguration {
         @Bean
         @Primary
-        FileDownloaderService fileDownloaderService() {
-            return new MockFileDownloaderService();
+        GameServerFileProcessor fileDownloaderService() {
+            return new MockGameServerFileProcessor();
         }
     }
 
     @Setter
-    public static class MockFileDownloaderService extends FileDownloaderService {
+    public static class MockGameServerFileProcessor extends GameServerFileProcessor {
         private CountDownLatch countDownLatch;
 
         @Override
-        public void download(URI downloadUri, File toFile) throws IOException {
+        public void downloadFile(URI downloadUri, File toFile) throws IOException {
             if (downloadUri.getPath().contains("fail")) {
                 throw new IOException("Download failed");
             }
@@ -229,6 +229,11 @@ class GameServerFileControllerIT extends WireMockTest {
                     this.countDownLatch = null;
                 }
             }
+        }
+
+        @Override
+        public void acceptEula(File toFile) {
+            // noop
         }
     }
 }

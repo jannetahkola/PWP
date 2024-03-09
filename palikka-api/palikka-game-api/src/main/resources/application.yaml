@@ -17,5 +17,5 @@ palikka:
       port: 25565
       file:
         name: server.jar
-        path: /home/minecraft/minecraft # todo make relative to app?
+        path: /app # todo directory structure needs to exist currently, change?
         start-command: java -jar server.jar # todo omit name?
