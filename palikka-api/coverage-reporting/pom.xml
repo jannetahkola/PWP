@@ -12,8 +12,8 @@
     <artifactId>coverage-reporting</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
-    <name>report-aggregate</name>
-    <description>report-aggregate</description>
+    <name>coverage-reporting</name>
+    <description>coverage-reporting</description>
 
     <dependencies>
         <dependency>

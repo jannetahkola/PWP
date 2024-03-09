@@ -13,8 +13,8 @@
     <artifactId>palikka-mock-file-server</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
-    <name>mock-game-file-server</name>
-    <description>mock-game-file-server</description>
+    <name>palikka-mock-file-server</name>
+    <description>palikka-mock-file-server</description>
 
     <dependencies>
         <dependency>
