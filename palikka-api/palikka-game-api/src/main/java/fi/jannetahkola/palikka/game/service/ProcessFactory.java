@@ -1,5 +1,7 @@
 package fi.jannetahkola.palikka.game.service;
 
+import fi.jannetahkola.palikka.game.process.GameProcess;
+import fi.jannetahkola.palikka.game.process.GameProcessExecutable;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -7,7 +9,7 @@ import java.nio.file.Path;
 
 @Slf4j
 public class ProcessFactory {
-    public Process newGameProcess(String command, Path pathToFile) {
+    public Process newProcess(String command, Path pathToFile) {
         try {
             return new ProcessBuilder()
                     .command(command.split(" "))
@@ -17,5 +19,13 @@ public class ProcessFactory {
             log.error("Game process start failed", e);
             throw new RuntimeException(e);
         }
+    }
+
+    public GameProcess newGameProcess(String command,
+                                      Path pathToFile,
+                                      GameProcess.GameProcessHooks hooks) {
+        GameProcessExecutable executable =
+                () -> newProcess(command, pathToFile);
+        return new GameProcess(executable, hooks);
     }
 }

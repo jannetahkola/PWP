@@ -44,6 +44,7 @@ public class GameProcess {
             process = executable.execute();
 
             List<? extends Future<?>> ioTasks = startIOTasks();
+            log.info("{} I/O task(s) started", ioTasks.size());
 
             process.onExit().thenAccept(exitedProcess -> {
                 log.info("Game process exit (1)");
@@ -84,19 +85,31 @@ public class GameProcess {
         return true;
     }
 
+    /**
+     * Stops the process by first attempting graceful shutdown.
+     * @param timeoutInMillis Timeout - at maximum double the value if graceful shutdown fails
+     * @return True if the process was shutdown
+     * @throws InterruptedException
+     */
     public boolean stopForcibly(long timeoutInMillis) throws InterruptedException {
         if (stop(timeoutInMillis)) {
             return true;
         }
         log.info("Graceful stop timed out, forcing now");
-        return process.destroyForcibly().waitFor(timeoutInMillis, TimeUnit.MILLISECONDS);
+        try {
+            process.destroyForcibly().onExit().get(timeoutInMillis, TimeUnit.MILLISECONDS);
+        } catch (ExecutionException | TimeoutException e) {
+            log.warn("Force stop timed out", e);
+            return false;
+        }
+        return true;
     }
 
     public boolean isActive() {
         return status.get().equals(Status.ACTIVE);
     }
 
-    @Builder
+    @Builder(toBuilder = true)
     @Value
     public static class GameProcessHooks {
         /**
@@ -147,6 +160,10 @@ public class GameProcess {
                 new InputListenerTask(process.getInputStream(), input -> {
                     hooks.getOnInput().ifPresent(onInputHook -> onInputHook.accept(input));
                     // TODO These could be moved to another input listener task for performance
+                    if (input.equals("Started")) {
+                        hooks.getOnGameStarted().ifPresent(Runnable::run);
+                    }
+
 //                    if (!gameProcessStartDetected && input.matches(GameProcessLogPatterns.SERVER_START_PATTERN.pattern())) {
 //                        hooks.getOnGameStarted().ifPresent(Runnable::run);
 //                        gameProcessStartDetected = true;
@@ -156,9 +173,8 @@ public class GameProcess {
 //                        gameProcessExitDetected = true;
 //                    }
                 }),
-                new OutputWriterTask(process.getOutputStream(), OUTPUT_QUEUE, input -> {
-                    hooks.getOnInput().ifPresent(onInputHook -> onInputHook.accept(input));
-                })
+                new OutputWriterTask(process.getOutputStream(), OUTPUT_QUEUE,
+                        input -> hooks.getOnInput().ifPresent(onInputHook -> onInputHook.accept(input)))
         ));
     }
 
