@@ -1,7 +1,7 @@
 version: '3.8'
 services:
-  palikka_game_api:
-    container_name: palikka_game_api
+  palikka-game-api:
+    container_name: palikka-game-api
     build:
       context: ./palikka-game-api
       dockerfile: Dockerfile
@@ -10,12 +10,12 @@ services:
     volumes:
       - ./conf/dev.keystore:/app/palikka.keystore
 
-  palikka_mock_file_server:
-    container_name: palikka_mock_file_server
+  palikka-mock-file-server:
+    container_name: palikka-mock-file-server
     build:
       context: ./palikka-mock-file-server
       dockerfile: Dockerfile
     ports:
-      - '8081:8080'
+      - '8081:8081'
     volumes:
       - ./conf/public/server.jar:/app/public/server.jar
