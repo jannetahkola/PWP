@@ -19,7 +19,8 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class GameServerProcessService {
     private static final AtomicReference<GameServerStatus> gameServerStatus = new AtomicReference<>(GameServerStatus.DOWN);
-    private static final List<Consumer<String>> inputListeners = new ArrayList<>();
+    private static final List<Consumer<String>> gameServerProcessInputListeners = new ArrayList<>();
+    private static final GameServerProcessLogger gameServerProcessLogger = new GameServerProcessLogger();
 
     private final GameServerProperties gameServerProperties;
     private final ProcessFactory processFactory;
@@ -37,11 +38,11 @@ public class GameServerProcessService {
             result = false;
             log.info("Cannot start - expected game server process to be DOWN, was {}", gameServerStatus.get());
         }
-        if (!pathValidator.validatePathExistsAndIsAFile(gameServerProperties.getFile().getPathToFile())) {
+        if (!pathValidator.validatePathExistsAndIsAFile(gameServerProperties.getFile().getPathToJarFile())) {
             // Path is validated actively instead of service start up so newly
             // downloaded server files are accounted for.
             result = false;
-            log.info("Cannot star - invalid game server file path");
+            log.info("Cannot start - invalid game server file path");
         }
         if (result)
             gameServerStatus.set(GameServerStatus.STARTING);
@@ -68,7 +69,7 @@ public class GameServerProcessService {
      * called before this for synchronous error handling.
      */
     @Async("threadPoolTaskExecutor")
-    public void start() {
+    public void startAsync() {
         var fileProperties = gameServerProperties.getFile();
 
         GameProcess.GameProcessHooks hooks = GameProcess.GameProcessHooks.builder()
@@ -76,15 +77,20 @@ public class GameServerProcessService {
                 .onGameStarted(() -> gameServerStatus.set(GameServerStatus.UP))
                 .onGameExited(() -> gameServerStatus.set(GameServerStatus.STOPPING))
                 .onProcessExited(() -> gameServerStatus.set(GameServerStatus.DOWN))
-                .onInput(input -> inputListeners.forEach(listener ->
-                        // Publish to listeners asynchronously to be safe
-                        CompletableFuture.runAsync(() -> {
-                            log.debug("Publishing game server process input to listener");
-                            listener.accept(input);
-                        })))
+                .onInput(input -> {
+                    gameServerProcessLogger.log(input);
+                    gameServerProcessInputListeners.forEach(listener ->
+                            // Publish to listeners asynchronously to be safe
+                            CompletableFuture.runAsync(() -> {
+                                log.debug("Publishing game server process input to listener");
+                                listener.accept(input);
+                            }));
+                })
                 .build();
         gameProcess = processFactory.newGameProcess(
-                fileProperties.getStartCommand(), fileProperties.getPathToFile(), hooks);
+                fileProperties.getStartCommand(),
+                fileProperties.getPathToJarFileDirectory(),
+                hooks);
         try {
             gameProcess.start();
         } catch (InterruptedException e) {
@@ -99,9 +105,9 @@ public class GameServerProcessService {
      * called before this for synchronous error handling.
      */
     @Async("threadPoolTaskExecutor")
-    public void stop() {
+    public void stopAsync() {
         try {
-            if (gameProcess.stop(1000)) {
+            if (gameProcess.stop(gameServerProperties.getStopTimeoutInMillis())) {
                 log.info("Process graceful stop success");
             } else {
                 log.error("Process graceful stop failure - time out");
@@ -115,7 +121,7 @@ public class GameServerProcessService {
     public void stopForcibly() {
         if (gameProcess == null || gameServerStatus.get().equals(GameServerStatus.DOWN)) return;
         try {
-            if (gameProcess.stopForcibly(1000)) {
+            if (gameProcess.stopForcibly(gameServerProperties.getStopTimeoutInMillis())) {
                 log.info("Process forceful stop success");
             } else {
                 log.error("Process forceful stop failure - time out");
@@ -131,7 +137,7 @@ public class GameServerProcessService {
     }
 
     public void registerInputListener(Consumer<String> listener) {
-        inputListeners.add(listener);
+        gameServerProcessInputListeners.add(listener);
     }
 
     public enum GameServerStatus {

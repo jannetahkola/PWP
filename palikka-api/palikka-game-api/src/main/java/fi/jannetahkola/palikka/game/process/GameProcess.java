@@ -26,6 +26,12 @@ public class GameProcess {
 
     private Process process;
 
+    /**
+     * Set after a console output has been detected indicating that the server is ready to accept connections.
+     * Used as an additional check to remove the need to match the start regex after the server is up.
+     */
+    private boolean processStarted = false;
+
     public GameProcess(@NonNull GameProcessExecutable executable,
                        @NonNull GameProcessHooks hooks) {
         this.executable = executable;
@@ -160,7 +166,9 @@ public class GameProcess {
                 new InputListenerTask(process.getInputStream(), input -> {
                     hooks.getOnInput().ifPresent(onInputHook -> onInputHook.accept(input));
                     // TODO These could be moved to another input listener task for performance
-                    if (input.equals("Started")) {
+                    if (!processStarted && GameProcessPatterns.SERVER_START_PATTERN.matcher(input).matches()) {
+                        log.info("Start detected, ready for connections");
+                        processStarted = true;
                         hooks.getOnGameStarted().ifPresent(Runnable::run);
                     }
 

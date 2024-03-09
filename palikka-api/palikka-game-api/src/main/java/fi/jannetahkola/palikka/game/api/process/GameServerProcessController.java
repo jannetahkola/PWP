@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/server/process") // TODO Change the other controller to /server/file
 @Validated
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class GameServerProcessController {
     private final GameServerProcessService gameServerProcessService;
 
@@ -24,14 +26,14 @@ public class GameServerProcessController {
             @Valid @RequestBody GameServerProcessControlRequest request) throws GameServerProcessStartException {
         if (request.getAction().equals(GameServerProcessControlRequest.Action.START)) {
             if (gameServerProcessService.initStart()) {
-                gameServerProcessService.start();
+                gameServerProcessService.startAsync();
                 return ResponseEntity.ok(getStatusResponse());
             } else {
                 throw new GameServerProcessStartException("Failed to start");
             }
         } else if (request.getAction().equals(GameServerProcessControlRequest.Action.STOP)) {
             if (gameServerProcessService.initStop()) {
-                gameServerProcessService.stop();
+                gameServerProcessService.stopAsync();
                 return ResponseEntity.ok(getStatusResponse());
             } else {
                 throw new GameServerProcessStartException("Failed to stop");

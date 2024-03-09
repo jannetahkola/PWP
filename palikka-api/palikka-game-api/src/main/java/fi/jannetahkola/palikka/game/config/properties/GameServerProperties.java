@@ -21,6 +21,9 @@ public class GameServerProperties {
     int port;
 
     @NotNull
+    long stopTimeoutInMillis;
+
+    @NotNull
     FileProperties file;
 
     @Data
@@ -41,10 +44,14 @@ public class GameServerProperties {
         /**
          * Command to execute the game server file, e.g. java -jar server.jar.
          */
-        @NotBlank
+        @NotBlank // todo add more validations
         String startCommand;
 
-        public Path getPathToFile() {
+        public Path getPathToJarFileDirectory() {
+            return Paths.get(path);
+        }
+
+        public Path getPathToJarFile() {
             return Paths.get(path, name);
         }
     }

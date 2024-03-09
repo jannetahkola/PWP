@@ -17,7 +17,7 @@ public class ProcessFactory {
                     .start();
         } catch (IOException e) {
             log.error("Game process start failed", e);
-            throw new RuntimeException(e);
+            throw new RuntimeException(e); // TODO Status won't be reset if error, e.g. eula not accepted
         }
     }
 

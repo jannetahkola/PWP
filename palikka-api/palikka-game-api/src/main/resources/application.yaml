@@ -19,3 +19,4 @@ palikka:
         name: server.jar
         path: /app # todo directory structure needs to exist currently, change?
         start-command: java -jar server.jar # todo omit name?
+      stop-timeout-in-millis: 10000
