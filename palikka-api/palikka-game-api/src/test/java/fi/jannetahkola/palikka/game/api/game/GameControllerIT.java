@@ -9,8 +9,11 @@ import io.restassured.RestAssured;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -39,8 +42,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
-import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForAdminUser;
-import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForUserNotFound;
+import static fi.jannetahkola.palikka.game.testutils.Stubs.*;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -49,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = { "logging.level.fi.jannetahkola.palikka.game=debug" })
+@ExtendWith(OutputCaptureExtension.class)
 // New context for each test so less hassle resetting everything
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ActiveProfiles("test")
@@ -93,7 +96,7 @@ class GameControllerIT extends WireMockGameProcessTest {
 
         @SneakyThrows
         @Test
-        void givenConnectRequest_withUnknownUser_thenForbiddenResponse() {
+        void givenConnectRequest_withUnknownUser_thenForbiddenResponse(CapturedOutput capturedOutput) {
             stubForUserNotFound(wireMockServer, 1);
 
             try {
@@ -101,9 +104,41 @@ class GameControllerIT extends WireMockGameProcessTest {
                 newStompClient().connectAsync(webSocketUri, headers, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
             } catch (ExecutionException e) {
                 assertTrue(e.getMessage().contains("403"));
+                assertThat(capturedOutput.getAll()).contains("User with id '1' not found");
                 return;
             }
             fail("Expected exception but none was thrown");
+        }
+
+        @SneakyThrows
+        @Test
+        void givenSendMessageToGame_withoutRoles_thenDisconnected(CapturedOutput capturedOutput) {
+            stubForNormalUser(wireMockServer);
+
+            WebSocketHttpHeaders headers = newWebSocketAuthHeaders(2);
+            StompSession session = newStompClient().connectAsync(webSocketUri, headers, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
+            StompSession.Receiptable receipt = session.send("/app/game", GameMessage.builder().data("haloo").build());
+            assertThat(receipt.getReceiptId()).isNull();
+
+            TestStompSessionHandlerAdapter.Frame frame = responseQueue.poll(1000, TimeUnit.MILLISECONDS);
+            assertThat(frame).isNull();
+
+            assertThat(capturedOutput.getAll()).contains("Failed to authorize message with authorization manager");
+            assertThat(session.isConnected()).isFalse(); // should disconnect session
+        }
+
+        @SneakyThrows
+        @Test
+        void givenSubscribeToGame_whenNotAdmin_thenSubscriptionOk() {
+            stubForNormalUser(wireMockServer);
+
+            WebSocketHttpHeaders headers = newWebSocketAuthHeaders(2);
+            StompSession session = newStompClient().connectAsync(webSocketUri, headers, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
+
+            StompSession.Subscription subscription = session.subscribe("/topic/game", newStompSessionHandler());
+            assertThat(subscription.getSubscriptionId()).isNotNull();
+
+            session.disconnect();
         }
     }
 
@@ -132,9 +167,10 @@ class GameControllerIT extends WireMockGameProcessTest {
             outputAsServerProcess(SERVER_START_LOG);
             assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
-
             TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
             assertThat(receivedFrame).isNotNull();
+            assertThat(receivedFrame.getHeaders().getDestination()).isEqualTo("/topic/game");
+
             GameMessage receivedMessage = receivedFrame.getPayloadAs(GameMessage.class);
             assertThat(receivedMessage).isNotNull();
             assertThat(receivedMessage.getSrc()).isEqualTo(GameMessage.Source.GAME);
