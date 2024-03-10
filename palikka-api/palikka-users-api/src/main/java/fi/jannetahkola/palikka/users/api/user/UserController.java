@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.users.api.user;
 
+import fi.jannetahkola.palikka.core.api.exception.ConflictException;
 import fi.jannetahkola.palikka.core.util.AuthorizationUtil;
 import fi.jannetahkola.palikka.users.api.user.model.UserModel;
 import fi.jannetahkola.palikka.users.api.user.model.UserModelAssembler;

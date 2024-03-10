@@ -8,6 +8,10 @@ spring:
       hibernate:
         format_sql: true
         show_sql: true
+  sql:
+    init:
+      # override main config to not run any scripts
+      data-locations:
 logging:
   level:
     fi.jannetahkola.palikka: debug

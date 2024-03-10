@@ -1,5 +1,16 @@
 version: '3.8'
 services:
+  palikka-users-api:
+    container_name: palikka-users-api
+    build:
+      context: ./palikka-users-api
+      dockerfile: Dockerfile
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./conf/keystore-dev.p12:/app/keystore-dev.p12
+      - ./conf/truststore-dev.p12:/app/truststore-dev.p12
+
   palikka-game-api:
     container_name: palikka-game-api
     build:
