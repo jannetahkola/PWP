@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.concurrent.BlockingQueue;
 
 @Slf4j
 public class ProcessFactory {
@@ -23,9 +24,10 @@ public class ProcessFactory {
 
     public GameProcess newGameProcess(String command,
                                       Path pathToFile,
-                                      GameProcess.GameProcessHooks hooks) {
+                                      GameProcess.GameProcessHooks hooks,
+                                      BlockingQueue<String> outputQueue) {
         GameProcessExecutable executable =
                 () -> newProcess(command, pathToFile);
-        return new GameProcess(executable, hooks);
+        return new GameProcess(executable, hooks, outputQueue);
     }
 }

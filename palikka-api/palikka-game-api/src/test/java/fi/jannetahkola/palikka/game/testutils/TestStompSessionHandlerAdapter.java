@@ -1,6 +1,9 @@
 package fi.jannetahkola.palikka.game.testutils;
 
+import fi.jannetahkola.palikka.game.api.game.model.GameMessage;
 import jakarta.annotation.Nonnull;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaders;
@@ -13,9 +16,9 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class TestStompSessionHandlerAdapter extends StompSessionHandlerAdapter {
-    private final BlockingQueue<Object> responseQueue;
+    private final BlockingQueue<Frame> responseQueue;
 
-    public TestStompSessionHandlerAdapter(BlockingQueue<Object> responseQueue) {
+    public TestStompSessionHandlerAdapter(BlockingQueue<Frame> responseQueue) {
         this.responseQueue = responseQueue;
     }
 
@@ -44,20 +47,32 @@ public class TestStompSessionHandlerAdapter extends StompSessionHandlerAdapter {
     @Override
     @Nonnull
     public Type getPayloadType(@Nonnull StompHeaders headers) {
-        return String.class;
+        return GameMessage.class;
     }
 
     @Override
     public void handleFrame(@Nonnull StompHeaders headers, Object payload) {
         if (payload != null) {
             try {
+                Frame frame = new Frame(headers, payload);
                 log.debug("Received frame, headers={}, payload={}", headers, payload);
-                if (!responseQueue.offer(payload, 500, TimeUnit.MILLISECONDS)) {
+                if (!responseQueue.offer(frame, 1000, TimeUnit.MILLISECONDS)) {
                     log.error("Failed to add response payload to response queue");
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class Frame {
+        StompHeaders headers;
+        Object payload;
+
+        public <T> T getPayloadAs(Class<T> clazz) {
+            return clazz.cast(payload);
         }
     }
 }

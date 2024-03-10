@@ -1,22 +1,26 @@
 package fi.jannetahkola.palikka.game.api.game;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fi.jannetahkola.palikka.game.api.game.model.GameMessage;
 import fi.jannetahkola.palikka.game.testutils.TestStompSessionHandlerAdapter;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
-import fi.jannetahkola.palikka.game.testutils.WireMockTest;
+import fi.jannetahkola.palikka.game.testutils.WireMockGameProcessTest;
+import io.restassured.RestAssured;
 import lombok.SneakyThrows;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.json.JSONObject;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.converter.CompositeMessageConverter;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -37,13 +41,18 @@ import java.util.concurrent.TimeUnit;
 
 import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForAdminUser;
 import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForUserNotFound;
+import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = { "logging.level.fi.jannetahkola.palikka.game=debug" })
+// New context for each test so less hassle resetting everything
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ActiveProfiles("test")
-class GameControllerIT extends WireMockTest {
+class GameControllerIT extends WireMockGameProcessTest {
 
     @Autowired
     ObjectMapper objectMapper;
@@ -51,13 +60,16 @@ class GameControllerIT extends WireMockTest {
     @Autowired
     TestTokenUtils tokens;
 
-    final BlockingQueue<Object> responseQueue = new LinkedBlockingDeque<>();
+    final BlockingQueue<TestStompSessionHandlerAdapter.Frame> responseQueue = new LinkedBlockingDeque<>();
 
     static String webSocketUri;
 
     @BeforeEach
     void beforeEach(@LocalServerPort int localServerPort) {
         webSocketUri = "http://localhost:" + localServerPort + "/ws";
+        RestAssured.port = localServerPort;
+        RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+        responseQueue.clear();
     }
 
     @DynamicPropertySource
@@ -65,59 +77,280 @@ class GameControllerIT extends WireMockTest {
         registry.add("palikka.integration.users-api.base-uri", () -> wireMockServer.baseUrl());
     }
 
-    @SneakyThrows
-    @Test
-    void givenConnectRequest_withoutToken_thenForbiddenResponse() {
-        try {
-            newStompClient().connectAsync(webSocketUri, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
-        } catch (ExecutionException e) {
-            assertTrue(e.getMessage().contains("403"));
-            return;
+    @Nested
+    class ResourceSecurityIT {
+        @SneakyThrows
+        @Test
+        void givenConnectRequest_withoutToken_thenForbiddenResponse() {
+            try {
+                newStompClient().connectAsync(webSocketUri, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
+            } catch (ExecutionException e) {
+                assertTrue(e.getMessage().contains("403"));
+                return;
+            }
+            fail("Expected exception but none was thrown");
         }
-        fail("Expected exception but none was thrown");
+
+        @SneakyThrows
+        @Test
+        void givenConnectRequest_withUnknownUser_thenForbiddenResponse() {
+            stubForUserNotFound(wireMockServer, 1);
+
+            try {
+                WebSocketHttpHeaders headers = newWebSocketAuthHeaders(1);
+                newStompClient().connectAsync(webSocketUri, headers, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
+            } catch (ExecutionException e) {
+                assertTrue(e.getMessage().contains("403"));
+                return;
+            }
+            fail("Expected exception but none was thrown");
+        }
+    }
+
+    @Nested
+    class ResourceFunctionalityIT {
+        @SneakyThrows
+        @Test
+        void testSubscribeToGameBeforeGameIsUp() {
+            mockGameProcess();
+
+            stubForAdminUser(wireMockServer);
+            HttpHeaders httpHeaders = newAuthHeader(1);
+
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newSession(newWebSocketAuthHeaders(httpHeaders), sessionHandler);
+            session.subscribe("/topic/game", sessionHandler);
+
+            given()
+                    .headers(httpHeaders)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(new JSONObject().put("action", "start").toString())
+                    .post("/game-api/game/process")
+                    .then().assertThat()
+                    .statusCode(200);
+
+            outputAsServerProcess(SERVER_START_LOG);
+            assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+
+            TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(receivedFrame).isNotNull();
+            GameMessage receivedMessage = receivedFrame.getPayloadAs(GameMessage.class);
+            assertThat(receivedMessage).isNotNull();
+            assertThat(receivedMessage.getSrc()).isEqualTo(GameMessage.Source.GAME);
+            assertThat(receivedMessage.getData()).contains("Done (13.324s)!");
+
+            stop(session);
+        }
+
+        @SneakyThrows
+        @RepeatedTest(value = 3, failureThreshold = 1)
+        void testSubscribeToGameAfterGameIsUp_thenLogHistoryIsReceivedInCorrectOrder() {
+            mockGameProcess();
+            stubForAdminUser(wireMockServer);
+            HttpHeaders httpHeaders = newAuthHeader(1);
+
+            given()
+                    .headers(httpHeaders)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(new JSONObject().put("action", "start").toString())
+                    .post("/game-api/game/process")
+                    .then().assertThat()
+                    .statusCode(200);
+
+            outputAsServerProcess(SERVER_START_LOG_QUIET);
+            outputAsServerProcess(SERVER_START_LOG);
+            assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newSession(newWebSocketAuthHeaders(httpHeaders), sessionHandler);
+            session.subscribe("/user/queue/reply", sessionHandler);
+            session.subscribe("/topic/game", sessionHandler);
+
+            TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(receivedFrame).isNotNull();
+            GameMessage receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
+            assertThat(receivedMsg.getSrc()).isEqualTo(GameMessage.Source.SERVER);
+            assertThat(receivedMsg.getTyp()).isEqualTo(GameMessage.Type.HISTORY);
+
+            String[] inputHistory = receivedMsg.getData().split("\n");
+            assertThat(inputHistory[0]).isEqualTo(SERVER_START_LOG_QUIET);
+            assertThat(inputHistory[1]).isEqualTo(SERVER_START_LOG);
+
+            stop(session);
+        }
+
+        @SneakyThrows
+        @RepeatedTest(value = 3, failureThreshold = 1)
+        void testSubscribeToGameAfterGameIsUp_andSendMessage_thenHistoryReceivedFirstAndSentMessageLast() {
+            mockGameProcess();
+
+            stubForAdminUser(wireMockServer);
+            HttpHeaders httpHeaders = newAuthHeader(1);
+            WebSocketHttpHeaders webSocketHttpHeaders = newWebSocketAuthHeaders(httpHeaders);
+
+            given()
+                    .headers(httpHeaders)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(new JSONObject().put("action", "start").toString())
+                    .post("/game-api/game/process")
+                    .then().assertThat()
+                    .statusCode(200);
+
+            outputAsServerProcess(SERVER_START_LOG);
+            assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newSession(webSocketHttpHeaders, sessionHandler);
+            session.subscribe("/user/queue/reply", sessionHandler);
+            session.subscribe("/topic/game", sessionHandler);
+
+            TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS); // Poll the history message
+            assertThat(receivedFrame).isNotNull();
+            assertThat(receivedFrame.getPayloadAs(GameMessage.class).getTyp()).isEqualTo(GameMessage.Type.HISTORY);
+
+            GameMessage msg = GameMessage.builder().data("/weather clear").build();
+            session.send("/app/game", msg);
+
+            receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(receivedFrame).isNotNull();
+            GameMessage receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
+            assertThat(receivedMsg).isNotNull();
+            assertThat(receivedMsg.getSrc()).isEqualTo(GameMessage.Source.GAME);
+            assertThat(receivedMsg.getData()).isEqualTo("/weather clear");
+
+            stop(session);
+        }
+
+        @SneakyThrows
+        @Test // If ran more than once we will receive the old history which is expected behaviour
+        void testSubscribeToGameBeforeGameIsUp_andSendMessage_thenEmptyHistoryReceivedFirst() {
+            mockGameProcess();
+
+            stubForAdminUser(wireMockServer);
+            HttpHeaders httpHeaders = newAuthHeader(1);
+            WebSocketHttpHeaders webSocketHttpHeaders = newWebSocketAuthHeaders(httpHeaders);
+
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newSession(webSocketHttpHeaders, sessionHandler);
+            session.subscribe("/user/queue/reply", sessionHandler);
+            session.subscribe("/topic/game", sessionHandler);
+
+            given()
+                    .headers(httpHeaders)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(new JSONObject().put("action", "start").toString())
+                    .post("/game-api/game/process")
+                    .then().assertThat()
+                    .statusCode(200);
+
+            outputAsServerProcess(SERVER_START_LOG);
+            assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+            TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS); // Poll the history message
+            assertThat(receivedFrame).isNotNull();
+            GameMessage receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
+            assertThat(receivedMsg.getTyp()).isEqualTo(GameMessage.Type.HISTORY);
+            assertThat(receivedMsg.getData()).isEmpty();
+
+            GameMessage msg = GameMessage.builder().data("/weather clear").build();
+            session.send("/app/game", msg);
+
+            receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(receivedFrame).isNotNull();
+            receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
+            assertThat(receivedMsg).isNotNull();
+            assertThat(receivedMsg.getSrc()).isEqualTo(GameMessage.Source.GAME);
+            assertThat(receivedMsg.getData()).isEqualTo(SERVER_START_LOG);
+
+            receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(receivedFrame).isNotNull();
+            receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
+            assertThat(receivedMsg).isNotNull();
+            assertThat(receivedMsg.getSrc()).isEqualTo(GameMessage.Source.GAME);
+            assertThat(receivedMsg.getData()).isEqualTo("/weather clear");
+
+            stop(session);
+        }
+
+        @SneakyThrows
+        @Test
+        void testSubscribeToGameBeforeGameIsUp_andIsNotFirstStart_thenOldHistoryReceived() {
+            mockGameProcess();
+
+            stubForAdminUser(wireMockServer);
+            HttpHeaders httpHeaders = newAuthHeader(1);
+
+            // Start
+            given()
+                    .headers(httpHeaders)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(new JSONObject().put("action", "start").toString())
+                    .post("/game-api/game/process")
+                    .then().assertThat()
+                    .statusCode(200);
+
+            outputAsServerProcess(SERVER_START_LOG);
+            assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+            // Stop
+            gameProcessService.stopForcibly();
+            assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+            // Start again
+            given()
+                    .headers(httpHeaders)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(new JSONObject().put("action", "start").toString())
+                    .post("/game-api/game/process")
+                    .then().assertThat()
+                    .statusCode(200);
+
+            outputAsServerProcess(SERVER_START_LOG);
+            assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+            WebSocketHttpHeaders webSocketHttpHeaders = newWebSocketAuthHeaders(httpHeaders);
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newSession(webSocketHttpHeaders, sessionHandler);
+            session.subscribe("/user/queue/reply", sessionHandler);
+            session.subscribe("/topic/game", sessionHandler);
+
+            TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(receivedFrame).isNotNull();
+            GameMessage receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
+            assertThat(receivedMsg.getTyp()).isEqualTo(GameMessage.Type.HISTORY);
+            String[] history = receivedMsg.getData().split("\n");
+            assertThat(history[0]).isEqualTo(SERVER_START_LOG);
+            assertThat(history[1]).isEqualTo("stop");
+
+            stop(session);
+        }
     }
 
     @SneakyThrows
-    @Test
-    void givenConnectRequest_withUnknownUser_thenForbiddenResponse() {
-        stubForUserNotFound(wireMockServer, 1);
-
-        try {
-            WebSocketHttpHeaders headers = newAuthHeaders(1);
-            newStompClient().connectAsync(webSocketUri, headers, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
-        } catch (ExecutionException e) {
-            assertTrue(e.getMessage().contains("403"));
-            return;
-        }
-        fail("Expected exception but none was thrown");
-    }
-
-    @SneakyThrows
-    @Test
-    void testEcho2() {
-        stubForAdminUser(wireMockServer);
-
-        StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
-        StompSession session = newSession(1, sessionHandler);
-        assertThat(session).isNotNull();
-
-        session.subscribe("/user/queue/reply", sessionHandler);
-        session.send("/app/echo", "test");
-
-        assertThat((String) responseQueue.poll(1000, TimeUnit.MILLISECONDS)).isEqualTo("test");
-
+    void stop(StompSession session) {
         session.disconnect();
+        gameProcessService.stopForcibly();
+        assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
     }
 
     @SneakyThrows
-    StompSession newSession(int userId, StompSessionHandlerAdapter sessionHandler) {
-        return newStompClient().connectAsync(webSocketUri, newAuthHeaders(userId), sessionHandler).get(1000, TimeUnit.MILLISECONDS);
+    StompSession newSession(WebSocketHttpHeaders headers, StompSessionHandlerAdapter sessionHandler) {
+        return newStompClient().connectAsync(webSocketUri, headers, sessionHandler).get(1000, TimeUnit.MILLISECONDS);
     }
 
-    WebSocketHttpHeaders newAuthHeaders(int userId) {
+    WebSocketHttpHeaders newWebSocketAuthHeaders(int userId) {
+        return new WebSocketHttpHeaders(newAuthHeader(userId));
+    }
+
+    WebSocketHttpHeaders newWebSocketAuthHeaders(HttpHeaders headers) {
+        return new WebSocketHttpHeaders(headers);
+    }
+
+    HttpHeaders newAuthHeader(int userId) {
         HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.add(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(userId));
-        return new WebSocketHttpHeaders(httpHeaders);
+        httpHeaders.setBearerAuth(tokens.generateToken(userId));
+        return httpHeaders;
     }
 
     WebSocketStompClient newStompClient() {

@@ -8,10 +8,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -19,9 +19,14 @@ import java.util.function.Consumer;
 @Service
 @RequiredArgsConstructor
 public class GameProcessService {
-    private static final AtomicReference<GameProcessStatus> gameProcessStatus = new AtomicReference<>(GameProcessStatus.DOWN);
-    private static final List<Consumer<String>> gameProcessInputListeners = new ArrayList<>();
+    // This is static so old listeners are kept, and we don't have to resubscribe the WS controller again.
+    private static final List<Consumer<String>> GAME_PROCESS_INPUT_LISTENERS = new ArrayList<>();
     private static final GameProcessLogger GAME_PROCESS_LOGGER = new GameProcessLogger();
+
+    private final AtomicReference<GameProcessStatus> gameProcessStatus = new AtomicReference<>(GameProcessStatus.DOWN);
+    private final BlockingQueue<String> outputQueue = new LinkedBlockingQueue<>();
+    // todo this needs to be a queue that evicts entries once max size reached - or redis
+    private final List<String> inputList = Collections.synchronizedList(new ArrayList<>());
 
     private final GameProperties gameProperties;
     private final ProcessFactory processFactory;
@@ -43,10 +48,13 @@ public class GameProcessService {
             // Path is validated actively instead of service start up so newly
             // downloaded server files are accounted for.
             result = false;
-            log.info("Cannot start - invalid game file path");
+            log.info("Cannot start - invalid game file path '{}'", gameProperties.getFile());
         }
-        if (result)
+        if (result) {
+            outputQueue.clear(); // todo test for this
             gameProcessStatus.set(GameProcessStatus.STARTING);
+            log.info("Successfully initialized for start");
+        }
         return result;
     }
 
@@ -71,17 +79,21 @@ public class GameProcessService {
      */
     @Async("threadPoolTaskExecutor")
     public void startAsync() {
+        log.info("Starting game process...");
+
         var fileProperties = gameProperties.getFile();
 
         GameProcess.GameProcessHooks hooks = GameProcess.GameProcessHooks.builder()
-                .onProcessStarted(() -> gameProcessStatus.set(GameProcessStatus.STARTING))
-                .onGameStarted(() -> gameProcessStatus.set(GameProcessStatus.UP))
-                .onGameExited(() -> gameProcessStatus.set(GameProcessStatus.STOPPING))
-                .onProcessExited(() -> gameProcessStatus.set(GameProcessStatus.DOWN))
+                .onProcessStarted(() -> setStatusAndLog(GameProcessStatus.STARTING))
+                .onGameStarted(() -> setStatusAndLog(GameProcessStatus.UP))
+                .onGameExited(() -> setStatusAndLog(GameProcessStatus.STOPPING))
+                .onProcessExited(() -> setStatusAndLog(GameProcessStatus.DOWN))
                 .onInput(input -> {
                     GAME_PROCESS_LOGGER.log(input);
-                    gameProcessInputListeners.forEach(listener ->
+                    inputList.add(input);
+                    GAME_PROCESS_INPUT_LISTENERS.forEach(listener ->
                             // Publish to listeners asynchronously to be safe
+                            // todo may mess up the ordering, use another thread maybe
                             CompletableFuture.runAsync(() -> {
                                 log.debug("Publishing game process input to listener");
                                 listener.accept(input);
@@ -91,7 +103,7 @@ public class GameProcessService {
         gameProcess = processFactory.newGameProcess(
                 fileProperties.getStartCommand(),
                 fileProperties.getPathToJarFileDirectory(),
-                hooks);
+                hooks, outputQueue);
         try {
             gameProcess.start();
         } catch (InterruptedException e) {
@@ -125,7 +137,7 @@ public class GameProcessService {
         try {
             Duration stopTimeout = gameProperties.getProcess().getStopTimeout();
             if (gameProcess.stopForcibly(stopTimeout.toMillis())) {
-                log.info("Process forceful stop success");
+                log.info("Process forceful stop success, status={}", getGameProcessStatus());
             } else {
                 log.error("Process forceful stop failure - time out");
             }
@@ -139,8 +151,25 @@ public class GameProcessService {
         return gameProcessStatus.get().getValue();
     }
 
+    public BlockingQueue<String> getOutputQueue() {
+        return outputQueue;
+    }
+
+    /**
+     * @return An unmodifiable copy of the underlying input history
+     * list. See {@link Collections#synchronizedList(List)}.
+     */
+    public List<String> copyInputList() {
+        List<String> copy;
+        synchronized (inputList) {
+            copy = Collections.unmodifiableList(inputList);
+        }
+        log.debug("Input history list copied");
+        return copy;
+    }
+
     public void registerInputListener(Consumer<String> listener) {
-        gameProcessInputListeners.add(listener);
+        GAME_PROCESS_INPUT_LISTENERS.add(listener);
     }
 
     public enum GameProcessStatus {
@@ -158,5 +187,10 @@ public class GameProcessService {
         public String getValue() {
             return value.toLowerCase(Locale.ROOT);
         }
+    }
+
+    private void setStatusAndLog(GameProcessStatus newStatus) {
+        gameProcessStatus.set(newStatus);
+        log.info("Set game process status={}", gameProcessStatus.get());
     }
 }

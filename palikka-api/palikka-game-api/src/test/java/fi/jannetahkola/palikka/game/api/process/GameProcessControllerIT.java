@@ -34,10 +34,7 @@ import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForAdminUser;
@@ -52,6 +49,7 @@ import static org.mockito.Mockito.when;
  * Tests the asynchronous lifecycle control actions. Depending on the host, test timeout may need to be increased.
  * Remember to stop the game process before each test!
  */
+// todo inherit WireMockGameProcessTest
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class GameProcessControllerIT extends WireMockTest {
@@ -375,7 +373,7 @@ class GameProcessControllerIT extends WireMockTest {
             processExitLatch = new CountDownLatch(1);
             gameStartLatch = new CountDownLatch(1);
 
-            when(processFactory.newGameProcess(any(), any(), any())).thenAnswer(invocationOnMock -> {
+            when(processFactory.newGameProcess(any(), any(), any(), any())).thenAnswer(invocationOnMock -> {
                 GameProcess.GameProcessHooks hooks =
                         invocationOnMock.getArgument(2, GameProcess.GameProcessHooks.class);
                 Runnable onProcessStarted = hooks.getOnProcessStarted()
@@ -415,7 +413,7 @@ class GameProcessControllerIT extends WireMockTest {
                         .onGameStarted(onGameStarted)
                         .onInput(onInput)
                         .build();
-                return new GameProcess(() -> mockProcess, newHooks);
+                return new GameProcess(() -> mockProcess, newHooks, gameProcessService.getOutputQueue());
             });
 
             when(pathValidator.validatePathExistsAndIsAFile(any())).thenReturn(true);

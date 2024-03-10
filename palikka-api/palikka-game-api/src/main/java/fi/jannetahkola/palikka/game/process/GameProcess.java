@@ -9,8 +9,7 @@ import lombok.NonNull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -18,10 +17,10 @@ import java.util.function.Consumer;
 @Slf4j
 public class GameProcess {
     private static final ExecutorService IO_EXECUTOR = Executors.newFixedThreadPool(3);
-    private static final BlockingQueue<String> OUTPUT_QUEUE = new LinkedBlockingQueue<>();
 
     private final GameProcessExecutable executable;
     private final GameProcessHooks hooks;
+    private final BlockingQueue<String> outputQueue;
     private final AtomicReference<Status> status = new AtomicReference<>(Status.INACTIVE);
 
     private Process process;
@@ -33,9 +32,11 @@ public class GameProcess {
     private boolean processStarted = false;
 
     public GameProcess(@NonNull GameProcessExecutable executable,
-                       @NonNull GameProcessHooks hooks) {
+                       @NonNull GameProcessHooks hooks,
+                       @NonNull BlockingQueue<String> outputQueue) {
         this.executable = executable;
         this.hooks = hooks;
+        this.outputQueue = outputQueue;
     }
 
     public void start() throws InterruptedException {
@@ -43,7 +44,7 @@ public class GameProcess {
             throw new GameProcessAlreadyActiveException("Failed to start - game process already active");
         }
 
-        status.set(Status.ACTIVE);
+        setStatusAndLog(Status.ACTIVE);
 
         Thread processThread = new Thread(() -> {
             log.info("Game process start (1)");
@@ -68,7 +69,7 @@ public class GameProcess {
                     Thread.currentThread().interrupt();
                 }
 
-                status.set(Status.INACTIVE);
+                setStatusAndLog(Status.INACTIVE);
                 hooks.getOnProcessExited().ifPresent(Runnable::run);
                 log.info("Game process exit (2)");
             });
@@ -84,7 +85,7 @@ public class GameProcess {
     public boolean stop(long timeoutInMillis) throws InterruptedException {
         log.info("Stopping game process gracefully with timeout of {} ms", timeoutInMillis);
         if (isActive()) {
-            OUTPUT_QUEUE.add("stop");
+            outputQueue.add("stop");
             return process.waitFor(timeoutInMillis, TimeUnit.MILLISECONDS);
         }
         log.info("Game process already stopped");
@@ -161,6 +162,11 @@ public class GameProcess {
         }
     }
 
+    private void setStatusAndLog(Status newStatus) {
+        status.set(newStatus);
+        log.info("Set process status={}", status.get());
+    }
+
     private List<? extends Future<?>> startIOTasks() {
         return AsyncTaskSubmitter.submitAll(IO_EXECUTOR, List.of(
                 new InputListenerTask(process.getInputStream(), input -> {
@@ -181,7 +187,7 @@ public class GameProcess {
 //                        gameProcessExitDetected = true;
 //                    }
                 }),
-                new OutputWriterTask(process.getOutputStream(), OUTPUT_QUEUE,
+                new OutputWriterTask(process.getOutputStream(), outputQueue,
                         input -> hooks.getOnInput().ifPresent(onInputHook -> onInputHook.accept(input)))
         ));
     }
