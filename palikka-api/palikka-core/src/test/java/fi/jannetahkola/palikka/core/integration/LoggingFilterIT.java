@@ -1,6 +1,6 @@
 package fi.jannetahkola.palikka.core.integration;
 
-import fi.jannetahkola.palikka.core.config.meta.EnableRequestAndResponseLogging;
+import fi.jannetahkola.palikka.core.config.meta.EnableRequestAndResponseLoggingSupport;
 import lombok.Data;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
@@ -25,7 +25,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+        properties = {
+                "palikka.request-and-response-logging.enabled=true"
+        }
+)
 @ExtendWith(OutputCaptureExtension.class)
 @AutoConfigureMockMvc
 class LoggingFilterIT {
@@ -64,7 +69,7 @@ class LoggingFilterIT {
                 // Disable security
                 org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class})
         @Configuration
-        @EnableRequestAndResponseLogging
+        @EnableRequestAndResponseLoggingSupport
         static class TestApplicationConfiguration {
         }
 

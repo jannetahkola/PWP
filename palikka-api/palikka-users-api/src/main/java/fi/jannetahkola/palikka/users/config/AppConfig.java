@@ -2,6 +2,7 @@ package fi.jannetahkola.palikka.users.config;
 
 import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilterConfigurer;
 import fi.jannetahkola.palikka.core.config.meta.EnableAuthenticationSupport;
+import fi.jannetahkola.palikka.core.config.meta.EnableRequestAndResponseLoggingSupport;
 import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import fi.jannetahkola.palikka.users.LocalUsersClient;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
@@ -22,6 +23,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 @EnableMethodSecurity
 @EnableAuthenticationSupport
+@EnableRequestAndResponseLoggingSupport
 public class AppConfig {
     @SneakyThrows
     @Bean

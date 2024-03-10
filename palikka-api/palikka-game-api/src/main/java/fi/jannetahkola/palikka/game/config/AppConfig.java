@@ -4,6 +4,7 @@ import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilterConfigurer;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.config.meta.EnableAuthenticationSupport;
 import fi.jannetahkola.palikka.core.config.meta.EnableRemoteUsersIntegration;
+import fi.jannetahkola.palikka.core.config.meta.EnableRequestAndResponseLoggingSupport;
 import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import fi.jannetahkola.palikka.game.config.properties.GameServerProperties;
 import fi.jannetahkola.palikka.game.service.ProcessFactory;
@@ -34,6 +35,7 @@ import java.util.concurrent.Executor;
 @EnableMethodSecurity
 @EnableAuthenticationSupport
 @EnableRemoteUsersIntegration
+@EnableRequestAndResponseLoggingSupport
 @Import(GameServerProperties.class)
 public class AppConfig {
 

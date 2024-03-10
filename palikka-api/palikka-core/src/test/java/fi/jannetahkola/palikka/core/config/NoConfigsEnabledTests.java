@@ -4,6 +4,7 @@ import fi.jannetahkola.palikka.core.LoggingFilter;
 import fi.jannetahkola.palikka.core.api.exception.DefaultApiExceptionHandler;
 import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilterConfigurer;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
+import fi.jannetahkola.palikka.core.config.meta.EnableRequestAndResponseLoggingSupport;
 import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -14,6 +15,7 @@ import org.springframework.context.ApplicationContext;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@EnableRequestAndResponseLoggingSupport // Should not be enabled unless property is set
 class NoConfigsEnabledTests {
     @Autowired
     ApplicationContext context;
