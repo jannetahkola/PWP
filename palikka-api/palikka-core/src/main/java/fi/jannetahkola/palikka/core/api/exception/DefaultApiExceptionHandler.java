@@ -8,6 +8,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,6 +36,14 @@ public class DefaultApiExceptionHandler {
         log.info("Access denied exception occurred", e); // TODO Check log levels
         return ApiErrorModel
                 .forbidden(e)
+                .toResponse();
+    }
+
+    @ExceptionHandler
+    public ResponseEntity<ApiErrorModel> noResourceFoundException(NoResourceFoundException e) {
+        log.debug("No resource found exception occurred", e);
+        return ApiErrorModel
+                .notFound(e)
                 .toResponse();
     }
 

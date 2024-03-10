@@ -37,7 +37,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+        properties = {
+                "logging.level.fi.jannetahkola.palikka.core.api.exception.DefaultApiExceptionHandler=debug"
+        })
 @ExtendWith(OutputCaptureExtension.class)
 @AutoConfigureMockMvc
 class DefaultApiExceptionHandlerIT {
@@ -65,6 +69,16 @@ class DefaultApiExceptionHandlerIT {
                 .andExpect(status().is(404));
         verify(exceptionHandlerMock, times(1)).notFoundException(any());
         assertThat(capturedOutput).contains("Not found exception occurred");
+    }
+
+    @SneakyThrows
+    @Test
+    void testNoResourceFound(CapturedOutput capturedOutput) {
+        when(exceptionHandlerMock.noResourceFoundException(any())).thenCallRealMethod();
+        mockMvc.perform(get("/unknown"))
+                .andExpect(status().is(404));
+        verify(exceptionHandlerMock, times(1)).noResourceFoundException(any());
+        assertThat(capturedOutput).contains("No resource found exception occurred");
     }
 
     @SneakyThrows
