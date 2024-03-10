@@ -15,7 +15,7 @@ import java.nio.file.Paths;
 
 @Slf4j
 @Service
-public class GameServerFileProcessor {
+public class GameFileProcessor {
     private static final String EULA_FILE_NAME = "eula.txt";
 
     public void downloadFile(URI downloadUri, File toFile) throws IOException {

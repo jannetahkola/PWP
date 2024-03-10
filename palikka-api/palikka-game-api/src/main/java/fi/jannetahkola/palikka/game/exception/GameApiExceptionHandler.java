@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @EnableDefaultApiExceptionHandling
 public class GameApiExceptionHandler {
     @ExceptionHandler
-    public ResponseEntity<ApiErrorModel> gameServerProcessStartException(GameServerProcessStartException e) {
+    public ResponseEntity<ApiErrorModel> gameProcessStartException(GameProcessStartException e) {
         log.info("", e);
         return ApiErrorModel
                 .badRequest(e)

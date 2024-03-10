@@ -26,11 +26,19 @@ palikka:
     users-api:
       base-uri: http://palikka-users-api:8080
   game:
-    server:
+    file:
+      name: server.jar
+      path: /app # todo directory structure needs to exist currently, change?
+      start-command: java -jar server.jar # todo omit name?
+    process:
+      stop-timeout: 10s
+    status:
       host: 172.25.16.1
       port: 25565
-      file:
-        name: server.jar
-        path: /app # todo directory structure needs to exist currently, change?
-        start-command: java -jar server.jar # todo omit name?
-      stop-timeout-in-millis: 10000
+# todo delete these - debugging only
+logging:
+  level:
+    fi.jannetahkola.palikka: debug
+    org.springframework.security: debug
+    org.springframework.test.context.jdbc: debug # which sql scripts are executed
+    org.springframework.jdbc.datasource.init: debug # which sql statements are executed

@@ -12,7 +12,7 @@ import java.util.Locale;
 @Data
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class GameServerProcessControlRequest {
+public class GameProcessControlRequest {
     @NotNull
     Action action;
 

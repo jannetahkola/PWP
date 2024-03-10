@@ -20,12 +20,5 @@ palikka:
           key-alias: jwt-usr
           key-pass: password
           validity-time: 10s
-  game:
-    server:
-      host: test.com
-      port: 25565
-      file:
-        name: server.jar
-        path: /home/minecraft/minecraft
   test:
     timeout-in-millis: 2000

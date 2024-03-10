@@ -6,7 +6,7 @@ import fi.jannetahkola.palikka.core.config.meta.EnableAuthenticationSupport;
 import fi.jannetahkola.palikka.core.config.meta.EnableRemoteUsersIntegration;
 import fi.jannetahkola.palikka.core.config.meta.EnableRequestAndResponseLoggingSupport;
 import fi.jannetahkola.palikka.core.integration.users.UsersClient;
-import fi.jannetahkola.palikka.game.config.properties.GameServerProperties;
+import fi.jannetahkola.palikka.game.config.properties.GameProperties;
 import fi.jannetahkola.palikka.game.service.ProcessFactory;
 import fi.jannetahkola.palikka.game.service.SocketFactory;
 import fi.jannetahkola.palikka.game.websocket.GameControllerHandshakeHandler;
@@ -36,7 +36,7 @@ import java.util.concurrent.Executor;
 @EnableAuthenticationSupport
 @EnableRemoteUsersIntegration
 @EnableRequestAndResponseLoggingSupport
-@Import(GameServerProperties.class)
+@Import(GameProperties.class)
 public class AppConfig {
 
     @SneakyThrows

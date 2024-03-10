@@ -5,7 +5,7 @@ import lombok.experimental.UtilityClass;
 import java.util.regex.Pattern;
 
 /**
- * Regexes for the various logs that the game server process outputs.
+ * Regexes for the various logs that the game process outputs.
  */
 @UtilityClass
 public class GameProcessPatterns {

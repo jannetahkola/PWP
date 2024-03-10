@@ -1,7 +1,7 @@
 package fi.jannetahkola.palikka.game.api.status;
 
 import fi.jannetahkola.palikka.game.api.status.model.GameStatusResponse;
-import fi.jannetahkola.palikka.game.config.properties.GameServerProperties;
+import fi.jannetahkola.palikka.game.config.properties.GameProperties;
 import fi.jannetahkola.palikka.game.service.SocketFactory;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
@@ -41,10 +41,12 @@ class GameStatusControllerTests {
         SocketFactory socketFactoryMock = mock(SocketFactory.class);
         when(socketFactoryMock.newSocket()).thenReturn(socketMock);
 
-        GameServerProperties gameServerProperties = new GameServerProperties();
-        gameServerProperties.setHost("127.0.0.1");
-        gameServerProperties.setPort(25565);
-        GameStatusController controller = new GameStatusController(gameServerProperties, socketFactoryMock);
+        GameProperties.StatusProperties statusProperties = new GameProperties.StatusProperties();
+        statusProperties.setHost("127.0.0.1");
+        statusProperties.setPort(25565);
+        GameProperties gameProperties = new GameProperties();
+        gameProperties.setStatus(statusProperties);
+        GameStatusController controller = new GameStatusController(gameProperties, socketFactoryMock);
 
         byte[] responseLengthVarIntBytes = {-116, 1}; // result 140
         out.write(responseLengthVarIntBytes);
@@ -74,10 +76,12 @@ class GameStatusControllerTests {
         SocketFactory socketFactoryMock = mock(SocketFactory.class);
         when(socketFactoryMock.newSocket()).thenReturn(socketMock);
 
-        GameServerProperties gameServerProperties = new GameServerProperties();
-        gameServerProperties.setHost("127.0.0.1");
-        gameServerProperties.setPort(25565);
-        GameStatusController controller = new GameStatusController(gameServerProperties, socketFactoryMock);
+        GameProperties.StatusProperties statusProperties = new GameProperties.StatusProperties();
+        statusProperties.setHost("127.0.0.1");
+        statusProperties.setPort(25565);
+        GameProperties gameProperties = new GameProperties();
+        gameProperties.setStatus(statusProperties);
+        GameStatusController controller = new GameStatusController(gameProperties, socketFactoryMock);
         GameStatusResponse gameStatus = controller.getGameStatus();
         assertThat(gameStatus).isNotNull();
         assertThat(gameStatus.isOnline()).isFalse();

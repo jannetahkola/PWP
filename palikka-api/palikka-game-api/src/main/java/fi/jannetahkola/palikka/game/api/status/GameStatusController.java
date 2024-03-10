@@ -2,7 +2,7 @@ package fi.jannetahkola.palikka.game.api.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fi.jannetahkola.palikka.game.api.status.model.GameStatusResponse;
-import fi.jannetahkola.palikka.game.config.properties.GameServerProperties;
+import fi.jannetahkola.palikka.game.config.properties.GameProperties;
 import fi.jannetahkola.palikka.game.service.PacketService;
 import fi.jannetahkola.palikka.game.util.VarIntUtil;
 import fi.jannetahkola.palikka.game.service.SocketFactory;
@@ -26,13 +26,14 @@ import java.nio.ByteBuffer;
 @RequestMapping("/game-api/game/status")
 @RequiredArgsConstructor
 public class GameStatusController {
-    private final GameServerProperties properties;
+    private final GameProperties properties;
     private final SocketFactory socketFactory;
 
     @GetMapping
     public GameStatusResponse getGameStatus() {
-        String host = properties.getHost();
-        int port = properties.getPort();
+        GameProperties.StatusProperties statusProperties = properties.getStatus();
+        String host = statusProperties.getHost();
+        int port = statusProperties.getPort();
 
         GameStatusResponse status = new GameStatusResponse();
         try (Socket socket = socketFactory.newSocket()) {
@@ -41,7 +42,7 @@ public class GameStatusController {
             final DataInputStream in = new DataInputStream(socket.getInputStream());
             PacketService.Packet handshakePacket = new PacketService().newHandshakePacket(host, port);
             out.write(handshakePacket.getBytes());
-            status = readGameServerStatusFromStream(in);
+            status = readGameStatusFromStream(in);
         } catch (IOException e) {
             log.warn("Failed to get server status", e);
             status.setOnline(false);
@@ -51,7 +52,7 @@ public class GameStatusController {
         return status;
     }
 
-    private static GameStatusResponse readGameServerStatusFromStream(DataInputStream in) throws IOException {
+    private static GameStatusResponse readGameStatusFromStream(DataInputStream in) throws IOException {
         log.debug("Reading server status from stream");
         VarIntUtil.read(in); // Response length (not used)
         final int responsePacketId = VarIntUtil.read(in); // Packet id
