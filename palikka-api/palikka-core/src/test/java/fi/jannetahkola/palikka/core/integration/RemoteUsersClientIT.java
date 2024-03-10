@@ -2,7 +2,6 @@ package fi.jannetahkola.palikka.core.integration;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import fi.jannetahkola.palikka.core.TestSpringBootConfig;
-import fi.jannetahkola.palikka.core.config.UsersIntegrationConfig;
 import fi.jannetahkola.palikka.core.config.meta.EnableRemoteUsersIntegration;
 import fi.jannetahkola.palikka.core.integration.users.RemoteUsersClient;
 import fi.jannetahkola.palikka.core.integration.users.User;
@@ -13,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
@@ -61,7 +59,7 @@ class RemoteUsersClientIT {
     @Test
     void givenGetUserRequest_thenOkResponse() {
         wireMockServer.stubFor(
-                get(urlMatching("/users-api/users-api/users/1"))
+                get(urlMatching("/users-api/users/1"))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -79,7 +77,7 @@ class RemoteUsersClientIT {
     @Test
     void givenGetUserRequest_thenNotFoundResponse(CapturedOutput capturedOutput) {
         wireMockServer.stubFor(
-                get(urlMatching("/users-api/users-api/users/1"))
+                get(urlMatching("/users-api/users/1"))
                         .willReturn(
                                 aResponse()
                                         .withStatus(404)
@@ -88,13 +86,13 @@ class RemoteUsersClientIT {
         assertThat(usersClient.getUser(1)).isNull();
         assertThat(capturedOutput.getAll()).contains(
                 "Request 'GET http://localhost:" + wireMockServer.getPort()
-                        + "/users-api/users-api/users/1' failed on exception. Status=404 NOT_FOUND");
+                        + "/users-api/users/1' failed on exception. Status=404 NOT_FOUND");
     }
 
     @Test
     void givenGetUserRequest_whenInvalidResponseBody_thenError(CapturedOutput capturedOutput) {
         wireMockServer.stubFor(
-                get(urlMatching("/users-api/users-api/users/1"))
+                get(urlMatching("/users-api/users/1"))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -104,6 +102,6 @@ class RemoteUsersClientIT {
         assertThat(user).isNull();
         assertThat(capturedOutput.getAll()).contains(
                 "Request 'GET http://localhost:" + wireMockServer.getPort()
-                        + "/users-api/users-api/users/1' failed on invalid response.");
+                        + "/users-api/users/1' failed on invalid response.");
     }
 }

@@ -35,7 +35,7 @@ public class RemoteUsersClient implements UsersClient {
     @Override
     public User getUser(Integer userId) {
         RestTemplate restTemplate = new RestTemplate();
-        URI uri = properties.getBaseUri().resolve("/users-api/users-api/users/" + userId);
+        URI uri = properties.getBaseUri().resolve("/users-api/users/" + userId);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
