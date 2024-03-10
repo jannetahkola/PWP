@@ -29,14 +29,23 @@ class UserControllerIT extends IntegrationTest {
     @Nested
     class ResourceSecurityIT {
         @Test
+        void givenGetUserRequest_whenSystemToken_thenOkResponse() {
+            given()
+                    .header(newSystemToken())
+                    .get("/users-api/users/" + USER_ID_ADMIN)
+                    .then().assertThat()
+                    .statusCode(200);
+        }
+
+        @Test
         void givenGetUserRequest_whenNoTokenOrRole_thenForbiddenResponse() {
             given()
-                    .get("/users/" + USER_ID_ADMIN)
+                    .get("/users-api/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newUserToken())
-                    .get("/users/" + USER_ID_ADMIN)
+                    .get("/users-api/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -45,7 +54,7 @@ class UserControllerIT extends IntegrationTest {
         void givenGetUserRequest_whenNoRoleButRequestedForSelf_thenOkResponse() {
             given()
                     .header(newUserToken())
-                    .get("/users/" + USER_ID_USER)
+                    .get("/users-api/users/" + USER_ID_USER)
                     .then().assertThat()
                     .statusCode(200);
         }
@@ -53,12 +62,12 @@ class UserControllerIT extends IntegrationTest {
         @Test
         void givenGetUsersRequest_whenNoTokenOrRole_thenForbiddenResponse() {
             given()
-                    .get("/users")
+                    .get("/users-api/users")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newUserToken())
-                    .get("/users")
+                    .get("/users-api/users")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -74,14 +83,21 @@ class UserControllerIT extends IntegrationTest {
             given()
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .post("/users")
+                    .post("/users-api/users")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newUserToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .post("/users")
+                    .post("/users-api/users")
+                    .then().assertThat()
+                    .statusCode(403);
+            given() // TODO add this to the other test too -> parameterized tests?
+                    .header(newSystemToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .post("/users-api/users")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -97,14 +113,14 @@ class UserControllerIT extends IntegrationTest {
             given()
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .put("/users/" + USER_ID_ADMIN)
+                    .put("/users-api/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newUserToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .put("/users/" + USER_ID_ADMIN)
+                    .put("/users-api/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -120,7 +136,7 @@ class UserControllerIT extends IntegrationTest {
                     .header(newUserToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .put("/users/" + USER_ID_USER)
+                    .put("/users-api/users/" + USER_ID_USER)
                     .then().assertThat()
                     .statusCode(202)
                     .body("username", equalTo("mock-user-3"))
@@ -134,7 +150,7 @@ class UserControllerIT extends IntegrationTest {
         void givenGetUserRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
-                    .get("/users/" + USER_ID_ADMIN)
+                    .get("/users-api/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(200)
                     .body("id", equalTo(1))
@@ -143,15 +159,15 @@ class UserControllerIT extends IntegrationTest {
                     .body("active", equalTo(true))
                     .body("roles", hasSize(1))
                     .body("roles", contains("ROLE_ADMIN"))
-                    .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN))
-                    .body("_links.roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));
+                    .body("_links.self.href", endsWith("/users-api/users/" + USER_ID_ADMIN))
+                    .body("_links.roles.href", endsWith("/users-api/users/" + USER_ID_ADMIN + "/roles"));
         }
 
         @Test
         void givenGetUserRequest_whenUserNotFound_thenNotFoundResponse() {
             given()
                     .header(newAdminToken())
-                    .get("/users/9999")
+                    .get("/users-api/users/9999")
                     .then().assertThat()
                     .statusCode(404)
                     .body("message", equalTo("User with id '9999' not found"));
@@ -161,7 +177,7 @@ class UserControllerIT extends IntegrationTest {
         void givenGetUsersRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
-                    .get("/users")
+                    .get("/users-api/users")
                     .then().assertThat()
                     .statusCode(200)
                     .body("_embedded.users", hasSize(2))
@@ -182,16 +198,16 @@ class UserControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .post("/users")
+                    .post("/users-api/users")
                     .then().assertThat()
                     .statusCode(201)
-                    .header(HttpHeaders.LOCATION, endsWith("/users/3"))
+                    .header(HttpHeaders.LOCATION, endsWith("/users-api/users/3"))
                     .body("id", equalTo(3))
                     .body("username", equalTo("mock-user-3"))
                     .body("password", nullValue())
                     .body("salt", nullValue())
                     .body("active", equalTo(true))
-                    .body("_links.self.href", endsWith("/users/3"));
+                    .body("_links.self.href", endsWith("/users-api/users/3"));
 
             UserEntity createdUser = userRepository.findById(3).orElseThrow();
             String salt = createdUser.getSalt();
@@ -207,7 +223,7 @@ class UserControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/users")
+                    .post("/users-api/users")
                     .then().assertThat()
                     .statusCode(400)
                     .body("message", containsString(expectedMessageSubstring));
@@ -226,7 +242,7 @@ class UserControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .post("/users")
+                    .post("/users-api/users")
                     .then().assertThat()
                     .statusCode(409)
                     .body("message", equalTo("User with username 'mock-user' already exists"));
@@ -244,7 +260,7 @@ class UserControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .put("/users/" + USER_ID_ADMIN)
+                    .put("/users-api/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(202)
                     .body("username", equalTo("mock-user-3"))
@@ -269,7 +285,7 @@ class UserControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .put("/users/9999")
+                    .put("/users-api/users/9999")
                     .then().assertThat()
                     .statusCode(404)
                     .body("message", equalTo("User with id '9999' not found"));
@@ -291,7 +307,7 @@ class UserControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .put("/users/" + USER_ID_ADMIN)
+                    .put("/users-api/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(409)
                     .body("message", equalTo("User with username 'mock-user-2' already exists"));

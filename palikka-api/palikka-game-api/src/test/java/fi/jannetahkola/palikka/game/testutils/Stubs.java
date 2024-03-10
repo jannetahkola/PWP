@@ -15,7 +15,7 @@ public class Stubs {
 
     public static void stubForAdminUser(WireMockExtension wireMockServer) {
         wireMockServer.stubFor(
-                get(urlMatching("/users/1"))
+                get(urlMatching("/users-api/users-api/users/1"))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -25,7 +25,7 @@ public class Stubs {
 
     public static void stubForNormalUser(WireMockExtension wireMockServer) {
         wireMockServer.stubFor(
-                get(urlMatching("/users/2"))
+                get(urlMatching("/users-api/users-api/users/2"))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -35,7 +35,7 @@ public class Stubs {
 
     public static void stubForUserNotFound(WireMockExtension wireMockServer, int userId) {
         wireMockServer.stubFor(
-                get(urlMatching("/users/" + userId))
+                get(urlMatching("/users-api/users-api/users/" + userId))
                         .willReturn(
                                 aResponse()
                                         .withStatus(HttpStatus.NOT_FOUND.value())

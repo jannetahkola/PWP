@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/server/process") // TODO Change the other controller to /server/file
+@RequestMapping("/game-api/game/process")
 @Validated
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasRole('ROLE_ADMIN')")
 public class GameServerProcessController {
     private final GameServerProcessService gameServerProcessService;
 

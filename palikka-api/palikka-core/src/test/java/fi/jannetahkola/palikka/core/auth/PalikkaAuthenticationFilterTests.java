@@ -155,4 +155,30 @@ class PalikkaAuthenticationFilterTests {
             assertThat(authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList()).contains("USERS_ALL");
         }
     }
+
+    @SneakyThrows
+    @Test
+    void testValidTokenWithSystemUser() {
+        var filter = new PalikkaAuthenticationFilter(jwtService, usersClient);
+
+        when(jwtService.parse(any())).thenReturn(Optional.of(new JWTClaimsSet.Builder().build()));
+
+        try (MockedStatic<SecurityContextHolder> securityContextMock = Mockito.mockStatic(SecurityContextHolder.class)) {
+            securityContextMock.when(SecurityContextHolder::getContext).thenReturn(new SecurityContextImpl());
+
+            MockHttpServletRequest req = new MockHttpServletRequest();
+            MockHttpServletResponse res = new MockHttpServletResponse();
+            MockFilterChain chain = new MockFilterChain();
+
+            req.addHeader(HttpHeaders.AUTHORIZATION, "Bearer valid-token");
+            filter.doFilterInternal(req, res, chain);
+
+            verify(jwtService, times(1)).parse(any());
+            verify(usersClient, times(0)).getUser(any());
+            securityContextMock.verify(SecurityContextHolder::getContext, times(1));
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            assertThat(authentication.isAuthenticated()).isTrue();
+        }
+    }
 }

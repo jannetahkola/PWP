@@ -7,10 +7,10 @@
   ],
   "_links": {
     "self": {
-      "href": "http://localhost:39981/users/2"
+      "href": "http://localhost:39981/users-api/users/2"
     },
     "roles": {
-      "href": "http://localhost:39981/users/2/roles"
+      "href": "http://localhost:39981/users-api/users/2/roles"
     }
   }
 }

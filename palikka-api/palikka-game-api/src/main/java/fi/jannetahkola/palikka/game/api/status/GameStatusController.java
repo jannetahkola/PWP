@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 // TODO set custom port and don't open it on host
 @Slf4j
 @RestController
-@RequestMapping("/game/status")
+@RequestMapping("/game-api/game/status")
 @RequiredArgsConstructor
 public class GameStatusController {
     private final GameServerProperties properties;

@@ -15,13 +15,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
-                "palikka.jwt.keystore-path=dev.keystore",
-                "palikka.jwt.keystore-pass=password",
-                "palikka.jwt.keystore-type=pkcs12",
-                "palikka.jwt.token.key-alias=jwt",
-                "palikka.jwt.token.key-pass=password",
-                "palikka.jwt.token.issuer=palikka-dev",
-                "palikka.jwt.token.validity-time=10s",
+                "palikka.jwt.keystore.signing.path=keystore-dev.p12",
+                "palikka.jwt.keystore.signing.pass=password",
+                "palikka.jwt.keystore.signing.type=pkcs12",
+
+                "palikka.jwt.token.user.signing.key-alias=jwt-usr",
+                "palikka.jwt.token.user.signing.key-pass=password",
+                "palikka.jwt.token.user.signing.validity-time=10s",
+                "palikka.jwt.token.user.issuer=palikka-dev-user",
+
+                "palikka.jwt.token.system.signing.key-alias=jwt-sys",
+                "palikka.jwt.token.system.signing.key-pass=password",
+                "palikka.jwt.token.system.signing.validity-time=10s",
+                "palikka.jwt.token.system.issuer=palikka-dev-system",
+
                 "palikka.integration.users-api.base-uri=http://test/"
         }
 )

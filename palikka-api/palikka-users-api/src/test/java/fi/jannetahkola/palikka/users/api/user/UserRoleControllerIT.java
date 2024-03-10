@@ -1,6 +1,5 @@
 package fi.jannetahkola.palikka.users.api.user;
 
-
 import fi.jannetahkola.palikka.users.api.user.model.UserRolePatchModel;
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
 import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
@@ -19,12 +18,12 @@ class UserRoleControllerIT extends IntegrationTest {
         @Test
         void givenGetUserRolesRequest_whenNoTokenOrRole_thenForbiddenResponse() {
             given()
-                    .get("/users/" + USER_ID_ADMIN + "/roles")
+                    .get("/users-api/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newUserToken())
-                    .get("/users/" + USER_ID_ADMIN + "/roles")
+                    .get("/users-api/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -33,7 +32,7 @@ class UserRoleControllerIT extends IntegrationTest {
         void givenGetUserRolesRequest_whenNoRoleButRequestedForSelf_thenOkResponse() {
             given()
                     .header(newUserToken())
-                    .get("/users/" + USER_ID_USER + "/roles")
+                    .get("/users-api/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(200);
         }
@@ -53,14 +52,14 @@ class UserRoleControllerIT extends IntegrationTest {
             given()
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users/" + USER_ID_ADMIN + "/roles")
+                    .patch("/users-api/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newUserToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users/" + USER_ID_ADMIN + "/roles")
+                    .patch("/users-api/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -72,11 +71,11 @@ class UserRoleControllerIT extends IntegrationTest {
         void givenGetUserRolesRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
-                    .get("/users/" + USER_ID_ADMIN + "/roles")
+                    .get("/users-api/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(200)
                     .body("_embedded.roles", hasSize(1))
-                    .body("_links.self.href", endsWith("/users/1/roles"));
+                    .body("_links.self.href", endsWith("/users-api/users/1/roles"));
         }
 
         @Test
@@ -95,7 +94,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users/" + USER_ID_ADMIN + "/roles")
+                    .patch("/users-api/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(202)
                     .body("_embedded.roles", hasSize(1))
@@ -114,7 +113,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users/3/roles")
+                    .patch("/users-api/users/3/roles")
                     .then().assertThat()
                     .statusCode(404)
                     .body("message", equalTo("User with id '3' not found"));
@@ -132,7 +131,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users/" + USER_ID_ADMIN + "/roles")
+                    .patch("/users-api/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(202)
                     .body("_embedded.roles", hasSize(1));

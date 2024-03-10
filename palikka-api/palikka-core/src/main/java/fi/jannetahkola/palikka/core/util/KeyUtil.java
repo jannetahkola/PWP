@@ -29,19 +29,54 @@ public class KeyUtil {
         }
     }
 
-    public KeyPair loadKeyPairFromPropertiesOrError(JwtProperties properties) {
+    public KeyPair loadKeyPair(JwtProperties.KeyStoreProperties keystoreProperties,
+                               JwtProperties.TokenProperties tokenProperties) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
+        try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(keystoreProperties.getPath())) {
+            KeyStore ks = KeyStore.getInstance(keystoreProperties.getType());
+            ks.load(is, keystoreProperties.getPass().toCharArray());
+
+            Key key = ks.getKey(tokenProperties.getSigning().getKeyAlias(), tokenProperties.getSigning().getKeyPass().toCharArray());
+            PublicKey publicKey = ks.getCertificate(tokenProperties.getSigning().getKeyAlias()).getPublicKey();
+
+            return new KeyPair(publicKey, (PrivateKey) key);
+        }
+    }
+
+    public Key loadPublicKey(String keystorePath,
+                             String keystorePass,
+                             String keystoreType,
+                             String keyAlias) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException {
+        try (InputStream is = Thread.currentThread().getContextClassLoader().getResourceAsStream(keystorePath)) {
+            KeyStore ks = KeyStore.getInstance(keystoreType);
+            ks.load(is, keystorePass.toCharArray());
+            return ks.getCertificate(keyAlias).getPublicKey();
+        }
+    }
+
+    public KeyPair loadKeyPairFromPropertiesOrError(JwtProperties.KeyStoreProperties keystoreProperties,
+                                                    JwtProperties.TokenProperties tokenProperties) {
         KeyPair keyPair = null;
         try {
-            keyPair = KeyUtil.loadKeyPair(
-                    properties.getKeystorePath(),
-                    properties.getKeystorePass(),
-                    properties.getKeystoreType(),
-                    properties.getToken().getKeyAlias(),
-                    properties.getToken().getKeyPass());
+            keyPair = loadKeyPair(keystoreProperties, tokenProperties);
         } catch (IOException | KeyStoreException | CertificateException | NoSuchAlgorithmException |
                  UnrecoverableKeyException e) {
-            log.error("Failed to load key from properties {}", properties);
+            log.error("Failed to private load key pair from keystore properties={}, token properties={}", keystoreProperties, tokenProperties);
         }
         return Objects.requireNonNull(keyPair);
+    }
+
+    public PublicKey loadPublicKeyFromPropertiesOrError(JwtProperties.KeyStoreProperties keystoreProperties,
+                                                        JwtProperties.TokenProperties tokenProperties) {
+        PublicKey key = null;
+        try {
+            key = (PublicKey) KeyUtil.loadPublicKey(
+                    keystoreProperties.getPath(),
+                    keystoreProperties.getPass(),
+                    keystoreProperties.getType(),
+                    tokenProperties.getVerification().getKeyAlias());
+        } catch (IOException | KeyStoreException | CertificateException | NoSuchAlgorithmException e) {
+            log.error("Failed to public load key from keystore properties={}, token properties={}", keystoreProperties, tokenProperties);
+        }
+        return Objects.requireNonNull(key);
     }
 }

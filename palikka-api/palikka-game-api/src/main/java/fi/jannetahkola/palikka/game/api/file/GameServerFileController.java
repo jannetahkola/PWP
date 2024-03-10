@@ -16,7 +16,7 @@ import java.net.URI;
 
 @Slf4j
 @RestController
-@RequestMapping("/server")
+@RequestMapping("/game-api/game/files")
 @Validated
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ROLE_ADMIN')")

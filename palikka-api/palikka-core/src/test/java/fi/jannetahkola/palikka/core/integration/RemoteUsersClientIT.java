@@ -3,6 +3,7 @@ package fi.jannetahkola.palikka.core.integration;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import fi.jannetahkola.palikka.core.TestSpringBootConfig;
 import fi.jannetahkola.palikka.core.config.UsersIntegrationConfig;
+import fi.jannetahkola.palikka.core.config.meta.EnableRemoteUsersIntegration;
 import fi.jannetahkola.palikka.core.integration.users.RemoteUsersClient;
 import fi.jannetahkola.palikka.core.integration.users.User;
 import org.junit.jupiter.api.Test;
@@ -28,12 +29,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
-                "logging.level.fi.jannetahkola.palikka.core.integration=debug"
+                "logging.level.fi.jannetahkola.palikka.core.integration=debug",
+
+                "palikka.jwt.keystore.signing.path=keystore-dev.p12",
+                "palikka.jwt.keystore.signing.pass=password",
+                "palikka.jwt.keystore.signing.type=pkcs12",
+
+                "palikka.jwt.token.system.signing.key-alias=jwt-sys",
+                "palikka.jwt.token.system.signing.key-pass=password",
+                "palikka.jwt.token.system.signing.validity-time=10s",
+                "palikka.jwt.token.system.issuer=palikka-dev-system",
         })
 // Specify context explicitly so other test apps won't get loaded
 @ContextConfiguration(classes = TestSpringBootConfig.class)
 @ExtendWith(OutputCaptureExtension.class)
-@Import(UsersIntegrationConfig.class)
+@EnableRemoteUsersIntegration
 class RemoteUsersClientIT {
     @Autowired
     RemoteUsersClient usersClient;
@@ -51,7 +61,7 @@ class RemoteUsersClientIT {
     @Test
     void givenGetUserRequest_thenOkResponse() {
         wireMockServer.stubFor(
-                get(urlMatching("/users/1"))
+                get(urlMatching("/users-api/users-api/users/1"))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -69,7 +79,7 @@ class RemoteUsersClientIT {
     @Test
     void givenGetUserRequest_thenNotFoundResponse(CapturedOutput capturedOutput) {
         wireMockServer.stubFor(
-                get(urlMatching("/users/1"))
+                get(urlMatching("/users-api/users-api/users/1"))
                         .willReturn(
                                 aResponse()
                                         .withStatus(404)
@@ -78,13 +88,13 @@ class RemoteUsersClientIT {
         assertThat(usersClient.getUser(1)).isNull();
         assertThat(capturedOutput.getAll()).contains(
                 "Request 'GET http://localhost:" + wireMockServer.getPort()
-                        + "/users/1' failed on exception. Status=404 NOT_FOUND");
+                        + "/users-api/users-api/users/1' failed on exception. Status=404 NOT_FOUND");
     }
 
     @Test
     void givenGetUserRequest_whenInvalidResponseBody_thenError(CapturedOutput capturedOutput) {
         wireMockServer.stubFor(
-                get(urlMatching("/users/1"))
+                get(urlMatching("/users-api/users-api/users/1"))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -94,6 +104,6 @@ class RemoteUsersClientIT {
         assertThat(user).isNull();
         assertThat(capturedOutput.getAll()).contains(
                 "Request 'GET http://localhost:" + wireMockServer.getPort()
-                        + "/users/1' failed on invalid response.");
+                        + "/users-api/users-api/users/1' failed on invalid response.");
     }
 }

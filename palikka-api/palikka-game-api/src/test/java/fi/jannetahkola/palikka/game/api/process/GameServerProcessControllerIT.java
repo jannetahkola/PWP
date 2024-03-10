@@ -96,13 +96,13 @@ class GameServerProcessControllerIT extends WireMockTest {
         @Test
         void givenGetProcessStatusRequest_whenNoTokenOrRoles_thenForbiddenResponse() {
             given()
-                    .get("/server/process")
+                    .get("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(403);
 
             given()
                     .header(authorizationHeader)
-                    .get("/server/process")
+                    .get("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -113,7 +113,7 @@ class GameServerProcessControllerIT extends WireMockTest {
             given()
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/server/process")
+                    .post("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(403);
 
@@ -121,7 +121,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/server/process")
+                    .post("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -144,7 +144,7 @@ class GameServerProcessControllerIT extends WireMockTest {
         void givenGetProcessStatusRequest_thenOkResponse() {
             given()
                     .header(authorizationHeader)
-                    .get("/server/process")
+                    .get("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(200) // TODO 403 if method/content-type not supported, change?
                     .body("status", equalTo("down"));
@@ -157,7 +157,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "invalid").toString())
-                    .post("/server/process")
+                    .post("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(400)
                     .body("message", equalTo("Invalid request"));
@@ -166,7 +166,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", null).toString())
-                    .post("/server/process")
+                    .post("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(400)
                     .body("message", equalTo("action: must not be null"));
@@ -186,7 +186,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                                 .header(authorizationHeader)
                                 .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .body(new JSONObject().put("action", "start").toString())
-                                .post("/server/process")
+                                .post("/game-api/game/process")
                                 .thenReturn();
                     } catch (JSONException e) {
                         throw new RuntimeException(e);
@@ -216,7 +216,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "stop").toString())
-                    .post("/server/process");
+                    .post("/game-api/game/process");
             assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
         }
 
@@ -229,7 +229,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/server/process")
+                    .post("/game-api/game/process")
                     .thenReturn();
 
             assertThat(processStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
@@ -246,7 +246,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                                 .header(authorizationHeader)
                                 .contentType(MediaType.APPLICATION_JSON_VALUE)
                                 .body(new JSONObject().put("action", "stop").toString())
-                                .post("/server/process")
+                                .post("/game-api/game/process")
                                 .thenReturn();
                     } catch (JSONException e) {
                         throw new RuntimeException(e);
@@ -281,7 +281,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/server/process")
+                    .post("/game-api/game/process")
                     .thenReturn();
 
             assertThat(processStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
@@ -290,7 +290,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "stop").toString())
-                    .post("/server/process")
+                    .post("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(400);
 
@@ -307,7 +307,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/server/process")
+                    .post("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(200);
 
@@ -315,7 +315,7 @@ class GameServerProcessControllerIT extends WireMockTest {
 
             given()
                     .header(authorizationHeader)
-                    .get("/server/process")
+                    .get("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("starting"));
@@ -325,7 +325,7 @@ class GameServerProcessControllerIT extends WireMockTest {
 
             given()
                     .header(authorizationHeader)
-                    .get("/server/process")
+                    .get("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("up"));
@@ -335,7 +335,7 @@ class GameServerProcessControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "stop").toString())
-                    .post("/server/process")
+                    .post("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(200);
 
@@ -343,7 +343,7 @@ class GameServerProcessControllerIT extends WireMockTest {
 
             given()
                     .header(authorizationHeader)
-                    .get("/server/process")
+                    .get("/game-api/game/process")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("down"));

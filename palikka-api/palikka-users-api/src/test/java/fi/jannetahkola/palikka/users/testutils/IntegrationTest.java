@@ -44,4 +44,8 @@ public abstract class IntegrationTest {
     protected Header newUserToken() {
         return newToken(USER_ID_USER);
     }
+
+    protected Header newSystemToken() {
+        return new Header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateSystemToken());
+    }
 }

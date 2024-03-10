@@ -6,9 +6,11 @@ services:
       context: ./palikka-game-api
       dockerfile: Dockerfile
     ports:
-      - '8080:8080'
+      - '8082:8082'
     volumes:
-      - ./conf/dev.keystore:/app/palikka.keystore
+      # todo add jwks endpoint to users rather than sharing the key stores
+      - ./conf/keystore-dev.p12:/app/keystore-dev.p12
+      - ./conf/truststore-dev.p12:/app/truststore-dev.p12
 
   palikka-mock-file-server:
     container_name: palikka-mock-file-server

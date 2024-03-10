@@ -1,16 +1,30 @@
+server:
+  port: 8082
 palikka:
   jwt:
-    keystore-path: file:palikka.keystore  # read from filesystem
-    keystore-pass: password
-    keystore-type: pkcs12
+    keystore:
+      signing:
+        path: file:keystore-dev.p12
+        pass: password
+        type: pkcs12
+      verification:
+        path: file:truststore-dev.p12
+        pass: password
+        type: pkcs12
     token:
-      key-alias: jwt
-      key-pass: password
-      issuer: palikka-dev
-      validity-time: 10s
+      user:
+        issuer: palikka-dev-usr
+        verification:
+          key-alias: jwt-usr
+      system:
+        issuer: palikka-dev-sys
+        signing:
+          key-alias: jwt-sys
+          key-pass: password
+          validity-time: 10s
   integration:
     users-api:
-      base-uri: http://localhost:8080
+      base-uri: http://palikka-users-api:8080
   game:
     server:
       host: 172.25.16.1

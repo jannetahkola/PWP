@@ -16,7 +16,16 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
-                "palikka.integration.users-api.base-uri=http://test/"
+                "palikka.integration.users-api.base-uri=http://test/",
+
+                "palikka.jwt.keystore.signing.path=keystore-dev.p12",
+                "palikka.jwt.keystore.signing.pass=password",
+                "palikka.jwt.keystore.signing.type=pkcs12",
+
+                "palikka.jwt.token.system.signing.key-alias=jwt-sys",
+                "palikka.jwt.token.system.signing.key-pass=password",
+                "palikka.jwt.token.system.signing.validity-time=10s",
+                "palikka.jwt.token.system.issuer=palikka-dev-system",
         }
 )
 @EnableRemoteUsersIntegration
@@ -28,8 +37,7 @@ class RemoteUsersIntegrationEnabledTests {
     @Test
     void test() {
         assertThat(context.getBean(UsersClient.class)).isNotNull();
-        assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
-                .isThrownBy(() -> context.getBean(JwtService.class));
+        assertThat(context.getBean(JwtService.class)).isNotNull();
         assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
                 .isThrownBy(() -> context.getBean(PalikkaAuthenticationFilterConfigurer.class));
     }

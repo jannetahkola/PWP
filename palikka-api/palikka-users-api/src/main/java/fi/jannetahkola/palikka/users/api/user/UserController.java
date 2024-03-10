@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/users-api/users")
 @RequiredArgsConstructor
 @Validated
 public class UserController {
@@ -34,7 +34,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_ADMIN') or (hasRole('ROLE_USER') and #userId == authentication.principal)")
+    @PreAuthorize("hasRole('ROLE_SYSTEM') or hasRole('ROLE_ADMIN') or (hasRole('ROLE_USER') and #userId == authentication.principal)")
     public ResponseEntity<UserModel> getUser(@PathVariable("id") Integer userId) {
         UserModel userModel = userRepository.findById(userId)
                 .map(userModelAssembler::toModel)

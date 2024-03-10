@@ -1,5 +1,8 @@
 package fi.jannetahkola.palikka.core.integration.users;
 
+import com.nimbusds.jwt.JWTClaimsSet;
+import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
+import fi.jannetahkola.palikka.core.auth.jwt.PalikkaJwtType;
 import fi.jannetahkola.palikka.core.config.properties.RemoteUsersIntegrationProperties;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -18,10 +21,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RemoteUsersClient implements UsersClient {
     private final RemoteUsersIntegrationProperties properties;
+    private final JwtService jwtService;
     private final Validator validator;
 
-    public RemoteUsersClient(RemoteUsersIntegrationProperties properties) {
+    public RemoteUsersClient(RemoteUsersIntegrationProperties properties, JwtService jwtService) {
         this.properties = properties;
+        this.jwtService = jwtService;
         try (ValidatorFactory validatorFactory = Validation.buildDefaultValidatorFactory()) {
             this.validator = validatorFactory.getValidator();
         }
@@ -30,10 +35,11 @@ public class RemoteUsersClient implements UsersClient {
     @Override
     public User getUser(Integer userId) {
         RestTemplate restTemplate = new RestTemplate();
-        URI uri = properties.getBaseUri().resolve("/users/" + userId);
+        URI uri = properties.getBaseUri().resolve("/users-api/users-api/users/" + userId);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        jwtService.sign(new JWTClaimsSet.Builder(), PalikkaJwtType.SYSTEM).ifPresent(headers::setBearerAuth);
 
         HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
 

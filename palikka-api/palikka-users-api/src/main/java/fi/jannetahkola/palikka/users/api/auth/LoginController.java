@@ -1,42 +1,56 @@
 package fi.jannetahkola.palikka.users.api.auth;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.nimbusds.jwt.JWTClaimsSet;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
+import fi.jannetahkola.palikka.core.auth.jwt.PalikkaJwtType;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
 import fi.jannetahkola.palikka.users.util.CryptoUtils;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
-@RequestMapping("/auth/login")
+@RequestMapping("/users-api/auth/login")
 @RequiredArgsConstructor
 public class LoginController {
     private final UserRepository userRepository;
     private final JwtService jwtService;
 
     @PostMapping
-    public void login(@RequestBody LoginRequest loginRequest) {
-        userRepository
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
+        LoginResponse loginResponse = userRepository
                 .findByUsername(loginRequest.getUsername())
-                .filter(user -> CryptoUtils.validatePassword(loginRequest.getPassword(), user.getSalt(), user.getPassword()))
+                .filter(user -> {
+                    if (!CryptoUtils.validatePassword(loginRequest.getPassword(), user.getSalt(), user.getPassword())) {
+                        log.debug("Invalid password for username '{}'", loginRequest.getUsername());
+                        return false;
+                    }
+                    return true;
+                })
                 .map(user -> {
                     JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder();
                     claims.subject(String.valueOf(user.getId()));
-                    String token = jwtService.sign(claims).orElseThrow();
-                    LoginResponse loginResponse = new LoginResponse();
-                    loginResponse.setToken(token);
-                    return loginResponse;
+                    String token = jwtService.sign(claims, PalikkaJwtType.USER).orElseThrow();
+                    return new LoginResponse(token);
                 })
-                .orElseThrow(); // TODO Custom exception + handler
+                .orElseThrow();// TODO Custom exception + handler
+        return ResponseEntity
+                .ok(loginResponse);
     }
 
-    @Data
+    @Value
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public static class LoginResponse {
         String token;
     }

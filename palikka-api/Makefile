@@ -3,7 +3,7 @@ test=1
 build:
 	chmod +x ./mvnw
 ifeq ($(test),1)
-	./mvnw clean package
+	./mvnw clean verify
 else
 	./mvnw clean package -DskipTests
 endif

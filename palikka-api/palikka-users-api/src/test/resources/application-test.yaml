@@ -16,11 +16,14 @@ logging:
     org.springframework.jdbc.datasource.init: debug # which sql statements are executed
 palikka:
   jwt:
-    keystore-path: dev.keystore
-    keystore-pass: password
-    keystore-type: pkcs12
+    keystore:
+      signing:
+        # override to load from classpath instead of filesystem
+        # todo fix to work with file: or without
+        path: keystore-dev.p12
+      verification:
+        path: truststore-dev.p12
     token:
-      key-alias: jwt
-      key-pass: password
-      issuer: palikka-dev
-      validity-time: 10s
+      user:
+        signing:
+          validity-time: 10s # override to be shorter
