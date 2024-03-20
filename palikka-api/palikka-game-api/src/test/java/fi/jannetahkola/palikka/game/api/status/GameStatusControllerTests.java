@@ -36,7 +36,7 @@ class GameStatusControllerTests {
         Socket socketMock = mock(Socket.class);
         when(socketMock.getInputStream()).thenReturn(in);
         when(socketMock.getOutputStream()).thenReturn(outOut);
-        doNothing().when(socketMock).connect(any());
+        doNothing().when(socketMock).connect(any(), anyInt());
 
         SocketFactory socketFactoryMock = mock(SocketFactory.class);
         when(socketFactoryMock.newSocket()).thenReturn(socketMock);
@@ -71,7 +71,7 @@ class GameStatusControllerTests {
     @Test
     void givenGetStatusRequest_whenDown_thenOkResponse() {
         Socket socketMock = mock(Socket.class);
-        doThrow(new IOException()).when(socketMock).connect(any());
+        doThrow(new IOException()).when(socketMock).connect(any(), anyInt());
 
         SocketFactory socketFactoryMock = mock(SocketFactory.class);
         when(socketFactoryMock.newSocket()).thenReturn(socketMock);
@@ -81,9 +81,13 @@ class GameStatusControllerTests {
         statusProperties.setPort(25565);
         GameProperties gameProperties = new GameProperties();
         gameProperties.setStatus(statusProperties);
+
         GameStatusController controller = new GameStatusController(gameProperties, socketFactoryMock);
         GameStatusResponse gameStatus = controller.getGameStatus();
+
         assertThat(gameStatus).isNotNull();
         assertThat(gameStatus.isOnline()).isFalse();
+        assertThat(gameStatus.getHost()).isEqualTo("127.0.0.1");
+        assertThat(gameStatus.getPort()).isEqualTo(25565);
     }
 }

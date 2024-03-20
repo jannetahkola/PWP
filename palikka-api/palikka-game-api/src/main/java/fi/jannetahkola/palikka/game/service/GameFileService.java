@@ -1,12 +1,15 @@
 package fi.jannetahkola.palikka.game.service;
 
+import fi.jannetahkola.palikka.game.exception.GameFileException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.net.URI;
+import java.io.IOException;
+import java.net.URL;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -19,20 +22,19 @@ public class GameFileService {
     private final GameFileProcessor gameFileProcessor;
 
     @Async("threadPoolTaskExecutor")
-    public void startDownloadAsync(URI downloadUri, File toFile) {
+    public void startDownloadAsync(URL downloadUrl, File toFile) {
         final long startTime = System.currentTimeMillis();
 
-        log.info("Start download");
+        log.info("Downloading server from URL={} to path={}", downloadUrl, toFile.toPath());
         downloadStatus.set(DownloadStatus.WORKING);
 
         try {
-            log.info("Server download path={}", toFile.toPath());
-
-            gameFileProcessor.downloadFile(downloadUri, toFile);
+            gameFileProcessor.downloadFile(downloadUrl, toFile);
 
             log.info("Server download done ({} ms)", System.currentTimeMillis() - startTime);
 
-            gameFileProcessor.acceptEula(toFile); // Errors ignored, file was still downloaded
+            // Optional operation, errors ignored
+            gameFileProcessor.acceptEula(toFile);
 
             downloadStatus.set(DownloadStatus.SUCCESS);
         } catch (Exception e) {
@@ -47,6 +49,15 @@ public class GameFileService {
                         ? DownloadStatus.IDLE
                         : currentStatus)
                 .getValue();
+    }
+
+    public List<String> getConfig(String pathToDir) {
+        try {
+            return gameFileProcessor.readFile(pathToDir, "server.properties");
+        } catch (IOException e) {
+            // Use message from the original exception since we are throwing them ourselves
+            throw new GameFileException(e.getMessage(), e);
+        }
     }
 
     public enum DownloadStatus {

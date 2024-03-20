@@ -7,7 +7,6 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.invocation.HandlerMethodArgumentResolver;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.security.authorization.AuthorizationEventPublisher;
 import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.authorization.SpringAuthorizationEventPublisher;
 import org.springframework.security.messaging.access.intercept.AuthorizationChannelInterceptor;
@@ -49,11 +48,14 @@ public class GameControllerConfigurer implements WebSocketMessageBrokerConfigure
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // SockJS is disabled -> all connections must use ws protocol instead of http
+        //registry.addEndpoint("/ws").withSockJS();
+        // todo enable CORS
         registry
                 .addEndpoint("/ws")
                 .addInterceptors(handshakeInterceptor)
-//                .setHandshakeHandler(handshakeHandler)
-                .withSockJS();
+                .setHandshakeHandler(handshakeHandler)
+                .setAllowedOriginPatterns("*");
     }
 
     // The below are to disable CSRF and configure WS security manually instead of using
@@ -66,13 +68,12 @@ public class GameControllerConfigurer implements WebSocketMessageBrokerConfigure
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        AuthorizationManager<Message<?>> build = new MessageMatcherDelegatingAuthorizationManager.Builder()
+        AuthorizationManager<Message<?>> authorizationManager = new MessageMatcherDelegatingAuthorizationManager.Builder()
                 .simpDestMatchers("/app/game").hasRole("ADMIN")
-                .anyMessage().authenticated().build();
-
-        AuthorizationChannelInterceptor authz = new AuthorizationChannelInterceptor(build);
-        AuthorizationEventPublisher publisher = new SpringAuthorizationEventPublisher(this.applicationContext);
-        authz.setAuthorizationEventPublisher(publisher);
-        registration.interceptors(new SecurityContextChannelInterceptor(), authz);
+                .anyMessage().authenticated()
+                .build();
+        AuthorizationChannelInterceptor authorizationChannelInterceptor = new AuthorizationChannelInterceptor(authorizationManager);
+        authorizationChannelInterceptor.setAuthorizationEventPublisher(new SpringAuthorizationEventPublisher(this.applicationContext));
+        registration.interceptors(new SecurityContextChannelInterceptor(), authorizationChannelInterceptor);
     }
 }

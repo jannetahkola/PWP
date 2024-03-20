@@ -1,5 +1,8 @@
 server:
   port: 8082
+spring:
+  hateoas:
+    use-hal-as-default-json-media-type: false
 palikka:
   jwt:
     keystore:
@@ -30,15 +33,12 @@ palikka:
       name: server.jar
       path: /app # todo directory structure needs to exist currently, change?
       start-command: java -jar server.jar # todo omit name?
-    process:
-      stop-timeout: 10s
     status:
-      host: 172.25.16.1
-      port: 25565
+      host: localhost
 # todo delete these - debugging only
 logging:
   level:
     fi.jannetahkola.palikka: debug
+    org.springframework.web.socket: debug
+    org.springframework.messaging: debug
     org.springframework.security: debug
-    org.springframework.test.context.jdbc: debug # which sql scripts are executed
-    org.springframework.jdbc.datasource.init: debug # which sql statements are executed

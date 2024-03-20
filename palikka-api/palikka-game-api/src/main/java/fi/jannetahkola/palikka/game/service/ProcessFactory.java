@@ -10,11 +10,11 @@ import java.util.concurrent.BlockingQueue;
 
 @Slf4j
 public class ProcessFactory {
-    public Process newProcess(String command, Path pathToFile) {
+    public Process newProcess(String command, Path pathToFileDirectory) {
         try {
             return new ProcessBuilder()
                     .command(command.split(" "))
-                    .directory(pathToFile.toFile())
+                    .directory(pathToFileDirectory.toFile())
                     .start();
         } catch (IOException e) {
             log.error("Game process start failed", e);
@@ -23,11 +23,11 @@ public class ProcessFactory {
     }
 
     public GameProcess newGameProcess(String command,
-                                      Path pathToFile,
+                                      Path pathToFileDirectory,
                                       GameProcess.GameProcessHooks hooks,
                                       BlockingQueue<String> outputQueue) {
         GameProcessExecutable executable =
-                () -> newProcess(command, pathToFile);
+                () -> newProcess(command, pathToFileDirectory);
         return new GameProcess(executable, hooks, outputQueue);
     }
 }

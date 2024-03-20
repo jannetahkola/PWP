@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -32,23 +33,32 @@ public class GameStatusController {
     @GetMapping
     public GameStatusResponse getGameStatus() {
         GameProperties.StatusProperties statusProperties = properties.getStatus();
+        log.debug("Fetching game status with config={}", statusProperties);
+
         String host = statusProperties.getHost();
         int port = statusProperties.getPort();
+        long connectTimeoutInMillis = statusProperties.getConnectTimeout().toMillis();
 
         GameStatusResponse status = new GameStatusResponse();
+
         try (Socket socket = socketFactory.newSocket()) {
-            socket.connect(new InetSocketAddress(host, port));
+            // Game server runs on the same host by necessity so always use localhost
+            socket.connect(new InetSocketAddress(InetAddress.getLocalHost(), port), (int) connectTimeoutInMillis);
             final DataOutputStream out = new DataOutputStream(socket.getOutputStream());
             final DataInputStream in = new DataInputStream(socket.getInputStream());
             PacketService.Packet handshakePacket = new PacketService().newHandshakePacket(host, port);
             out.write(handshakePacket.getBytes());
             status = readGameStatusFromStream(in);
         } catch (IOException e) {
-            log.warn("Failed to get server status", e);
+            log.warn("Failed to get game status", e);
             status.setOnline(false);
         }
+
         status.setHost(host);
         status.setPort(port);
+
+        log.debug("Returning game status={}", status);
+
         return status;
     }
 

@@ -6,9 +6,13 @@ import fi.jannetahkola.palikka.game.testutils.TestStompSessionHandlerAdapter;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import fi.jannetahkola.palikka.game.testutils.WireMockGameProcessTest;
 import io.restassured.RestAssured;
+import lombok.NonNull;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,7 +31,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 import org.springframework.web.socket.sockjs.client.SockJsClient;
@@ -45,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 import static fi.jannetahkola.palikka.game.testutils.Stubs.*;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -65,14 +69,14 @@ class GameControllerIT extends WireMockGameProcessTest {
 
     final BlockingQueue<TestStompSessionHandlerAdapter.Frame> responseQueue = new LinkedBlockingDeque<>();
 
-    static String webSocketUri;
+    static String webSocketUrl;
 
     @BeforeEach
     void beforeEach(@LocalServerPort int localServerPort) {
-        webSocketUri = "http://localhost:" + localServerPort + "/ws";
         RestAssured.port = localServerPort;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
         responseQueue.clear();
+        webSocketUrl = "ws://localhost:" + localServerPort + "/ws";
     }
 
     @DynamicPropertySource
@@ -86,7 +90,9 @@ class GameControllerIT extends WireMockGameProcessTest {
         @Test
         void givenConnectRequest_withoutToken_thenForbiddenResponse() {
             try {
-                newStompClient().connectAsync(webSocketUri, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
+                newStompClient()
+                        .connectAsync(webSocketUrl, newStompSessionHandler())
+                        .get(1000, TimeUnit.MILLISECONDS);
             } catch (ExecutionException e) {
                 assertTrue(e.getMessage().contains("403"));
                 return;
@@ -100,8 +106,10 @@ class GameControllerIT extends WireMockGameProcessTest {
             stubForUserNotFound(wireMockServer, 1);
 
             try {
-                WebSocketHttpHeaders headers = newWebSocketAuthHeaders(1);
-                newStompClient().connectAsync(webSocketUri, headers, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
+                String token = tokens.generateToken(1);
+                newStompClient()
+                        .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
+                        .get(1000, TimeUnit.MILLISECONDS);
             } catch (ExecutionException e) {
                 assertTrue(e.getMessage().contains("403"));
                 assertThat(capturedOutput.getAll()).contains("User with id '1' not found");
@@ -115,8 +123,11 @@ class GameControllerIT extends WireMockGameProcessTest {
         void givenSendMessageToGame_withoutRoles_thenDisconnected(CapturedOutput capturedOutput) {
             stubForNormalUser(wireMockServer);
 
-            WebSocketHttpHeaders headers = newWebSocketAuthHeaders(2);
-            StompSession session = newStompClient().connectAsync(webSocketUri, headers, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
+            String token = tokens.generateToken(2);
+
+            StompSession session = newStompClient()
+                    .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
+                    .get(1000, TimeUnit.MILLISECONDS);
             StompSession.Receiptable receipt = session.send("/app/game", GameMessage.builder().data("haloo").build());
             assertThat(receipt.getReceiptId()).isNull();
 
@@ -132,8 +143,11 @@ class GameControllerIT extends WireMockGameProcessTest {
         void givenSubscribeToGame_whenNotAdmin_thenSubscriptionOk() {
             stubForNormalUser(wireMockServer);
 
-            WebSocketHttpHeaders headers = newWebSocketAuthHeaders(2);
-            StompSession session = newStompClient().connectAsync(webSocketUri, headers, newStompSessionHandler()).get(1000, TimeUnit.MILLISECONDS);
+            String token = tokens.generateToken(2);
+
+            StompSession session = newStompClient()
+                    .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
+                    .get(1000, TimeUnit.MILLISECONDS);
 
             StompSession.Subscription subscription = session.subscribe("/topic/game", newStompSessionHandler());
             assertThat(subscription.getSubscriptionId()).isNotNull();
@@ -146,14 +160,30 @@ class GameControllerIT extends WireMockGameProcessTest {
     class ResourceFunctionalityIT {
         @SneakyThrows
         @Test
+        void testConnectWithHttpProtocol_thenExceptionIsThrown() {
+            // SockJS is disabled so ws protocol must be used
+            stubForAdminUser(wireMockServer);
+            String token = tokens.generateToken(1);
+            String httpWebSocketUrl = webSocketUrl.replace("ws:", "http:");
+            assertThatExceptionOfType(IllegalArgumentException.class)
+                    .isThrownBy(() -> newStompClient()
+                            .connectAsync(httpWebSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
+                            .get(1000, TimeUnit.MILLISECONDS))
+                    .withMessage("Invalid scheme: http");
+        }
+
+        @SneakyThrows
+        @Test
         void testSubscribeToGameBeforeGameIsUp() {
             mockGameProcess();
 
             stubForAdminUser(wireMockServer);
-            HttpHeaders httpHeaders = newAuthHeader(1);
+            String token = tokens.generateToken(1);
+
+            HttpHeaders httpHeaders = newAuthHeader(token);
 
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
-            StompSession session = newSession(newWebSocketAuthHeaders(httpHeaders), sessionHandler);
+            StompSession session = newSession(token, sessionHandler);
             session.subscribe("/topic/game", sessionHandler);
 
             given()
@@ -184,7 +214,9 @@ class GameControllerIT extends WireMockGameProcessTest {
         void testSubscribeToGameAfterGameIsUp_thenLogHistoryIsReceivedInCorrectOrder() {
             mockGameProcess();
             stubForAdminUser(wireMockServer);
-            HttpHeaders httpHeaders = newAuthHeader(1);
+
+            String token = tokens.generateToken(1);
+            HttpHeaders httpHeaders = newAuthHeader(token);
 
             given()
                     .headers(httpHeaders)
@@ -199,7 +231,7 @@ class GameControllerIT extends WireMockGameProcessTest {
             assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
-            StompSession session = newSession(newWebSocketAuthHeaders(httpHeaders), sessionHandler);
+            StompSession session = newSession(token, sessionHandler);
             session.subscribe("/user/queue/reply", sessionHandler);
             session.subscribe("/topic/game", sessionHandler);
 
@@ -222,8 +254,8 @@ class GameControllerIT extends WireMockGameProcessTest {
             mockGameProcess();
 
             stubForAdminUser(wireMockServer);
-            HttpHeaders httpHeaders = newAuthHeader(1);
-            WebSocketHttpHeaders webSocketHttpHeaders = newWebSocketAuthHeaders(httpHeaders);
+            String token = tokens.generateToken(1);
+            HttpHeaders httpHeaders = newAuthHeader(token);
 
             given()
                     .headers(httpHeaders)
@@ -237,7 +269,7 @@ class GameControllerIT extends WireMockGameProcessTest {
             assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
-            StompSession session = newSession(webSocketHttpHeaders, sessionHandler);
+            StompSession session = newSession(token, sessionHandler);
             session.subscribe("/user/queue/reply", sessionHandler);
             session.subscribe("/topic/game", sessionHandler);
 
@@ -264,11 +296,13 @@ class GameControllerIT extends WireMockGameProcessTest {
             mockGameProcess();
 
             stubForAdminUser(wireMockServer);
-            HttpHeaders httpHeaders = newAuthHeader(1);
-            WebSocketHttpHeaders webSocketHttpHeaders = newWebSocketAuthHeaders(httpHeaders);
+
+            String token = tokens.generateToken(1);
+
+            HttpHeaders httpHeaders = newAuthHeader(token);
 
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
-            StompSession session = newSession(webSocketHttpHeaders, sessionHandler);
+            StompSession session = newSession(token, sessionHandler);
             session.subscribe("/user/queue/reply", sessionHandler);
             session.subscribe("/topic/game", sessionHandler);
 
@@ -315,7 +349,8 @@ class GameControllerIT extends WireMockGameProcessTest {
             mockGameProcess();
 
             stubForAdminUser(wireMockServer);
-            HttpHeaders httpHeaders = newAuthHeader(1);
+            String token = tokens.generateToken(1);
+            HttpHeaders httpHeaders = newAuthHeader(token);
 
             // Start
             given()
@@ -345,9 +380,8 @@ class GameControllerIT extends WireMockGameProcessTest {
             outputAsServerProcess(SERVER_START_LOG);
             assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
-            WebSocketHttpHeaders webSocketHttpHeaders = newWebSocketAuthHeaders(httpHeaders);
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
-            StompSession session = newSession(webSocketHttpHeaders, sessionHandler);
+            StompSession session = newSession(token, sessionHandler);
             session.subscribe("/user/queue/reply", sessionHandler);
             session.subscribe("/topic/game", sessionHandler);
 
@@ -371,25 +405,38 @@ class GameControllerIT extends WireMockGameProcessTest {
     }
 
     @SneakyThrows
-    StompSession newSession(WebSocketHttpHeaders headers, StompSessionHandlerAdapter sessionHandler) {
-        return newStompClient().connectAsync(webSocketUri, headers, sessionHandler).get(1000, TimeUnit.MILLISECONDS);
+    StompSession newSession(@NonNull String token, @NonNull StompSessionHandlerAdapter sessionHandler) {
+        return newStompClient()
+                .connectAsync(webSocketUrl + newAuthQueryParam(token), sessionHandler)
+                .get(1000, TimeUnit.MILLISECONDS);
     }
 
-    WebSocketHttpHeaders newWebSocketAuthHeaders(int userId) {
-        return new WebSocketHttpHeaders(newAuthHeader(userId));
-    }
-
-    WebSocketHttpHeaders newWebSocketAuthHeaders(HttpHeaders headers) {
-        return new WebSocketHttpHeaders(headers);
-    }
-
-    HttpHeaders newAuthHeader(int userId) {
+    HttpHeaders newAuthHeader(String token) {
         HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.setBearerAuth(tokens.generateToken(userId));
+        httpHeaders.setBearerAuth(token);
         return httpHeaders;
     }
 
+    String newAuthQueryParam(@NonNull String token) {
+        return "?token=" + token;
+    }
+
     WebSocketStompClient newStompClient() {
+        WebSocketStompClient client = new WebSocketStompClient(new StandardWebSocketClient()); // new SockJsClient(transportList)
+        List<MessageConverter> converters = new ArrayList<>();
+        converters.add(new MappingJackson2MessageConverter(objectMapper));
+        converters.add(new StringMessageConverter());
+        client.setMessageConverter(new CompositeMessageConverter(converters));
+        return client;
+    }
+
+    /**
+     * SockJS support is disabled but this is here for reference. Connections with SockJSClient
+     * will fail on missing /ws/info endpoint.
+     * @return {@link WebSocketStompClient}
+     */
+    @SuppressWarnings("unused")
+    WebSocketStompClient newStompWithSockJsClient() {
         List<Transport> transportList = Collections.singletonList(new WebSocketTransport(new StandardWebSocketClient()));
         WebSocketStompClient client = new WebSocketStompClient(new SockJsClient(transportList));
         List<MessageConverter> converters = new ArrayList<>();

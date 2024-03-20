@@ -13,6 +13,7 @@ public class Stubs {
         // util
     }
 
+    // todo return id from here to prevent having to remember the correct ones
     public static void stubForAdminUser(WireMockExtension wireMockServer) {
         wireMockServer.stubFor(
                 get(urlMatching("/users-api/users/1"))

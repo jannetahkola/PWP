@@ -6,7 +6,7 @@ services:
       context: ./palikka-users-api
       dockerfile: Dockerfile
     ports:
-      - '8080:8080'
+      - 8080:8080
     volumes:
       - ./conf/keystore-dev.p12:/app/keystore-dev.p12
       - ./conf/truststore-dev.p12:/app/truststore-dev.p12
@@ -17,7 +17,8 @@ services:
       context: ./palikka-game-api
       dockerfile: Dockerfile
     ports:
-      - '8082:8082'
+      - 8082:8082
+      - 25565:25565
     volumes:
       # todo add jwks endpoint to users rather than sharing the key stores
       - ./conf/keystore-dev.p12:/app/keystore-dev.p12

@@ -3,6 +3,7 @@ package fi.jannetahkola.palikka.game.config.properties;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -19,7 +20,7 @@ public class GameProperties {
     StatusProperties status;
 
     @NotNull
-    ProcessProperties process;
+    ProcessProperties process = new ProcessProperties();
 
     @NotNull
     FileProperties file;
@@ -27,18 +28,35 @@ public class GameProperties {
     @Data
     @Valid
     public static class ProcessProperties {
+        /**
+         * Duration of the game process stop time out. Defaults to 10 seconds.
+         */
         @NotNull
-        Duration stopTimeout;
+        Duration stopTimeout = Duration.ofSeconds(10);
     }
 
     @Data
     @Valid
     public static class StatusProperties {
+        /**
+         * The public host the game executable is running on. Returned in the
+         * status response as the host name - in reality this does not affect the status request
+         * as it is always done to <code>localhost</code>. E.g. myserver.com.
+         */
         @NotBlank
         String host;
 
+        /**
+         * Port that the game executable accepts connections on. Defaults to 25565.
+         */
         @NotNull
-        int port;
+        int port = 25565;
+
+        /**
+         * Duration of the status request connection timeout. Defaults to 2 seconds.
+         */
+        @NotNull
+        Duration connectTimeout = Duration.ofSeconds(2);
     }
 
     @Data
@@ -54,12 +72,14 @@ public class GameProperties {
          * Name of the game JAR file, e.g. server.jar.
          */
         @NotBlank
+        @Pattern(regexp = "^.*(\\.jar)$")
         String name;
 
         /**
          * Command to execute the game JAR file, e.g. java -jar server.jar.
          */
-        @NotBlank // todo add more validations
+        @NotBlank
+        @Pattern(regexp = "^(java -jar).*(\\.jar)$")
         String startCommand;
 
         public Path getPathToJarFileDirectory() {

@@ -26,23 +26,37 @@ public class PalikkaAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     @Nonnull HttpServletResponse response,
                                     @Nonnull FilterChain filterChain) throws ServletException, IOException {
-        log.debug("At authentication filter");
+        log.debug("At authentication filter for request {} {}",
+                request.getMethod(), request.getRequestURI());
 
+        if (request.getRequestURI().startsWith("/ws")) { // todo should make this configurable and set it here and in security config
+            log.debug("Abort, open path detected");
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String token;
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (!StringUtils.hasText(header) || !header.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+            String parameter = request.getParameter("token");
+            if (!StringUtils.hasText(parameter)) {
+                log.debug("Abort, could not parse auth token from header or parameters");
+                filterChain.doFilter(request, response);
+                return;
+            }
+            token = parameter;
+            log.debug("Authenticating request with parameter={}", token);
+        } else {
+            String[] parts = header.split(" ");
+            if (parts.length <= 1) {
+                log.debug("Abort, malformed authorization header");
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            token = parts[1].trim();
+            log.debug("Authenticating request with header={}", token);
         }
-
-        String[] parts = header.split(" ");
-        if (parts.length <= 1) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        log.debug("Authenticating request with Authorization header={}", header);
-
-        String token = parts[1].trim();
 
         AuthenticationUtil.authenticateToken(token, jwtService, usersClient);
 

@@ -34,6 +34,10 @@ public class GameProcessService {
 
     private GameProcess gameProcess;
 
+    public boolean isDown() {
+        return GameProcessStatus.DOWN.equals(gameProcessStatus.get());
+    }
+
     /**
      * Checks if the process can be started. If true, sets the status to {@link GameProcessStatus#STARTING}.
      * @return True if the process can be started.
@@ -155,6 +159,12 @@ public class GameProcessService {
         return outputQueue;
     }
 
+    public void addOutput(String output) {
+        log.debug("Adding output={}", output);
+        outputQueue.add(output);
+        log.debug("Added output={}", output);
+    }
+
     /**
      * @return An unmodifiable copy of the underlying input history
      * list. See {@link Collections#synchronizedList(List)}.
@@ -168,6 +178,7 @@ public class GameProcessService {
         return copy;
     }
 
+    // todo register a lifecycle listener instead to hook into any events and send them to client via WS
     public void registerInputListener(Consumer<String> listener) {
         GAME_PROCESS_INPUT_LISTENERS.add(listener);
     }

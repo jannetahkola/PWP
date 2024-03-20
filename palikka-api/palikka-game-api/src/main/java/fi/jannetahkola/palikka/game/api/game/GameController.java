@@ -3,6 +3,9 @@ package fi.jannetahkola.palikka.game.api.game;
 import fi.jannetahkola.palikka.game.api.game.model.GameMessage;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
 import jakarta.annotation.PostConstruct;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -13,14 +16,24 @@ import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+// todo test with expired JWT since WS has a bit different flow?
 @Slf4j
 @Controller
 @RequiredArgsConstructor
 public class GameController {
+    private static final Validator VALIDATOR;
+
     private final SimpMessagingTemplate messagingTemplate;
     private final GameProcessService gameProcessService;
+
+    static {
+        try (var validatorFactory = Validation.buildDefaultValidatorFactory()) {
+            VALIDATOR = validatorFactory.getValidator();
+        }
+    }
 
     @PostConstruct
     void postConstruct() {
@@ -55,10 +68,18 @@ public class GameController {
     @MessageMapping("/game")
     public void handleMessageToGame(@Payload GameMessage msg,
                                     Principal principal) {
+        Set<ConstraintViolation<GameMessage>> violations = VALIDATOR.validate(msg);
+        if (!violations.isEmpty()) {
+            log.debug("Failed to process message with constraint violations: {}", violations);
+            return;
+        }
         // If process is not up, nothing will happen. Process service will clear the
         // queue next time the process is started.
         log.info("Outputting to game as principal '{}'", principal.getName());
-        CompletableFuture.runAsync(() -> gameProcessService.getOutputQueue().add(msg.getData()));
+        CompletableFuture.runAsync(() -> {
+            log.debug("Passing output message to game process");
+            gameProcessService.addOutput(msg.getData());
+        });
     }
 
 //    @MessageMapping("/echo")

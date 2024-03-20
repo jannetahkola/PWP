@@ -4,6 +4,8 @@ spring:
 logging:
   level:
     fi.jannetahkola.palikka: debug
+    org.springframework.web.socket: debug
+    org.springframework.messaging: debug
     org.springframework.security: debug
 palikka:
   jwt:

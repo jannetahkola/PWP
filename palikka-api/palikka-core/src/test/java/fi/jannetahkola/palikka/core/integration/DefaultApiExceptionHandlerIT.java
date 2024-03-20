@@ -9,9 +9,13 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.hamcrest.Matchers;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -28,12 +32,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.stream.Stream;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -110,18 +117,43 @@ class DefaultApiExceptionHandlerIT {
         mockMvc.perform(post("/").contentType(MediaType.APPLICATION_JSON_VALUE))
                 .andExpect(status().is(400))
                 .andExpect(jsonPath("message", equalTo("Invalid request")));
+        verify(exceptionHandlerMock, times(1)).httpMessageNotReadableException(any());
         assertThat(capturedOutput).contains("HTTP message not readable exception occurred");
     }
 
     @SneakyThrows
+    @ParameterizedTest
+    @MethodSource("unsupportedMediaTypeArgs")
+    void testHttpMediaTypeNotSupportedException(String contentType,
+                                                String expectedErrorMessagePrefix,
+                                                CapturedOutput capturedOutput) {
+        when(exceptionHandlerMock.httpMediaTypeNotSupportedException(any())).thenCallRealMethod();
+        String json = new JSONObject().put("value", "valid-value").toString();
+        mockMvc.perform(post("/").contentType(contentType).content(json))
+                .andExpect(status().is(400))
+                .andExpect(jsonPath("message", Matchers.startsWith(expectedErrorMessagePrefix)));
+        verify(exceptionHandlerMock, times(1)).httpMediaTypeNotSupportedException(any());
+        assertThat(capturedOutput.getAll()).contains("HTTP media type not supported exception occurred");
+    }
+
+    static Stream<Arguments> unsupportedMediaTypeArgs() {
+        return Stream.of(
+                Arguments.of(MediaType.TEXT_PLAIN_VALUE, "Content-Type 'text/plain;charset=UTF-8' is not supported"),
+                Arguments.of("", "Content-Type 'application/octet-stream' is not supported"),
+                Arguments.of("test", "Invalid mime type \"test;charset=UTF-8\": does not contain '/'"),
+                Arguments.of("test/test", "Content-Type 'test/test;charset=UTF-8' is not supported"),
+                Arguments.of("höpö/höpö", "Invalid mime type \"höpö/höpö;charset=UTF-8\": Invalid token character 'ö' in token")
+        );
+    }
+
+    @SneakyThrows
     @Test
-    void testMethodArgumentInvalid(CapturedOutput capturedOutput) {
-        // TODO test missing & invalid content type
-        // TODO assert body format
+    void testMethodArgumentInvalidException(CapturedOutput capturedOutput) {
         when(exceptionHandlerMock.methodArgumentNotValidException(any())).thenCallRealMethod();
         String json = new JSONObject().put("value", " ").toString();
         mockMvc.perform(post("/").contentType(MediaType.APPLICATION_JSON_VALUE).content(json))
-                .andExpect(status().is(400));
+                .andExpect(status().is(400))
+                .andExpect(jsonPath("message", equalTo("value: must not be blank")));
         verify(exceptionHandlerMock, times(1)).methodArgumentNotValidException(any());
         assertThat(capturedOutput).contains("Method argument not valid exception occurred");
     }
@@ -155,7 +187,7 @@ class DefaultApiExceptionHandlerIT {
         }
 
         @PostMapping
-        public void testValidatedBody(@Valid @RequestBody ValidatedRequestObject request) {
+        public void testInvalidPostRequest(@Valid @RequestBody ValidatedRequestObject request) {
         }
 
         @EnableAutoConfiguration(exclude = {

@@ -1,10 +1,12 @@
 package fi.jannetahkola.palikka.core.api.exception;
 
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -31,6 +33,11 @@ import java.util.stream.Collectors;
 @Slf4j
 @ControllerAdvice
 public class DefaultApiExceptionHandler {
+    @PostConstruct
+    void postConstruct() {
+        log.info("----- Default API exception handling ENABLED -----");
+    }
+
     @ExceptionHandler
     public ResponseEntity<ApiErrorModel> accessDeniedException(AccessDeniedException e) {
         log.info("Access denied exception occurred", e); // TODO Check log levels
@@ -87,7 +94,15 @@ public class DefaultApiExceptionHandler {
                 .toResponse();
     }
 
-    @ExceptionHandler // TODO test that this isn't triggered before others when default handler used in another service
+    @ExceptionHandler
+    public ResponseEntity<ApiErrorModel> httpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException e) {
+        log.info("HTTP media type not supported exception occurred", e);
+        return ApiErrorModel
+                .badRequest(e)
+                .toResponse();
+    }
+
+    @ExceptionHandler
     public ResponseEntity<ApiErrorModel> unhandledException(Exception e) {
         log.info("Unhandled exception occurred", e);
         return ApiErrorModel

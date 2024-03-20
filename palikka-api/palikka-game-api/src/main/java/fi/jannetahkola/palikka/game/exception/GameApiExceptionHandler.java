@@ -13,9 +13,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 public class GameApiExceptionHandler {
     @ExceptionHandler
     public ResponseEntity<ApiErrorModel> gameProcessStartException(GameProcessStartException e) {
-        log.info("", e);
-        return ApiErrorModel
-                .badRequest(e)
-                .toResponse();
+        log.info("Game process start exception occurred", e);
+        return ApiErrorModel.badRequest(e).toResponse();
+    }
+
+    @ExceptionHandler
+    public ResponseEntity<ApiErrorModel> gameFileException(GameFileException e) {
+        log.info("Game file exception occurred", e);
+        return ApiErrorModel.badRequest(e).toResponse();
     }
 }
