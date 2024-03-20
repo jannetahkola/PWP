@@ -6,7 +6,6 @@ import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
 import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import fi.jannetahkola.palikka.users.util.CryptoUtils;
 import lombok.SneakyThrows;
-import org.assertj.core.api.Assertions;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Nested;
@@ -171,6 +170,23 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(404)
                     .body("message", equalTo("User with id '9999' not found"));
+        }
+
+        @Test
+        void givenGetCurrentUserRequest_thenOkResponse() {
+            given()
+                    .header(newAdminToken())
+                    .get("/users-api/users/me")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .body("id", equalTo(1))
+                    .body("username", equalTo("mock-user"))
+                    .body("password", nullValue())
+                    .body("active", equalTo(true))
+                    .body("roles", hasSize(1))
+                    .body("roles", contains("ROLE_ADMIN"))
+                    .body("_links.self.href", endsWith("/users-api/users/" + USER_ID_ADMIN))
+                    .body("_links.roles.href", endsWith("/users-api/users/" + USER_ID_ADMIN + "/roles"));
         }
 
         @Test

@@ -45,6 +45,18 @@ public class UserController {
                 .body(userModel);
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('ROLE_SYSTEM') or hasRole('ROLE_ADMIN')")
+    public ResponseEntity<UserModel> getCurrentUser(Authentication authentication) {
+        UserModel userModel = userRepository.findById(Integer.valueOf(authentication.getName()))
+                .map(userModelAssembler::toModel)
+                // todo in this case we should log the hell out
+                .orElseThrow(() -> UsersNotFoundException.ofUser(Integer.valueOf(authentication.getName())));
+        return ResponseEntity
+                .ok()
+                .body(userModel);
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<UserModel> postUser(@Validated(UserModel.PostGroup.class) @RequestBody UserModel userToPost) {
