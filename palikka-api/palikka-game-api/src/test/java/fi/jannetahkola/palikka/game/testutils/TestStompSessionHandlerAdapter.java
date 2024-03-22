@@ -1,6 +1,8 @@
 package fi.jannetahkola.palikka.game.testutils;
 
-import fi.jannetahkola.palikka.game.api.game.model.GameMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameLifecycleMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameLogMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameUserReplyMessage;
 import jakarta.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -16,10 +18,16 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class TestStompSessionHandlerAdapter extends StompSessionHandlerAdapter {
-    private final BlockingQueue<Frame> responseQueue;
+    private final BlockingQueue<Frame> userReplyQueue;
+    private final BlockingQueue<Frame> logMessageQueue;
+    private final BlockingQueue<Frame> lifecycleMessageQueue;
 
-    public TestStompSessionHandlerAdapter(BlockingQueue<Frame> responseQueue) {
-        this.responseQueue = responseQueue;
+    public TestStompSessionHandlerAdapter(BlockingQueue<Frame> userReplyQueue,
+                                          BlockingQueue<Frame> logMessageQueue,
+                                          BlockingQueue<Frame> lifecycleMessageQueue) {
+        this.userReplyQueue = userReplyQueue;
+        this.logMessageQueue = logMessageQueue;
+        this.lifecycleMessageQueue = lifecycleMessageQueue;
     }
 
     @Override
@@ -47,7 +55,21 @@ public class TestStompSessionHandlerAdapter extends StompSessionHandlerAdapter {
     @Override
     @Nonnull
     public Type getPayloadType(@Nonnull StompHeaders headers) {
-        return GameMessage.class;
+        String destination = headers.getDestination();
+        if (destination != null) {
+            switch (destination) {
+                case "/user/queue/reply" -> {
+                    return GameUserReplyMessage.class;
+                }
+                case "/topic/game/logs" -> {
+                    return GameLogMessage.class;
+                }
+                case "/topic/game/lifecycle" -> {
+                    return GameLifecycleMessage.class;
+                }
+            }
+        }
+        throw new IllegalArgumentException("Unknown destination in STOMP headers, destination=" + destination);
     }
 
     @Override
@@ -56,8 +78,29 @@ public class TestStompSessionHandlerAdapter extends StompSessionHandlerAdapter {
             try {
                 Frame frame = new Frame(headers, payload);
                 log.debug("Received frame, headers={}, payload={}", headers, payload);
-                if (!responseQueue.offer(frame, 1000, TimeUnit.MILLISECONDS)) {
-                    log.error("Failed to add response payload to response queue");
+
+                String destination = frame.getHeaders().getDestination();
+
+                if (destination != null) {
+                    switch (destination) {
+                        case "/user/queue/reply" -> {
+                            if (!userReplyQueue.offer(frame, 1000, TimeUnit.MILLISECONDS)) {
+                                log.error("Failed to add user reply message to queue");
+                            }
+                        }
+                        case "/topic/game/logs" -> {
+                            if (!logMessageQueue.offer(frame, 1000, TimeUnit.MILLISECONDS)) {
+                                log.error("Failed to add game log message to queue");
+                            }
+                        }
+                        case "/topic/game/lifecycle" -> {
+                            if (!lifecycleMessageQueue.offer(frame, 1000, TimeUnit.MILLISECONDS)) {
+                                log.error("Failed to add game lifecycle message to queue");
+                            }
+                        }
+                    }
+                } else {
+                    log.error("Frame is missing destination");
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);

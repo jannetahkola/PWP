@@ -1,6 +1,9 @@
 package fi.jannetahkola.palikka.game.api.game;
 
-import fi.jannetahkola.palikka.game.api.game.model.GameMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameLifecycleMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameLogMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameOutputMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameUserReplyMessage;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.ConstraintViolation;
@@ -37,44 +40,72 @@ public class GameController {
 
     @PostConstruct
     void postConstruct() {
+        gameProcessService.registerLifecycleListener(processStatus -> {
+            log.debug("Publishing game lifecycle event to subscribers");
+            GameLifecycleMessage msg = GameLifecycleMessage.builder()
+                    .status(processStatus)
+                    .build();
+            messagingTemplate.convertAndSend("/topic/game/lifecycle", msg);
+        });
         gameProcessService.registerInputListener(input -> {
-            GameMessage msg = GameMessage.builder()
-                    .src(GameMessage.Source.GAME)
-                    .typ(GameMessage.Type.LOG)
+            log.debug("Publishing game input event to subscribers");
+            GameLogMessage msg = GameLogMessage.builder()
                     .data(input)
                     .build();
-            messagingTemplate.convertAndSend("/topic/game", msg);
+            messagingTemplate.convertAndSend("/topic/game/logs", msg);
         });
     }
 
-    @SubscribeMapping("/game")
+    @SubscribeMapping("/game/lifecycle")
+    public void subscribeToGameLifecycle(Principal principal) {
+        log.info("New game lifecycle subscription with principal '{}'", principal);
+    }
+
+    @SubscribeMapping("/game/logs")
     public void subscribeToGame(Principal principal) {
-        log.info("New subscription with principal '{}'", principal.getName());
+        log.info("New game logs subscription with principal '{}'", principal.getName());
 
         final List<String> inputList = gameProcessService.copyInputList();
 
         // Send the history in one batch to avoid any new messages
         // that come to the topic appearing in between the history entries
-        log.debug("Sending input history to user={}", principal.getName());
+        log.debug("Publishing game input history to user={}", principal.getName());
         String inputHistory = String.join("\n", inputList);
-        GameMessage inputHistoryMsg = GameMessage.builder()
-                .src(GameMessage.Source.SERVER)
-                .typ(GameMessage.Type.HISTORY)
+        GameUserReplyMessage inputHistoryMsg = GameUserReplyMessage.builder()
+                .typ(GameUserReplyMessage.Type.HISTORY)
                 .data(inputHistory)
                 .build();
         messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/reply", inputHistoryMsg);
     }
 
+    // todo if token expires we should kill the session somehow
+    // send token with each message and validate -> can still read console messages
+    // one 403 received in client, disconnect WS immediately to prevent above?
     @MessageMapping("/game")
-    public void handleMessageToGame(@Payload GameMessage msg,
+    public void handleMessageToGame(@Payload GameOutputMessage msg,
                                     Principal principal) {
-        Set<ConstraintViolation<GameMessage>> violations = VALIDATOR.validate(msg);
+        Set<ConstraintViolation<GameOutputMessage>> violations = VALIDATOR.validate(msg);
         if (!violations.isEmpty()) {
             log.debug("Failed to process message with constraint violations: {}", violations);
+            GameUserReplyMessage userReplyMessage = GameUserReplyMessage.builder()
+                    .typ(GameUserReplyMessage.Type.ERROR)
+                    .data("Invalid message")
+                    .build();
+            messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/reply", userReplyMessage);
             return;
         }
-        // If process is not up, nothing will happen. Process service will clear the
-        // queue next time the process is started.
+
+        if (!gameProcessService.isUp()) {
+            // If process is not up, nothing will happen. Process service will clear the
+            // queue next time the process is started.
+            GameUserReplyMessage userReplyMessage = GameUserReplyMessage.builder()
+                    .typ(GameUserReplyMessage.Type.ERROR)
+                    .data("Cannot process message - game is not UP")
+                    .build();
+            messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/reply", userReplyMessage);
+            return;
+        }
+
         log.info("Outputting to game as principal '{}'", principal.getName());
         CompletableFuture.runAsync(() -> {
             log.debug("Passing output message to game process");

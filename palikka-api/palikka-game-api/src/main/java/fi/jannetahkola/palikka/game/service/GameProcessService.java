@@ -19,8 +19,9 @@ import java.util.function.Consumer;
 @Service
 @RequiredArgsConstructor
 public class GameProcessService {
-    // This is static so old listeners are kept, and we don't have to resubscribe the WS controller again.
+    // These are static so old listeners are kept, and we don't have to resubscribe the WS controller again.
     private static final List<Consumer<String>> GAME_PROCESS_INPUT_LISTENERS = new ArrayList<>();
+    private static final List<Consumer<String>> GAME_PROCESS_LIFECYCLE_LISTENERS = new ArrayList<>();
     private static final GameProcessLogger GAME_PROCESS_LOGGER = new GameProcessLogger();
 
     private final AtomicReference<GameProcessStatus> gameProcessStatus = new AtomicReference<>(GameProcessStatus.DOWN);
@@ -33,6 +34,10 @@ public class GameProcessService {
     private final PathValidator pathValidator;
 
     private GameProcess gameProcess;
+
+    public boolean isUp() {
+        return GameProcessStatus.UP.equals(gameProcessStatus.get());
+    }
 
     public boolean isDown() {
         return GameProcessStatus.DOWN.equals(gameProcessStatus.get());
@@ -88,21 +93,11 @@ public class GameProcessService {
         var fileProperties = gameProperties.getFile();
 
         GameProcess.GameProcessHooks hooks = GameProcess.GameProcessHooks.builder()
-                .onProcessStarted(() -> setStatusAndLog(GameProcessStatus.STARTING))
-                .onGameStarted(() -> setStatusAndLog(GameProcessStatus.UP))
-                .onGameExited(() -> setStatusAndLog(GameProcessStatus.STOPPING))
-                .onProcessExited(() -> setStatusAndLog(GameProcessStatus.DOWN))
-                .onInput(input -> {
-                    GAME_PROCESS_LOGGER.log(input);
-                    inputList.add(input);
-                    GAME_PROCESS_INPUT_LISTENERS.forEach(listener ->
-                            // Publish to listeners asynchronously to be safe
-                            // todo may mess up the ordering, use another thread maybe
-                            CompletableFuture.runAsync(() -> {
-                                log.debug("Publishing game process input to listener");
-                                listener.accept(input);
-                            }));
-                })
+                .onProcessStarted(() -> setStatusAndPublish(GameProcessStatus.STARTING))
+                .onGameStarted(() -> setStatusAndPublish(GameProcessStatus.UP))
+                .onGameExited(() -> setStatusAndPublish(GameProcessStatus.STOPPING))
+                .onProcessExited(() -> setStatusAndPublish(GameProcessStatus.DOWN))
+                .onInput(this::storeInputAndPublish)
                 .build();
         gameProcess = processFactory.newGameProcess(
                 fileProperties.getStartCommand(),
@@ -178,9 +173,12 @@ public class GameProcessService {
         return copy;
     }
 
-    // todo register a lifecycle listener instead to hook into any events and send them to client via WS
     public void registerInputListener(Consumer<String> listener) {
         GAME_PROCESS_INPUT_LISTENERS.add(listener);
+    }
+
+    public void registerLifecycleListener(Consumer<String> listener) {
+        GAME_PROCESS_LIFECYCLE_LISTENERS.add(listener);
     }
 
     public enum GameProcessStatus {
@@ -200,8 +198,19 @@ public class GameProcessService {
         }
     }
 
-    private void setStatusAndLog(GameProcessStatus newStatus) {
-        gameProcessStatus.set(newStatus);
-        log.info("Set game process status={}", gameProcessStatus.get());
+    private void setStatusAndPublish(GameProcessStatus newStatus) {
+        GameProcessStatus currentStatus = gameProcessStatus.updateAndGet(oldStatus -> newStatus);
+        log.info("Set game process status={}", currentStatus);
+        GAME_PROCESS_LIFECYCLE_LISTENERS.forEach(listener ->
+                CompletableFuture.runAsync(() -> listener.accept(currentStatus.getValue())));
+    }
+
+    private void storeInputAndPublish(String input) {
+        GAME_PROCESS_LOGGER.log(input);
+        inputList.add(input);
+        GAME_PROCESS_INPUT_LISTENERS.forEach(listener ->
+                // Publish to listeners asynchronously to be safe
+                // todo may mess up the ordering, use another thread maybe
+                CompletableFuture.runAsync(() -> listener.accept(input)));
     }
 }

@@ -1,7 +1,10 @@
 package fi.jannetahkola.palikka.game.api.game;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import fi.jannetahkola.palikka.game.api.game.model.GameMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameLifecycleMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameLogMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameOutputMessage;
+import fi.jannetahkola.palikka.game.api.game.model.GameUserReplyMessage;
 import fi.jannetahkola.palikka.game.testutils.TestStompSessionHandlerAdapter;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import fi.jannetahkola.palikka.game.testutils.WireMockGameProcessTest;
@@ -40,10 +43,7 @@ import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static fi.jannetahkola.palikka.game.testutils.Stubs.*;
 import static io.restassured.RestAssured.given;
@@ -67,7 +67,9 @@ class GameControllerIT extends WireMockGameProcessTest {
     @Autowired
     TestTokenUtils tokens;
 
-    final BlockingQueue<TestStompSessionHandlerAdapter.Frame> responseQueue = new LinkedBlockingDeque<>();
+    final BlockingQueue<TestStompSessionHandlerAdapter.Frame> userReplyQueue = new LinkedBlockingQueue<>();
+    final BlockingQueue<TestStompSessionHandlerAdapter.Frame> logMessageQueue = new LinkedBlockingDeque<>();
+    final BlockingQueue<TestStompSessionHandlerAdapter.Frame> lifecycleMessageQueue = new LinkedBlockingDeque<>();
 
     static String webSocketUrl;
 
@@ -75,7 +77,10 @@ class GameControllerIT extends WireMockGameProcessTest {
     void beforeEach(@LocalServerPort int localServerPort) {
         RestAssured.port = localServerPort;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
-        responseQueue.clear();
+
+        logMessageQueue.clear();
+        lifecycleMessageQueue.clear();;
+
         webSocketUrl = "ws://localhost:" + localServerPort + "/ws";
     }
 
@@ -128,10 +133,10 @@ class GameControllerIT extends WireMockGameProcessTest {
             StompSession session = newStompClient()
                     .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
                     .get(1000, TimeUnit.MILLISECONDS);
-            StompSession.Receiptable receipt = session.send("/app/game", GameMessage.builder().data("haloo").build());
+            StompSession.Receiptable receipt = session.send("/app/game", GameLogMessage.builder().data("haloo").build());
             assertThat(receipt.getReceiptId()).isNull();
 
-            TestStompSessionHandlerAdapter.Frame frame = responseQueue.poll(1000, TimeUnit.MILLISECONDS);
+            TestStompSessionHandlerAdapter.Frame frame = logMessageQueue.poll(1000, TimeUnit.MILLISECONDS);
             assertThat(frame).isNull();
 
             assertThat(capturedOutput.getAll()).contains("Failed to authorize message with authorization manager");
@@ -149,8 +154,13 @@ class GameControllerIT extends WireMockGameProcessTest {
                     .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
                     .get(1000, TimeUnit.MILLISECONDS);
 
-            StompSession.Subscription subscription = session.subscribe("/topic/game", newStompSessionHandler());
-            assertThat(subscription.getSubscriptionId()).isNotNull();
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+
+            StompSession.Subscription subscriptionToLogs = session.subscribe("/topic/game/logs", sessionHandler);
+            assertThat(subscriptionToLogs.getSubscriptionId()).isNotNull();
+
+            StompSession.Subscription subscriptionToLifecycle = session.subscribe("/topic/game/lifecycle", sessionHandler);
+            assertThat(subscriptionToLifecycle.getSubscriptionId()).isNotNull();
 
             session.disconnect();
         }
@@ -184,7 +194,8 @@ class GameControllerIT extends WireMockGameProcessTest {
 
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newSession(token, sessionHandler);
-            session.subscribe("/topic/game", sessionHandler);
+            session.subscribe("/topic/game/logs", sessionHandler);
+            session.subscribe("/topic/game/lifecycle", sessionHandler);
 
             given()
                     .headers(httpHeaders)
@@ -197,14 +208,19 @@ class GameControllerIT extends WireMockGameProcessTest {
             outputAsServerProcess(SERVER_START_LOG);
             assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
-            TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
-            assertThat(receivedFrame).isNotNull();
-            assertThat(receivedFrame.getHeaders().getDestination()).isEqualTo("/topic/game");
+            // lifecycle
+            TestStompSessionHandlerAdapter.Frame lifecycleFrame = lifecycleMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(lifecycleFrame).isNotNull();
+            assertThat(lifecycleFrame.getPayloadAs(GameLifecycleMessage.class).getStatus()).isEqualTo("starting");
 
-            GameMessage receivedMessage = receivedFrame.getPayloadAs(GameMessage.class);
-            assertThat(receivedMessage).isNotNull();
-            assertThat(receivedMessage.getSrc()).isEqualTo(GameMessage.Source.GAME);
-            assertThat(receivedMessage.getData()).contains("Done (13.324s)!");
+            lifecycleFrame = lifecycleMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(lifecycleFrame).isNotNull();
+            assertThat(lifecycleFrame.getPayloadAs(GameLifecycleMessage.class).getStatus()).isEqualTo("up");
+
+            // logs
+            TestStompSessionHandlerAdapter.Frame logFrame = logMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(logFrame).isNotNull();
+            assertThat(logFrame.getPayloadAs(GameLogMessage.class).getData()).contains("Done (13.324s)!");
 
             stop(session);
         }
@@ -233,17 +249,21 @@ class GameControllerIT extends WireMockGameProcessTest {
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newSession(token, sessionHandler);
             session.subscribe("/user/queue/reply", sessionHandler);
-            session.subscribe("/topic/game", sessionHandler);
+            session.subscribe("/topic/game/logs", sessionHandler);
+            session.subscribe("/topic/game/lifecycle", sessionHandler);
 
-            TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
-            assertThat(receivedFrame).isNotNull();
-            GameMessage receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
-            assertThat(receivedMsg.getSrc()).isEqualTo(GameMessage.Source.SERVER);
-            assertThat(receivedMsg.getTyp()).isEqualTo(GameMessage.Type.HISTORY);
+            TestStompSessionHandlerAdapter.Frame userReplyFrame = userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(userReplyFrame).isNotNull();
 
-            String[] inputHistory = receivedMsg.getData().split("\n");
+            GameUserReplyMessage userReplyMessage = userReplyFrame.getPayloadAs(GameUserReplyMessage.class);
+            assertThat(userReplyMessage.getTyp()).isEqualTo(GameUserReplyMessage.Type.HISTORY);
+
+            String[] inputHistory = userReplyMessage.getData().split("\n");
             assertThat(inputHistory[0]).isEqualTo(SERVER_START_LOG_QUIET);
             assertThat(inputHistory[1]).isEqualTo(SERVER_START_LOG);
+
+            TestStompSessionHandlerAdapter.Frame lifecycleFrame = lifecycleMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(lifecycleFrame).isNull(); // no lifecycle events since subscribed after start and no changes
 
             stop(session);
         }
@@ -271,21 +291,20 @@ class GameControllerIT extends WireMockGameProcessTest {
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newSession(token, sessionHandler);
             session.subscribe("/user/queue/reply", sessionHandler);
-            session.subscribe("/topic/game", sessionHandler);
+            session.subscribe("/topic/game/logs", sessionHandler);
 
-            TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS); // Poll the history message
-            assertThat(receivedFrame).isNotNull();
-            assertThat(receivedFrame.getPayloadAs(GameMessage.class).getTyp()).isEqualTo(GameMessage.Type.HISTORY);
+            TestStompSessionHandlerAdapter.Frame userReplyFrame = userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS); // Poll the history message
+            assertThat(userReplyFrame).isNotNull();
+            assertThat(userReplyFrame.getPayloadAs(GameUserReplyMessage.class).getTyp()).isEqualTo(GameUserReplyMessage.Type.HISTORY);
 
-            GameMessage msg = GameMessage.builder().data("/weather clear").build();
+            GameLogMessage msg = GameLogMessage.builder().data("/weather clear").build();
             session.send("/app/game", msg);
 
-            receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
-            assertThat(receivedFrame).isNotNull();
-            GameMessage receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
-            assertThat(receivedMsg).isNotNull();
-            assertThat(receivedMsg.getSrc()).isEqualTo(GameMessage.Source.GAME);
-            assertThat(receivedMsg.getData()).isEqualTo("/weather clear");
+            TestStompSessionHandlerAdapter.Frame logFrame = logMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(logFrame).isNotNull();
+            GameLogMessage logMsg = logFrame.getPayloadAs(GameLogMessage.class);
+            assertThat(logMsg).isNotNull();
+            assertThat(logMsg.getData()).isEqualTo("/weather clear");
 
             stop(session);
         }
@@ -304,7 +323,8 @@ class GameControllerIT extends WireMockGameProcessTest {
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newSession(token, sessionHandler);
             session.subscribe("/user/queue/reply", sessionHandler);
-            session.subscribe("/topic/game", sessionHandler);
+            session.subscribe("/topic/game/logs", sessionHandler);
+            session.subscribe("/topic/game/lifecycle", sessionHandler);
 
             given()
                     .headers(httpHeaders)
@@ -317,28 +337,28 @@ class GameControllerIT extends WireMockGameProcessTest {
             outputAsServerProcess(SERVER_START_LOG);
             assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
-            TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS); // Poll the history message
+            // Poll history event
+            TestStompSessionHandlerAdapter.Frame receivedFrame = userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
             assertThat(receivedFrame).isNotNull();
-            GameMessage receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
-            assertThat(receivedMsg.getTyp()).isEqualTo(GameMessage.Type.HISTORY);
+            GameUserReplyMessage receivedMsg = receivedFrame.getPayloadAs(GameUserReplyMessage.class);
+            assertThat(receivedMsg.getTyp()).isEqualTo(GameUserReplyMessage.Type.HISTORY);
             assertThat(receivedMsg.getData()).isEmpty();
 
-            GameMessage msg = GameMessage.builder().data("/weather clear").build();
+            GameLogMessage msg = GameLogMessage.builder().data("/weather clear").build();
             session.send("/app/game", msg);
 
-            receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
-            assertThat(receivedFrame).isNotNull();
-            receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
-            assertThat(receivedMsg).isNotNull();
-            assertThat(receivedMsg.getSrc()).isEqualTo(GameMessage.Source.GAME);
-            assertThat(receivedMsg.getData()).isEqualTo(SERVER_START_LOG);
+            // Poll input events
+            TestStompSessionHandlerAdapter.Frame logFrame = logMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(logFrame).isNotNull();
+            GameLogMessage logMsg = logFrame.getPayloadAs(GameLogMessage.class);
+            assertThat(logMsg).isNotNull();
+            assertThat(logMsg.getData()).isEqualTo(SERVER_START_LOG);
 
-            receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
-            assertThat(receivedFrame).isNotNull();
-            receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
-            assertThat(receivedMsg).isNotNull();
-            assertThat(receivedMsg.getSrc()).isEqualTo(GameMessage.Source.GAME);
-            assertThat(receivedMsg.getData()).isEqualTo("/weather clear");
+            logFrame = logMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(logFrame).isNotNull();
+            logMsg = logFrame.getPayloadAs(GameLogMessage.class);
+            assertThat(logMsg).isNotNull();
+            assertThat(logMsg.getData()).isEqualTo("/weather clear");
 
             stop(session);
         }
@@ -383,17 +403,35 @@ class GameControllerIT extends WireMockGameProcessTest {
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newSession(token, sessionHandler);
             session.subscribe("/user/queue/reply", sessionHandler);
-            session.subscribe("/topic/game", sessionHandler);
+            session.subscribe("/topic/game/logs", sessionHandler);
 
-            TestStompSessionHandlerAdapter.Frame receivedFrame = responseQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
-            assertThat(receivedFrame).isNotNull();
-            GameMessage receivedMsg = receivedFrame.getPayloadAs(GameMessage.class);
-            assertThat(receivedMsg.getTyp()).isEqualTo(GameMessage.Type.HISTORY);
+            TestStompSessionHandlerAdapter.Frame userReplyFrame = userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(userReplyFrame).isNotNull();
+            GameUserReplyMessage receivedMsg = userReplyFrame.getPayloadAs(GameUserReplyMessage.class);
+            assertThat(receivedMsg.getTyp()).isEqualTo(GameUserReplyMessage.Type.HISTORY);
             String[] history = receivedMsg.getData().split("\n");
             assertThat(history[0]).isEqualTo(SERVER_START_LOG);
             assertThat(history[1]).isEqualTo("stop");
 
             stop(session);
+        }
+
+        @SneakyThrows
+        @Test
+        void testSendInvalidMessage() {
+            stubForAdminUser(wireMockServer);
+            String token = tokens.generateToken(1);
+
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newSession(token, sessionHandler);
+            session.subscribe("/user/queue/reply", sessionHandler);
+
+            GameOutputMessage msg = GameOutputMessage.builder().data(" ").build();
+            session.send("/app/game", msg);
+
+            TestStompSessionHandlerAdapter.Frame userReplyFrame = userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(userReplyFrame).isNotNull();
+            assertThat(userReplyFrame.getPayloadAs(GameUserReplyMessage.class).getData()).isEqualTo("Invalid message");
         }
     }
 
@@ -447,6 +485,6 @@ class GameControllerIT extends WireMockGameProcessTest {
     }
 
     StompSessionHandlerAdapter newStompSessionHandler() {
-        return new TestStompSessionHandlerAdapter(responseQueue);
+        return new TestStompSessionHandlerAdapter(userReplyQueue, logMessageQueue, lifecycleMessageQueue);
     }
 }
