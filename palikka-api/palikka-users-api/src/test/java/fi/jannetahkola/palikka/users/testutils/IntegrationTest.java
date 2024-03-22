@@ -24,6 +24,11 @@ public abstract class IntegrationTest {
      */
     protected static final int USER_ID_USER = 2;
 
+    /**
+     * Root user id. See {@link SqlForUsers}
+     */
+    protected static final int USER_ID_ROOT = 3;
+
     @Autowired
     protected TestTokenUtils tokens;
 

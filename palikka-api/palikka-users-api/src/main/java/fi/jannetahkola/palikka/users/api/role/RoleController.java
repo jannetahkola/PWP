@@ -7,7 +7,6 @@ import fi.jannetahkola.palikka.users.data.role.RoleEntity;
 import fi.jannetahkola.palikka.users.data.role.RoleRepository;
 import fi.jannetahkola.palikka.users.exception.UsersNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,7 +30,6 @@ public class RoleController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER')")
-    @Cacheable("roleCache")
     public ResponseEntity<CollectionModel<RoleModel>> getRoles(Authentication authentication) {
         List<RoleEntity> roles = roleRepository.findAll();
         if (!AuthorizationUtil.hasAuthority(authentication, "ROLE_ADMIN")) {
@@ -45,7 +43,6 @@ public class RoleController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER')")
-    @Cacheable("roleCache")
     public ResponseEntity<RoleModel> getRole(@PathVariable("id") Integer roleId, Authentication authentication) {
         RoleModel roleModel = roleRepository.findById(roleId)
                 .map(roleModelAssembler::toModel)

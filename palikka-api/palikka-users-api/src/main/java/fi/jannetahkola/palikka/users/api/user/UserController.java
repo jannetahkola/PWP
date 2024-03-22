@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.users.api.user;
 
+import fi.jannetahkola.palikka.core.api.exception.BadRequestException;
 import fi.jannetahkola.palikka.core.api.exception.ConflictException;
 import fi.jannetahkola.palikka.core.util.AuthorizationUtil;
 import fi.jannetahkola.palikka.users.api.user.model.UserModel;
@@ -46,7 +47,7 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    @PreAuthorize("hasRole('ROLE_SYSTEM') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasRole('ROLE_USER') or hasRole('ROLE_ADMIN')")
     public ResponseEntity<UserModel> getCurrentUser(Authentication authentication) {
         UserModel userModel = userRepository.findById(Integer.valueOf(authentication.getName()))
                 .map(userModelAssembler::toModel)
@@ -71,6 +72,7 @@ public class UserController {
         UserEntity userEntity = new UserEntity();
         userEntity.setUsername(userToPost.getUsername());
         userEntity.setActive(userToPost.getActive());
+        userEntity.setRoot(false);
         userEntity.setSalt(salt);
         userEntity.setPassword(hash);
 
@@ -90,6 +92,10 @@ public class UserController {
                 .findById(userId)
                 .orElseThrow(() -> UsersNotFoundException.ofUser(userId));
 
+        if (Boolean.TRUE.equals(existingUserEntity.getRoot())) {
+            throw new BadRequestException("Root user not updatable");
+        }
+
         if (userRepository.existsByUsernameExcept(userToPut.getUsername(), existingUserEntity.getUsername())) {
             throw new ConflictException(
                     String.format("User with username '%s' already exists", userToPut.getUsername()));
@@ -105,8 +111,10 @@ public class UserController {
         userEntity.setId(userId);
         userEntity.setUsername(userToPut.getUsername());
         userEntity.setActive(isActive);
+        userEntity.setRoot(existingUserEntity.getRoot());
         userEntity.setSalt(existingUserEntity.getSalt());
         userEntity.setPassword(existingUserEntity.getPassword());
+        existingUserEntity.getRoles().forEach(userEntity::addRole);
 
         if (userToPut.getPassword() != null) {
             // TODO Password updated at timestamp

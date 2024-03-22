@@ -31,6 +31,9 @@ public class UserModel extends RepresentationModel<UserModel> {
     @NotNull(groups = {PostGroup.class})
     Boolean active;
 
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    Boolean root;
+
     @Builder.Default
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     Set<String> roles = new HashSet<>();

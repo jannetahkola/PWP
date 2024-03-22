@@ -138,6 +138,24 @@ class UserRoleControllerIT extends IntegrationTest {
         }
 
         @Test
+        void givenPatchUserRolesRequest_whenTargetUserIsRoot_thenBadRequestResponse() {
+            UserRolePatchModel patch = UserRolePatchModel.builder()
+                    .patch(
+                            UserRolePatchModel.UserRolePatch.builder()
+                                    .action(UserRolePatchModel.Action.ADD)
+                                    .roleId(2).build())
+                    .build();
+            given()
+                    .header(newAdminToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(patch)
+                    .patch("/users-api/users/" + USER_ID_ROOT + "/roles")
+                    .then().assertThat()
+                    .statusCode(400)
+                    .body("message", equalTo("Root user not updatable"));
+        }
+
+        @Test
         void givenPatchUserRolesRequest_whenParametersInvalid_thenBadRequestResponse() {
             // TODO Parameterized test
         }

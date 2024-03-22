@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.nimbusds.jwt.JWTClaimsSet;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.auth.jwt.PalikkaJwtType;
+import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
 import fi.jannetahkola.palikka.users.util.CryptoUtils;
 import jakarta.validation.Valid;
@@ -27,7 +28,8 @@ public class LoginController {
     private final UserRepository userRepository;
     private final JwtService jwtService;
 
-    @PostMapping
+    // todo tests
+    @PostMapping // todo return expiry time so we don't have to parse token in client
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
         LoginResponse loginResponse = userRepository
                 .findByUsername(loginRequest.getUsername())
@@ -38,6 +40,7 @@ public class LoginController {
                     }
                     return true;
                 })
+                .filter(UserEntity::getActive)
                 .map(user -> {
                     JWTClaimsSet.Builder claims = new JWTClaimsSet.Builder();
                     claims.subject(String.valueOf(user.getId()));

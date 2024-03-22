@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.core.integration;
 
+import fi.jannetahkola.palikka.core.api.exception.BadRequestException;
 import fi.jannetahkola.palikka.core.api.exception.ConflictException;
 import fi.jannetahkola.palikka.core.api.exception.DefaultApiExceptionHandler;
 import fi.jannetahkola.palikka.core.api.exception.NotFoundException;
@@ -57,6 +58,16 @@ class DefaultApiExceptionHandlerIT {
 
     @MockBean
     DefaultApiExceptionHandler exceptionHandlerMock;
+
+    @SneakyThrows
+    @Test
+    void testBadRequest(CapturedOutput capturedOutput) {
+        when(exceptionHandlerMock.badRequestException(any())).thenCallRealMethod();
+        mockMvc.perform(get("/400"))
+                .andExpect(status().is(400));
+        verify(exceptionHandlerMock, times(1)).badRequestException(any());
+        assertThat(capturedOutput).contains("Bad request exception occurred");
+    }
 
     @SneakyThrows
     @Test
@@ -164,6 +175,11 @@ class DefaultApiExceptionHandlerIT {
     static class DefaultApiExceptionHandlerITTestApplication {
         public static void main(String[] args) {
             SpringApplication.run(DefaultApiExceptionHandlerITTestApplication.class);
+        }
+
+        @GetMapping("/400")
+        public void testBadRequest() {
+            throw new BadRequestException("");
         }
 
         @GetMapping("/403")

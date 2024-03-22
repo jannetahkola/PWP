@@ -1,6 +1,7 @@
 package fi.jannetahkola.palikka.users.api.user.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.constraints.NotNull;
@@ -40,6 +41,11 @@ public class UserRolePatchModel {
 
         Action(String value) {
             this.value = value;
+        }
+
+        @JsonValue
+        public String getValue() {
+            return this.value.toLowerCase(Locale.ROOT);
         }
 
         @JsonCreator

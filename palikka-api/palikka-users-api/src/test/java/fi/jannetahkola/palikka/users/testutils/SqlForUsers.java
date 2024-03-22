@@ -16,16 +16,22 @@ import java.lang.annotation.*;
 @SqlGroup(value = {
         @Sql(
                 statements = {
-                        "insert into palikka_user (username, password, salt, active) values ('mock-user', 'mock-pass', 'mock-salt', true)",
+                        "insert into palikka_user (username, password, salt, active, root) values ('mock-user', 'mock-pass', 'mock-salt', true, false)",
                         "insert into palikka_role (name, description) values ('ROLE_ADMIN', 'Access to everything')",
                         "insert into palikka_user_role (user_id, role_id) values (1, 1)"},
                 executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD
         ),
         @Sql(
                 statements = {
-                        "insert into palikka_user (username, password, salt, active) values ('mock-user-2', 'mock-pass', 'mock-salt', true)",
+                        "insert into palikka_user (username, password, salt, active, root) values ('mock-user-2', 'mock-pass', 'mock-salt', true, false)",
                         "insert into palikka_role (name, description) values ('ROLE_USER', 'Access to limited functionality and self endpoints')",
                         "insert into palikka_user_role (user_id, role_id) values (2, 2)"},
+                executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD
+        ),
+        @Sql(
+                statements = {
+                        "insert into palikka_user (username, password, salt, active, root) values ('mock-user-root', 'mock-pass', 'mock-salt', true, true)",
+                        "insert into palikka_user_role (user_id, role_id) values (3, 1)"},
                 executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD
         ),
 })

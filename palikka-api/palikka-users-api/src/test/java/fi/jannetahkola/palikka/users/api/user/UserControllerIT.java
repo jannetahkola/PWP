@@ -71,6 +71,28 @@ class UserControllerIT extends IntegrationTest {
                     .statusCode(403);
         }
 
+        @Test
+        void givenGetCurrentUserRequest_whenNoToken_thenForbiddenResponse() {
+            given()
+                    .get("/users-api/users/me")
+                    .then().assertThat()
+                    .statusCode(403);
+        }
+
+        @Test
+        void givenGetCurrentUserRequest_whenAnyRole_thenOkResponse() {
+            given()
+                    .header(newAdminToken())
+                    .get("/users-api/users/me")
+                    .then().assertThat()
+                    .statusCode(200);
+            given()
+                    .header(newUserToken())
+                    .get("/users-api/users/me")
+                    .then().assertThat()
+                    .statusCode(200);
+        }
+
         @SneakyThrows
         @Test
         void givenGetPostUserRequest_whenNoTokenOrRole_thenForbiddenResponse() {
@@ -156,6 +178,7 @@ class UserControllerIT extends IntegrationTest {
                     .body("username", equalTo("mock-user"))
                     .body("password", nullValue())
                     .body("active", equalTo(true))
+                    .body("root", equalTo(false))
                     .body("roles", hasSize(1))
                     .body("roles", contains("ROLE_ADMIN"))
                     .body("_links.self.href", endsWith("/users-api/users/" + USER_ID_ADMIN))
@@ -208,6 +231,8 @@ class UserControllerIT extends IntegrationTest {
                     .put("username", "mock-user-3")
                     .put("password", "mock-pass")
                     .put("active", true)
+                    .put("root", true) // Cannot be set by clients, should be false
+                    .put("roles", "[\"ROLE_USER\"]") // Cannot be set during POST, should be empty
                     .toString();
 
             given()
@@ -223,6 +248,8 @@ class UserControllerIT extends IntegrationTest {
                     .body("password", nullValue())
                     .body("salt", nullValue())
                     .body("active", equalTo(true))
+                    .body("root", equalTo(false))
+                    .body("roles", hasSize(0))
                     .body("_links.self.href", endsWith("/users-api/users/3"));
 
             UserEntity createdUser = userRepository.findById(3).orElseThrow();
@@ -271,6 +298,7 @@ class UserControllerIT extends IntegrationTest {
                     .put("username", "mock-user-3")
                     .put("password", "new-pass")
                     .put("active", false) // Admin can update
+                    .put("root", true) // Cannot be updated, should stay false
                     .toString();
             given()
                     .header(newAdminToken())
@@ -282,7 +310,9 @@ class UserControllerIT extends IntegrationTest {
                     .body("username", equalTo("mock-user-3"))
                     .body("password", nullValue())
                     .body("salt", nullValue())
-                    .body("active", equalTo(false));
+                    .body("active", equalTo(false))
+                    .body("root", equalTo(false))
+                    .body("roles", hasSize(1));
 
             UserEntity createdUser = userRepository.findById(USER_ID_ADMIN).orElseThrow();
             String salt = createdUser.getSalt();
@@ -305,6 +335,22 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(404)
                     .body("message", equalTo("User with id '9999' not found"));
+        }
+
+        @SneakyThrows
+        @Test
+        void givenPutUserRequest_whenTargetUserIsRoot_thenBadRequestResponse() {
+            String json = new JSONObject()
+                    .put("username", "mock-user-3")
+                    .toString();
+            given()
+                    .header(newAdminToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .put("/users-api/users/" + USER_ID_ROOT)
+                    .then().assertThat()
+                    .statusCode(400)
+                    .body("message", equalTo("Root user not updatable"));
         }
 
         @Test

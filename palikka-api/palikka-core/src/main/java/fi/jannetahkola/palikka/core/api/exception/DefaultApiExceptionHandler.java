@@ -39,6 +39,12 @@ public class DefaultApiExceptionHandler {
     }
 
     @ExceptionHandler
+    public ResponseEntity<ApiErrorModel> badRequestException(BadRequestException e) {
+        log.debug("Bad request exception occurred", e);
+        return ApiErrorModel.badRequest(e).toResponse();
+    }
+
+    @ExceptionHandler
     public ResponseEntity<ApiErrorModel> accessDeniedException(AccessDeniedException e) {
         log.info("Access denied exception occurred", e); // TODO Check log levels
         return ApiErrorModel

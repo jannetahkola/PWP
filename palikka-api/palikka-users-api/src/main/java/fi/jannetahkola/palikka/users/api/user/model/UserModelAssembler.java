@@ -26,6 +26,7 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
                 .username(entity.getUsername())
                 .password(entity.getPassword())
                 .active(entity.getActive())
+                .root(entity.getRoot())
                 .roles(
                         entity.getRoles().stream()
                                 .map(RoleEntity::getName)

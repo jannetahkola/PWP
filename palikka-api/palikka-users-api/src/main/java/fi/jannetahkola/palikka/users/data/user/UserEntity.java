@@ -30,6 +30,9 @@ public class UserEntity {
     @Column(nullable = false)
     private Boolean active = true;
 
+    @Column(nullable = false)
+    private Boolean root = false;
+
     @Setter(AccessLevel.NONE)
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(

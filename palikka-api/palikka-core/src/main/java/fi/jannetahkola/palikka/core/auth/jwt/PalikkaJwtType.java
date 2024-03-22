@@ -21,6 +21,6 @@ public enum PalikkaJwtType {
 
     @JsonCreator
     public static PalikkaJwtType fromValue(String value) {
-        return PalikkaJwtType.valueOf(value.toLowerCase(Locale.ROOT));
+        return PalikkaJwtType.valueOf(value.toUpperCase(Locale.ROOT));
     }
 }

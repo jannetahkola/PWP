@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.users.api.user;
 
+import fi.jannetahkola.palikka.core.api.exception.BadRequestException;
 import fi.jannetahkola.palikka.users.api.role.model.RoleModel;
 import fi.jannetahkola.palikka.users.api.role.model.RoleModelAssembler;
 import fi.jannetahkola.palikka.users.api.user.model.UserRolePatchModel;
@@ -55,6 +56,10 @@ public class UserRoleController {
                                                                      @Valid @RequestBody UserRolePatchModel patchModel) {
         UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> UsersNotFoundException.ofUser(userId));
+
+        if (Boolean.TRUE.equals(userEntity.getRoot())) {
+            throw new BadRequestException("Root user not updatable");
+        }
 
         Map<UserRolePatchModel.Action, List<UserRolePatchModel.UserRolePatch>> patchesByActionMap =
                 patchModel.getPatches().stream()
