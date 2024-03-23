@@ -27,17 +27,17 @@ class UserRoleControllerIT extends IntegrationTest {
         @Test
         void givenGetUserRolesRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
             given()
-                    .get("/users-api/users/" + USER_ID_ADMIN + "/roles")
+                    .get("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newViewerToken())
-                    .get("/users-api/users/" + USER_ID_ADMIN + "/roles")
+                    .get("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newUserToken())
-                    .get("/users-api/users/" + USER_ID_ADMIN + "/roles")
+                    .get("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -46,12 +46,12 @@ class UserRoleControllerIT extends IntegrationTest {
         void givenGetUserRolesRequest_whenNoAllowedRoleButRequestedForSelf_thenOkResponse() {
             given()
                     .header(newViewerToken())
-                    .get("/users-api/users/" + USER_ID_VIEWER + "/roles")
+                    .get("/users/" + USER_ID_VIEWER + "/roles")
                     .then().assertThat()
                     .statusCode(200);
             given()
                     .header(newUserToken())
-                    .get("/users-api/users/" + USER_ID_USER + "/roles")
+                    .get("/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(200);
         }
@@ -71,14 +71,14 @@ class UserRoleControllerIT extends IntegrationTest {
             given()
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users-api/users/" + USER_ID_ADMIN + "/roles")
+                    .patch("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newUserToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users-api/users/" + USER_ID_ADMIN + "/roles")
+                    .patch("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -90,11 +90,11 @@ class UserRoleControllerIT extends IntegrationTest {
         void givenGetUserRolesRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
-                    .get("/users-api/users/" + USER_ID_ADMIN + "/roles")
+                    .get("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(200)
                     .body("_embedded.roles", hasSize(1))
-                    .body("_links.self.href", endsWith("/users-api/users/1/roles"));
+                    .body("_links.self.href", endsWith("/users/1/roles"));
         }
 
         @Test
@@ -113,7 +113,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users-api/users/" + USER_ID_USER + "/roles")
+                    .patch("/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(202)
                     .body("_embedded.roles", hasSize(1))
@@ -132,7 +132,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users-api/users/999/roles")
+                    .patch("/users/999/roles")
                     .then().assertThat()
                     .statusCode(404)
                     .body("message", equalTo("User with id '999' not found"));
@@ -150,7 +150,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users-api/users/" + USER_ID_USER + "/roles")
+                    .patch("/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(202)
                     .body("_embedded.roles", hasSize(1));
@@ -168,7 +168,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users-api/users/" + USER_ID_ADMIN + "/roles")
+                    .patch("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(400)
                     .body("message", equalTo("Root user not updatable"));
@@ -183,7 +183,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .patch("/users-api/users/" + USER_ID_USER + "/roles")
+                    .patch("/users/" + USER_ID_USER + "/roles")
                     .then().log().all().assertThat()
                     .statusCode(400)
                     .body("message", equalTo(expectedMessageSubstring));

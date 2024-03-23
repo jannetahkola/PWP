@@ -1,3 +1,8 @@
+server:
+  servlet:
+    context-path: /users-api
+  port: 8080
+
 spring:
   hateoas:
     use-hal-as-default-json-media-type: false
@@ -21,6 +26,7 @@ spring:
           time_zone: UTC
         format_sql: true
         show_sql: true
+
 palikka:
   jwt:
     keystore:

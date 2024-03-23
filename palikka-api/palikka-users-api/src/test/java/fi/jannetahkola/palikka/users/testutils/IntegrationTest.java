@@ -34,6 +34,7 @@ public abstract class IntegrationTest {
 
     @BeforeEach
     public void beforeEach(@LocalServerPort int localServerPort) {
+        RestAssured.basePath = "/users-api";
         RestAssured.port = localServerPort;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
     }

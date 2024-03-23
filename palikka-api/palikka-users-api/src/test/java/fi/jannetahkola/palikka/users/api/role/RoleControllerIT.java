@@ -15,17 +15,17 @@ class RoleControllerIT extends IntegrationTest {
         @Test
         void givenGetRoleRequest_whenNoTokenOrAllowedRole_thenForbiddenRequest() {
             given()
-                    .get("/users-api/roles/1")
+                    .get("/roles/1")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newViewerToken())
-                    .get("/users-api/roles/1")
+                    .get("/roles/1")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(newUserToken())
-                    .get("/users-api/roles/1")
+                    .get("/roles/1")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -34,7 +34,7 @@ class RoleControllerIT extends IntegrationTest {
         void givenGetRoleRequest_whenLimitedRole_andRequestedForThatRole_thenOkResponse() {
             given()
                     .header(newUserToken())
-                    .get("/users-api/roles/2")
+                    .get("/roles/2")
                     .then().assertThat()
                     .statusCode(200);
         }
@@ -42,7 +42,7 @@ class RoleControllerIT extends IntegrationTest {
         @Test
         void givenGetRolesRequest_whenNoToken_thenForbiddenRequest() {
             given()
-                    .get("/users-api/roles")
+                    .get("/roles")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -51,7 +51,7 @@ class RoleControllerIT extends IntegrationTest {
         void givenGetRolesRequest_whenLimitedRole_thenResultsFiltered_andOkResponse() {
             given()
                     .header(newUserToken())
-                    .get("/users-api/roles")
+                    .get("/roles")
                     .then().assertThat()
                     .statusCode(200)
                     .body("_embedded.roles", hasSize(1))
@@ -65,7 +65,7 @@ class RoleControllerIT extends IntegrationTest {
         void givenGetRolesRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
-                    .get("/users-api/roles")
+                    .get("/roles")
                     .then().assertThat()
                     .statusCode(200)
                     .body("_embedded.roles", hasSize(3))
@@ -76,7 +76,7 @@ class RoleControllerIT extends IntegrationTest {
         void givenGetRoleRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
-                    .get("/users-api/roles/1")
+                    .get("/roles/1")
                     .then().assertThat()
                     .statusCode(200)
                     .body("id", equalTo(1))
@@ -88,7 +88,7 @@ class RoleControllerIT extends IntegrationTest {
         void givenGetRoleRequest_whenRoleNotFound_thenNotFoundResponse() {
             given()
                     .header(newAdminToken())
-                    .get("/users-api/roles/999")
+                    .get("/roles/999")
                     .then().assertThat()
                     .statusCode(404)
                     .body("message", equalTo("Role with id '999' not found"));

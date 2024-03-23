@@ -17,7 +17,7 @@ import java.time.ZoneId;
 
 @Slf4j
 @RestController
-@RequestMapping("/users-api/auth/logout")
+@RequestMapping("/auth/logout")
 @RequiredArgsConstructor
 public class LogoutController {
     private final JwtService jwtService;

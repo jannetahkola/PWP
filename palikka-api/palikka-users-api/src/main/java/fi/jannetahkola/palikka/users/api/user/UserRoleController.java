@@ -28,7 +28,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Slf4j
 @RestController
-@RequestMapping("/users-api/users")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 @Validated
 public class UserRoleController {
