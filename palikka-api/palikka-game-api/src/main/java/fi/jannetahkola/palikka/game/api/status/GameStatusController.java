@@ -5,7 +5,7 @@ import fi.jannetahkola.palikka.game.api.status.model.GameStatusResponse;
 import fi.jannetahkola.palikka.game.config.properties.GameProperties;
 import fi.jannetahkola.palikka.game.service.PacketService;
 import fi.jannetahkola.palikka.game.util.VarIntUtil;
-import fi.jannetahkola.palikka.game.service.SocketFactory;
+import fi.jannetahkola.palikka.game.service.factory.SocketFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,8 +20,6 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 
-// TODO hateoas?
-// TODO set custom port and don't open it on host
 @Slf4j
 @RestController
 @RequestMapping("/game-api/game/status")
@@ -29,6 +27,7 @@ import java.nio.ByteBuffer;
 public class GameStatusController {
     private final GameProperties properties;
     private final SocketFactory socketFactory;
+    private final ObjectMapper objectMapper;
 
     @GetMapping
     public GameStatusResponse getGameStatus() {
@@ -48,7 +47,7 @@ public class GameStatusController {
             final DataInputStream in = new DataInputStream(socket.getInputStream());
             PacketService.Packet handshakePacket = new PacketService().newHandshakePacket(host, port);
             out.write(handshakePacket.getBytes());
-            status = readGameStatusFromStream(in);
+            status = readGameStatusFromStream(in, objectMapper);
         } catch (IOException e) {
             // It's not uncommon for this to fail because the game is down
             log.debug("Failed to get game status", e);
@@ -63,7 +62,7 @@ public class GameStatusController {
         return status;
     }
 
-    private static GameStatusResponse readGameStatusFromStream(DataInputStream in) throws IOException {
+    private static GameStatusResponse readGameStatusFromStream(DataInputStream in, ObjectMapper objectMapper) throws IOException {
         log.debug("Reading server status from stream");
         VarIntUtil.read(in); // Response length (not used)
         final int responsePacketId = VarIntUtil.read(in); // Packet id
@@ -78,6 +77,6 @@ public class GameStatusController {
         in.readFully(buffer);
         String statusString = new String(buffer);
         log.debug("Received status from server={}", statusString);
-        return new ObjectMapper().readValue(statusString, GameStatusResponse.class); // TODO use spring configured jackson?
+        return objectMapper.readValue(statusString, GameStatusResponse.class);
     }
 }

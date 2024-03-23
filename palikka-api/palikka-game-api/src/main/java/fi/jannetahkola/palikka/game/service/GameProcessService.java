@@ -2,13 +2,18 @@ package fi.jannetahkola.palikka.game.service;
 
 import fi.jannetahkola.palikka.game.config.properties.GameProperties;
 import fi.jannetahkola.palikka.game.process.GameProcess;
+import fi.jannetahkola.palikka.game.service.factory.ProcessFactory;
+import fi.jannetahkola.palikka.game.service.validator.PathValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -195,6 +200,16 @@ public class GameProcessService {
 
         public String getValue() {
             return value.toLowerCase(Locale.ROOT);
+        }
+    }
+
+    /**
+     * Separate class for logging game process logs. Makes it easier to separate them.
+     */
+    @Slf4j
+    public static class GameProcessLogger {
+        public void log(String input) {
+            log.info(input);
         }
     }
 

@@ -1,4 +1,4 @@
-package fi.jannetahkola.palikka.game.service;
+package fi.jannetahkola.palikka.game.service.validator;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

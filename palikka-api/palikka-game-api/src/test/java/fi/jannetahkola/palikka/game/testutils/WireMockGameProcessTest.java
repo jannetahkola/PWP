@@ -2,8 +2,8 @@ package fi.jannetahkola.palikka.game.testutils;
 
 import fi.jannetahkola.palikka.game.process.GameProcess;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
-import fi.jannetahkola.palikka.game.service.PathValidator;
-import fi.jannetahkola.palikka.game.service.ProcessFactory;
+import fi.jannetahkola.palikka.game.service.validator.PathValidator;
+import fi.jannetahkola.palikka.game.service.factory.ProcessFactory;
 import lombok.SneakyThrows;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;

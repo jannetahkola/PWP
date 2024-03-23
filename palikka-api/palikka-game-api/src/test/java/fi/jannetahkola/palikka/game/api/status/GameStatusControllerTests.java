@@ -1,8 +1,9 @@
 package fi.jannetahkola.palikka.game.api.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import fi.jannetahkola.palikka.game.api.status.model.GameStatusResponse;
 import fi.jannetahkola.palikka.game.config.properties.GameProperties;
-import fi.jannetahkola.palikka.game.service.SocketFactory;
+import fi.jannetahkola.palikka.game.service.factory.SocketFactory;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +47,7 @@ class GameStatusControllerTests {
         statusProperties.setPort(25565);
         GameProperties gameProperties = new GameProperties();
         gameProperties.setStatus(statusProperties);
-        GameStatusController controller = new GameStatusController(gameProperties, socketFactoryMock);
+        GameStatusController controller = new GameStatusController(gameProperties, socketFactoryMock, new ObjectMapper());
 
         byte[] responseLengthVarIntBytes = {-116, 1}; // result 140
         out.write(responseLengthVarIntBytes);
@@ -82,7 +83,7 @@ class GameStatusControllerTests {
         GameProperties gameProperties = new GameProperties();
         gameProperties.setStatus(statusProperties);
 
-        GameStatusController controller = new GameStatusController(gameProperties, socketFactoryMock);
+        GameStatusController controller = new GameStatusController(gameProperties, socketFactoryMock, new ObjectMapper());
         GameStatusResponse gameStatus = controller.getGameStatus();
 
         assertThat(gameStatus).isNotNull();
