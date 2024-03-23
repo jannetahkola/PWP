@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.game.api.status.model;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
@@ -12,14 +13,17 @@ import java.util.Map;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GameStatusResponse {
+    private String host;
+    private int port;
     private boolean online = true;
     private String version;
     private String description;
     private String motd;
     private Players players;
     private String favicon;
-    private String host;
-    private int port;
+
+    @JsonAlias("enforcesSecureChat")
+    private Boolean enforcesSecureChat;
 
     @Data
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)

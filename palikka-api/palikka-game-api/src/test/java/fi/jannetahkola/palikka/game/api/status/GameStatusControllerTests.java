@@ -64,8 +64,10 @@ class GameStatusControllerTests {
         assertThat(gameStatus).isNotNull();
         assertThat(gameStatus.isOnline()).isTrue();
         assertThat(gameStatus.getVersion()).isEqualTo("1.20.4");
+        assertThat(gameStatus.getPlayers().getOnline()).isZero();
         assertThat(gameStatus.getPlayers().getMax()).isEqualTo(20);
         assertThat(gameStatus.getDescription()).isEqualTo("A Minecraft Server");
+        assertThat(gameStatus.getEnforcesSecureChat()).isTrue();
     }
 
     @SneakyThrows
