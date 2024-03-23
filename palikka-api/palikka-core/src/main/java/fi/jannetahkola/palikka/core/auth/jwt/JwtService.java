@@ -13,6 +13,7 @@ import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import fi.jannetahkola.palikka.core.config.properties.JwtProperties;
 import fi.jannetahkola.palikka.core.util.KeyUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 import java.security.KeyPair;
 import java.security.PublicKey;
@@ -36,8 +37,17 @@ public class JwtService {
         return this.properties;
     }
 
+    public boolean isExpired(String token) {
+        try {
+            return SignedJWT.parse(token).getJWTClaimsSet().getExpirationTime().before(new Date());
+        } catch (ParseException e) {
+            log.info("Token parsing failed", e);
+        }
+        return true;
+    }
+
     public Optional<JWTClaimsSet> parse(String token) {
-        if (token == null) return Optional.empty();
+        if (!StringUtils.hasText(token)) return Optional.empty();
         try {
             String ptyp = (String) Objects.requireNonNull(
                     SignedJWT.parse(token).getHeader().getCustomParam("ptyp"), "Missing palikka token type");
@@ -58,6 +68,12 @@ public class JwtService {
     }
 
     public Optional<String> sign(JWTClaimsSet.Builder claims, PalikkaJwtType jwtType) {
+        return sign(claims, jwtType, null);
+    }
+
+    public Optional<String> sign(JWTClaimsSet.Builder claims,
+                                 PalikkaJwtType jwtType,
+                                 Date expiryDate) {
         if (!jwsSigners.containsKey(jwtType)) {
             log.error("Token signing failed - service not configured with token producer support");
             return Optional.empty();
@@ -81,7 +97,12 @@ public class JwtService {
             claims.jwtID(UUID.randomUUID().toString());
             claims.issuer(tokenProperties.getIssuer());
             claims.issueTime(Date.from(Instant.now()));
-            claims.expirationTime(Date.from(Instant.now().plusSeconds(signingProperties.getValidityTime().getSeconds())));
+            claims.expirationTime(expiryDate);
+
+            if (expiryDate == null) {
+                claims.expirationTime(Date.from(Instant.now()
+                        .plusSeconds(signingProperties.getValidityTime().getSeconds())));
+            }
 
             JWSHeader.Builder header = new JWSHeader.Builder(JWSAlgorithm.RS512)
                     .keyID(signingProperties.getKeyAlias())

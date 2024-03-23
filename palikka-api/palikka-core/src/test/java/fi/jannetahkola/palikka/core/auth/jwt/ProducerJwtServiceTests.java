@@ -64,7 +64,7 @@ class ProducerJwtServiceTests {
         assertThat(jwtService.parse("test")).isNotPresent();
         assertThat(capturedOutput.getAll().split("\n"))
                 .filteredOn(logLine -> logLine.contains("Invalid serialized unsecured/JWS/JWE object: Missing part delimiters"))
-                .hasSize(3); // null case is not logged
+                .hasSize(1); // blank/null cases are not logged
     }
 
     @SneakyThrows
