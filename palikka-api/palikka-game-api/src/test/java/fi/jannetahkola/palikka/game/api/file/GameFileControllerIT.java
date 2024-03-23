@@ -262,6 +262,8 @@ class GameFileControllerIT extends WireMockTest {
                     .body("message", is("Invalid download URL"));
         }
 
+        // todo synchronization tests
+
         static Stream<Arguments> invalidDownloadUrlArgs() {
             return Stream.of(
                     Arguments.of("test"),

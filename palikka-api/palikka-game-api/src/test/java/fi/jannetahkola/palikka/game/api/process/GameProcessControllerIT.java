@@ -1,11 +1,7 @@
 package fi.jannetahkola.palikka.game.api.process;
 
-import fi.jannetahkola.palikka.game.process.GameProcess;
-import fi.jannetahkola.palikka.game.service.GameProcessService;
-import fi.jannetahkola.palikka.game.service.PathValidator;
-import fi.jannetahkola.palikka.game.service.ProcessFactory;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
-import fi.jannetahkola.palikka.game.testutils.WireMockTest;
+import fi.jannetahkola.palikka.game.testutils.WireMockGameProcessTest;
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import io.restassured.response.Response;
@@ -17,58 +13,37 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-import java.io.IOException;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
-import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForAdminUser;
 import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForNormalUser;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests the asynchronous lifecycle control actions. Depending on the host, test timeout may need to be increased.
  * Remember to stop the game process before each test!
  */
-// todo inherit WireMockGameProcessTest
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ActiveProfiles("test")
-class GameProcessControllerIT extends WireMockTest {
-    static final String SERVER_START_LOG = "[19:56:37] [Server thread/INFO]: Done (13.324s)! For help, type \"help\"";
-
-    @Value("#{T(java.lang.Long).parseLong('${palikka.test.timeout-in-millis}')}")
-    Long testTimeoutMillis;
-
+class GameProcessControllerIT extends WireMockGameProcessTest {
     @Autowired
     TestTokenUtils tokens;
-
-    @Autowired
-    GameProcessService gameProcessService;
-
-    @MockBean
-    ProcessFactory processFactory;
-
-    @MockBean
-    PathValidator pathValidator;
 
     Header authorizationHeader;
 
@@ -127,11 +102,6 @@ class GameProcessControllerIT extends WireMockTest {
 
     @Nested
     class ResourceFunctionalityIT {
-        CountDownLatch processStartLatch;
-        CountDownLatch processExitLatch;
-        CountDownLatch gameStartLatch;
-        PipedOutputStream gameOut;
-
         @BeforeEach
         void beforeEach() {
             stubForAdminUser(wireMockServer);
@@ -215,7 +185,10 @@ class GameProcessControllerIT extends WireMockTest {
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "stop").toString())
                     .post("/game-api/game/process");
+
             assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+            stop();
         }
 
         @SneakyThrows
@@ -267,7 +240,7 @@ class GameProcessControllerIT extends WireMockTest {
             assertThat(successfulResponses).isEqualTo(1);
             assertThat(badRequestResponses).isEqualTo(2);
 
-            assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+            stop();
         }
 
         @SneakyThrows
@@ -292,8 +265,7 @@ class GameProcessControllerIT extends WireMockTest {
                     .then().assertThat()
                     .statusCode(400);
 
-            gameProcessService.stopForcibly();
-            assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+            stop();
         }
 
         @SneakyThrows
@@ -328,7 +300,6 @@ class GameProcessControllerIT extends WireMockTest {
                     .statusCode(200)
                     .body("status", equalTo("up"));
 
-
             given()
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -345,78 +316,8 @@ class GameProcessControllerIT extends WireMockTest {
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("down"));
-        }
 
-        /**
-         * Output something as if the game process would log it.
-         * @param output Output to write
-         */
-        @SneakyThrows
-        void outputAsServerProcess(String output) {
-            gameOut.write((output + "\n").getBytes(StandardCharsets.UTF_8));
-        }
-
-        void mockGameProcess() throws IOException {
-            gameOut = new PipedOutputStream();
-            var out = new PipedOutputStream(new PipedInputStream());
-
-            Process mockProcess = Mockito.mock(Process.class);
-            when(mockProcess.onExit()).thenReturn(new CompletableFuture<>());
-            when(mockProcess.destroyForcibly()).thenAnswer(invocationOnMock -> {
-                mockProcess.onExit().complete(mockProcess); // Same as what would normally happen
-                return mockProcess;
-            });
-            when(mockProcess.getInputStream()).thenReturn(new PipedInputStream(gameOut));
-            when(mockProcess.getOutputStream()).thenReturn(out);
-
-            processStartLatch = new CountDownLatch(1);
-            processExitLatch = new CountDownLatch(1);
-            gameStartLatch = new CountDownLatch(1);
-
-            when(processFactory.newGameProcess(any(), any(), any(), any())).thenAnswer(invocationOnMock -> {
-                GameProcess.GameProcessHooks hooks =
-                        invocationOnMock.getArgument(2, GameProcess.GameProcessHooks.class);
-                Runnable onProcessStarted = hooks.getOnProcessStarted()
-                        .map(runnable -> (Runnable) () -> {
-                            processStartLatch.countDown();
-                            runnable.run();
-                        })
-                        .orElse(processStartLatch::countDown);
-                Runnable onProcessExited = hooks.getOnProcessExited()
-                        .map(runnable -> (Runnable) () -> {
-                            processExitLatch.countDown();
-                            runnable.run();
-                        })
-                        .orElse(processExitLatch::countDown);
-                Runnable onGameStarted = hooks.getOnGameStarted()
-                        .map(runnable -> (Runnable) () -> {
-                            gameStartLatch.countDown();
-                            runnable.run();
-                        })
-                        .orElse(gameStartLatch::countDown);
-                // Simulate how the game would exit when receiving "stop"
-                Consumer<String> onInput = hooks.getOnInput()
-                        .map(runnable -> (Consumer<String>) (s) -> {
-                            runnable.accept(s);
-                            if (s.equals("stop")) {
-                                mockProcess.onExit().complete(mockProcess);
-                            }
-                        })
-                        .orElse((s) -> {
-                            if (s.equals("stop")) {
-                                mockProcess.onExit().complete(mockProcess);
-                            }
-                        });
-                GameProcess.GameProcessHooks newHooks = hooks.toBuilder()
-                        .onProcessStarted(onProcessStarted)
-                        .onProcessExited(onProcessExited)
-                        .onGameStarted(onGameStarted)
-                        .onInput(onInput)
-                        .build();
-                return new GameProcess(() -> mockProcess, newHooks, gameProcessService.getOutputQueue());
-            });
-
-            when(pathValidator.validatePathExistsAndIsAFile(any())).thenReturn(true);
+            stop();
         }
     }
 }

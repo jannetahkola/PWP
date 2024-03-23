@@ -22,11 +22,26 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-// todo test with expired JWT since WS has a bit different flow?
 @Slf4j
 @Controller
 @RequiredArgsConstructor
 public class GameController {
+    /**
+     * Destination to target specific users.
+     * @see <a href="https://docs.spring.io/spring-framework/reference/web/websocket/stomp/user-destination.html">User destinations</a>
+     */
+    private static final String DEST_USER = "/queue/reply";
+
+    /**
+     * Destination to target the game lifecycle topic.
+     */
+    private static final String DEST_GAME_LIFECYCLE = "/topic/game/lifecycle";
+
+    /**
+     * Destination to target the game logs topic.
+     */
+    private static final String DEST_GAME_LOGS = "/topic/game/logs";
+
     private static final Validator VALIDATOR;
 
     private final SimpMessagingTemplate messagingTemplate;
@@ -45,20 +60,20 @@ public class GameController {
             GameLifecycleMessage msg = GameLifecycleMessage.builder()
                     .status(processStatus)
                     .build();
-            messagingTemplate.convertAndSend("/topic/game/lifecycle", msg);
+            messagingTemplate.convertAndSend(DEST_GAME_LIFECYCLE, msg);
         });
         gameProcessService.registerInputListener(input -> {
             log.debug("Publishing game input event to subscribers");
             GameLogMessage msg = GameLogMessage.builder()
                     .data(input)
                     .build();
-            messagingTemplate.convertAndSend("/topic/game/logs", msg);
+            messagingTemplate.convertAndSend(DEST_GAME_LOGS, msg);
         });
     }
 
     @SubscribeMapping("/game/lifecycle")
     public void subscribeToGameLifecycle(Principal principal) {
-        log.info("New game lifecycle subscription with principal '{}'", principal);
+        log.info("New game lifecycle subscription with principal '{}'", principal.getName());
     }
 
     @SubscribeMapping("/game/logs")
@@ -75,34 +90,31 @@ public class GameController {
                 .typ(GameUserReplyMessage.Type.HISTORY)
                 .data(inputHistory)
                 .build();
-        messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/reply", inputHistoryMsg);
+        messagingTemplate.convertAndSendToUser(principal.getName(), DEST_USER, inputHistoryMsg);
     }
 
-    // todo if token expires we should kill the session somehow
-    // send token with each message and validate -> can still read console messages
-    // one 403 received in client, disconnect WS immediately to prevent above?
     @MessageMapping("/game")
     public void handleMessageToGame(@Payload GameOutputMessage msg,
                                     Principal principal) {
         Set<ConstraintViolation<GameOutputMessage>> violations = VALIDATOR.validate(msg);
         if (!violations.isEmpty()) {
             log.debug("Failed to process message with constraint violations: {}", violations);
-            GameUserReplyMessage userReplyMessage = GameUserReplyMessage.builder()
+            GameUserReplyMessage reply = GameUserReplyMessage.builder()
                     .typ(GameUserReplyMessage.Type.ERROR)
                     .data("Invalid message")
                     .build();
-            messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/reply", userReplyMessage);
+            messagingTemplate.convertAndSendToUser(principal.getName(), DEST_USER, reply);
             return;
         }
 
         if (!gameProcessService.isUp()) {
             // If process is not up, nothing will happen. Process service will clear the
             // queue next time the process is started.
-            GameUserReplyMessage userReplyMessage = GameUserReplyMessage.builder()
+            GameUserReplyMessage reply = GameUserReplyMessage.builder()
                     .typ(GameUserReplyMessage.Type.ERROR)
                     .data("Cannot process message - game is not UP")
                     .build();
-            messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/reply", userReplyMessage);
+            messagingTemplate.convertAndSendToUser(principal.getName(), DEST_USER, reply);
             return;
         }
 
@@ -112,11 +124,4 @@ public class GameController {
             gameProcessService.addOutput(msg.getData());
         });
     }
-
-//    @MessageMapping("/echo")
-//    public void echo(@Payload String payload, Principal principal) {
-//        log.info("At echo with principal={}", principal);
-//        messagingTemplate.convertAndSendToUser(
-//                principal.getName(), "/queue/reply", payload);
-//    }
 }

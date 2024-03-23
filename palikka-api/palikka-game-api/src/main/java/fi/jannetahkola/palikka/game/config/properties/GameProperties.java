@@ -1,11 +1,13 @@
 package fi.jannetahkola.palikka.game.config.properties;
 
+import fi.jannetahkola.palikka.game.websocket.SessionCleanUpScheduler;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.validation.annotation.Validated;
 
 import java.nio.file.Path;
@@ -24,6 +26,33 @@ public class GameProperties {
 
     @NotNull
     FileProperties file;
+
+    @NotNull
+    SessionProperties session = new SessionProperties();
+
+    @Data
+    @Valid
+    public static class SessionProperties {
+        @NotNull
+        AutoCleanProperties autoClean = new AutoCleanProperties();
+
+        @Data
+        @Valid
+        public static class AutoCleanProperties {
+            /**
+             * Fixed delay in milliseconds for the session auto clean job. See {@link Scheduled#fixedDelayString()}.
+             * Must be set in properties so the value can be injected in {@link SessionCleanUpScheduler}.
+             */
+            @NotNull
+            private Long fixedDelay;
+
+            /**
+             * Enable session auto clean job. Defaults to true.
+             */
+            @NotNull
+            private Boolean enabled = true;
+        }
+    }
 
     @Data
     @Valid

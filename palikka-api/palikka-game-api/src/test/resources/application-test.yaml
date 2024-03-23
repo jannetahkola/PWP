@@ -22,5 +22,9 @@ palikka:
           key-alias: jwt-usr
           key-pass: password
           validity-time: 10s
+  game:
+    session:
+      auto-clean:
+        enabled: false
   test:
     timeout-in-millis: 2000

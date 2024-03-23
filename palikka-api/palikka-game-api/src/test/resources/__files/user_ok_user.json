@@ -2,6 +2,7 @@
   "id": 2,
   "username": "mock-user-2",
   "active": true,
+  "root": false,
   "roles": [
     "ROLE_USER"
   ],

@@ -9,13 +9,12 @@ import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import fi.jannetahkola.palikka.game.config.properties.GameProperties;
 import fi.jannetahkola.palikka.game.service.ProcessFactory;
 import fi.jannetahkola.palikka.game.service.SocketFactory;
-import fi.jannetahkola.palikka.game.websocket.GameControllerHandshakeHandler;
-import fi.jannetahkola.palikka.game.websocket.GameControllerHandshakeInterceptor;
-import fi.jannetahkola.palikka.game.websocket.SessionInterceptor;
+import fi.jannetahkola.palikka.game.websocket.*;
 import lombok.SneakyThrows;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -28,7 +27,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.socket.server.HandshakeHandler;
-import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import java.util.Collections;
 import java.util.List;
@@ -41,7 +39,7 @@ import java.util.concurrent.Executor;
 @EnableAuthenticationSupport
 @EnableRemoteUsersIntegration
 @EnableRequestAndResponseLoggingSupport
-@Import(GameProperties.class)
+@EnableConfigurationProperties(GameProperties.class)
 public class PalikkaGameApiAppConfig {
 
     @SneakyThrows
@@ -63,18 +61,39 @@ public class PalikkaGameApiAppConfig {
     }
 
     @Bean
-    HandshakeInterceptor handshakeInterceptor(JwtService jwtService, UsersClient usersClient) {
-        return new GameControllerHandshakeInterceptor(jwtService, usersClient);
+    AuthenticationHandshakeInterceptor authenticationHandshakeInterceptor(JwtService jwtService, UsersClient usersClient) {
+        return new AuthenticationHandshakeInterceptor(jwtService, usersClient);
     }
 
     @Bean
-    HandshakeHandler handshakeHandler(JwtService jwtService, UsersClient usersClient) {
-        return new GameControllerHandshakeHandler(jwtService, usersClient);
+    HandshakeHandler handshakeHandler() {
+        return new GameControllerHandshakeHandler();
     }
 
     @Bean
-    SessionInterceptor sessionInterceptor() {
-        return new SessionInterceptor();
+    SessionEventLogger sessionInterceptor() {
+        return new SessionEventLogger();
+    }
+
+    @Bean
+    SessionStore webSocketSessionStore(JwtService jwtService) {
+        return new SessionStore(jwtService);
+    }
+
+    @Bean
+    PreSendAuthorizationChannelInterceptor preSendAuthorizationChannelInterceptor(JwtService jwtService) {
+        return new PreSendAuthorizationChannelInterceptor(jwtService);
+    }
+
+    @Bean
+    SessionBasedWebSocketHandlerDecoratorFactory sessionBasedWebSocketHandlerDecoratorFactory(SessionStore sessionStore) {
+        return new SessionBasedWebSocketHandlerDecoratorFactory(sessionStore);
+    }
+
+    @Bean
+    @ConditionalOnProperty(value = "palikka.session.auto-clean.enabled", matchIfMissing = true)
+    SessionCleanUpScheduler sessionCleanUpScheduler(GameProperties gameProperties, SessionStore sessionStore) {
+        return new SessionCleanUpScheduler(gameProperties, sessionStore);
     }
 
     @Bean

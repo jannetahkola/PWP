@@ -9,15 +9,17 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.messaging.simp.stomp.StompSession;
 
-import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -41,6 +43,23 @@ public abstract class WireMockGameProcessTest extends WireMockTest {
     @MockBean
     protected PathValidator pathValidator;
 
+    @SneakyThrows
+    protected void stop(StompSession session) {
+        try {
+            session.disconnect();
+        } catch (Exception e) {
+            // Ignore
+        } finally {
+            stop();
+        }
+    }
+
+    @SneakyThrows
+    protected void stop() {
+        gameProcessService.stopForcibly();
+        assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+    }
+
     /**
      * Output something as if the game process would log it.
      * @param output Output to write
@@ -52,7 +71,12 @@ public abstract class WireMockGameProcessTest extends WireMockTest {
         }
     }
 
-    protected void mockGameProcess() throws IOException {
+    @SneakyThrows
+    protected void mockGameProcess() {
+        if (!gameProcessService.isDown()) {
+            throw new IllegalAccessException("Game process is not DOWN");
+        }
+
         gameOut = new PipedOutputStream();
         var out = new PipedOutputStream(new PipedInputStream());
 

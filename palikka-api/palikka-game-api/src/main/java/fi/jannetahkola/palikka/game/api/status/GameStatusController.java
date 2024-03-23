@@ -50,7 +50,8 @@ public class GameStatusController {
             out.write(handshakePacket.getBytes());
             status = readGameStatusFromStream(in);
         } catch (IOException e) {
-            log.warn("Failed to get game status", e);
+            // It's not uncommon for this to fail because the game is down
+            log.debug("Failed to get game status", e);
             status.setOnline(false);
         }
 

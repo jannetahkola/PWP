@@ -13,10 +13,13 @@ public class Stubs {
         // util
     }
 
-    // todo return id from here to prevent having to remember the correct ones
+    public static final int USER_ID_ADMIN = 1;
+    public static final int USER_ID_USER = 2;
+    public static final int USER_ID_VIEWER = 3;
+
     public static void stubForAdminUser(WireMockExtension wireMockServer) {
         wireMockServer.stubFor(
-                get(urlMatching("/users-api/users/1"))
+                get(urlMatching("/users-api/users/" + USER_ID_ADMIN))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
@@ -26,11 +29,21 @@ public class Stubs {
 
     public static void stubForNormalUser(WireMockExtension wireMockServer) {
         wireMockServer.stubFor(
-                get(urlMatching("/users-api/users/2"))
+                get(urlMatching("/users-api/users/" + USER_ID_USER))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
                                         .withBodyFile("user_ok_user.json")
+                                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
+    }
+
+    public static void stubForViewerUser(WireMockExtension wireMockServer) {
+        wireMockServer.stubFor(
+                get(urlMatching("/users-api/users/" + USER_ID_VIEWER))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withBodyFile("user_ok_viewer.json")
                                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)));
     }
 

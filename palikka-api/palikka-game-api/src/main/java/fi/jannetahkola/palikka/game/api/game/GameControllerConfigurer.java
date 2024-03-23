@@ -1,6 +1,11 @@
 package fi.jannetahkola.palikka.game.api.game;
 
+import fi.jannetahkola.palikka.game.websocket.AuthenticationHandshakeInterceptor;
+import fi.jannetahkola.palikka.game.websocket.PreSendAuthorizationChannelInterceptor;
+import fi.jannetahkola.palikka.game.websocket.SessionBasedWebSocketHandlerDecoratorFactory;
+import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
@@ -16,11 +21,13 @@ import org.springframework.security.messaging.context.SecurityContextChannelInte
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 import org.springframework.web.socket.server.HandshakeHandler;
-import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import java.util.List;
 
+// todo enable CORS
+@Slf4j
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
@@ -29,7 +36,9 @@ public class GameControllerConfigurer implements WebSocketMessageBrokerConfigure
     public static final String SUBSCRIBE_PREFIX_QUEUE = "/queue";
     public static final String MESSAGE_PREFIX = "/app";
 
-    private final HandshakeInterceptor handshakeInterceptor;
+    private final PreSendAuthorizationChannelInterceptor preSendAuthorizationChannelInterceptor;
+    private final SessionBasedWebSocketHandlerDecoratorFactory sessionBasedWebSocketHandlerDecoratorFactory;
+    private final AuthenticationHandshakeInterceptor authenticationHandshakeInterceptor;
     private final HandshakeHandler handshakeHandler;
     private final ApplicationContext applicationContext;
 
@@ -49,13 +58,17 @@ public class GameControllerConfigurer implements WebSocketMessageBrokerConfigure
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // SockJS is disabled -> all connections must use ws protocol instead of http
-        //registry.addEndpoint("/ws").withSockJS();
-        // todo enable CORS
         registry
                 .addEndpoint("/ws")
-                .addInterceptors(handshakeInterceptor)
+                .addInterceptors(authenticationHandshakeInterceptor)
                 .setHandshakeHandler(handshakeHandler)
                 .setAllowedOriginPatterns("*");
+    }
+
+    @Override
+    public void configureWebSocketTransport(@Nonnull WebSocketTransportRegistration registry) {
+        WebSocketMessageBrokerConfigurer.super.configureWebSocketTransport(registry);
+        registry.addDecoratorFactory(sessionBasedWebSocketHandlerDecoratorFactory);
     }
 
     // The below are to disable CSRF and configure WS security manually instead of using
@@ -69,11 +82,15 @@ public class GameControllerConfigurer implements WebSocketMessageBrokerConfigure
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         AuthorizationManager<Message<?>> authorizationManager = new MessageMatcherDelegatingAuthorizationManager.Builder()
-                .simpDestMatchers("/app/game").hasRole("ADMIN")
+                .simpDestMatchers("/app/game").hasAnyRole("ADMIN", "USER")
                 .anyMessage().authenticated()
                 .build();
         AuthorizationChannelInterceptor authorizationChannelInterceptor = new AuthorizationChannelInterceptor(authorizationManager);
         authorizationChannelInterceptor.setAuthorizationEventPublisher(new SpringAuthorizationEventPublisher(this.applicationContext));
-        registration.interceptors(new SecurityContextChannelInterceptor(), authorizationChannelInterceptor);
+        registration.interceptors(
+                preSendAuthorizationChannelInterceptor,
+                new SecurityContextChannelInterceptor(),
+                authorizationChannelInterceptor
+        );
     }
 }

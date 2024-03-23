@@ -35,6 +35,10 @@ palikka:
       start-command: java -jar server.jar # todo omit name?
     status:
       host: localhost
+    session:
+      auto-clean:
+        enabled: true
+        fixed-delay: 60000
 # todo delete these - debugging only
 logging:
   level:

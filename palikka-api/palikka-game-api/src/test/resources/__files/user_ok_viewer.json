@@ -1,0 +1,17 @@
+{
+  "id": 3,
+  "username": "mock-user-3",
+  "active": true,
+  "root": false,
+  "roles": [
+    "ROLE_VIEWER"
+  ],
+  "_links": {
+    "self": {
+      "href": "http://localhost:39981/users-api/users/3"
+    },
+    "roles": {
+      "href": "http://localhost:39981/users-api/users/3/roles"
+    }
+  }
+}

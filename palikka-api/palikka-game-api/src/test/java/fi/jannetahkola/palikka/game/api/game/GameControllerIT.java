@@ -8,15 +8,16 @@ import fi.jannetahkola.palikka.game.api.game.model.GameUserReplyMessage;
 import fi.jannetahkola.palikka.game.testutils.TestStompSessionHandlerAdapter;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import fi.jannetahkola.palikka.game.testutils.WireMockGameProcessTest;
+import fi.jannetahkola.palikka.game.websocket.SessionStore;
 import io.restassured.RestAssured;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.RepeatedTest;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -40,10 +41,12 @@ import org.springframework.web.socket.sockjs.client.SockJsClient;
 import org.springframework.web.socket.sockjs.client.Transport;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.stream.Stream;
 
 import static fi.jannetahkola.palikka.game.testutils.Stubs.*;
 import static io.restassured.RestAssured.given;
@@ -107,6 +110,24 @@ class GameControllerIT extends WireMockGameProcessTest {
 
         @SneakyThrows
         @Test
+        void givenConnectRequest_withExpiredToken_thenForbiddenResponse(CapturedOutput capturedOutput) {
+            stubForUserNotFound(wireMockServer, USER_ID_ADMIN);
+
+            try {
+                String token = tokens.generateExpiredToken(USER_ID_ADMIN);
+                newStompClient()
+                        .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
+                        .get(1000, TimeUnit.MILLISECONDS);
+            } catch (ExecutionException e) {
+                assertTrue(e.getMessage().contains("403"));
+                assertThat(capturedOutput.getAll()).contains("Expired JWT");
+                return;
+            }
+            fail("Expected exception but none was thrown");
+        }
+
+        @SneakyThrows
+        @Test
         void givenConnectRequest_withUnknownUser_thenForbiddenResponse(CapturedOutput capturedOutput) {
             stubForUserNotFound(wireMockServer, 1);
 
@@ -124,16 +145,45 @@ class GameControllerIT extends WireMockGameProcessTest {
         }
 
         @SneakyThrows
-        @Test
-        void givenSendMessageToGame_withoutRoles_thenDisconnected(CapturedOutput capturedOutput) {
+        @ParameterizedTest
+        @MethodSource("sendMessageToGameAllowedUserArgs")
+        void givenSendMessageToGame_withAllowedRole_thenMessageOk(Integer user, CapturedOutput capturedOutput) {
+            stubForAdminUser(wireMockServer);
             stubForNormalUser(wireMockServer);
+            stubForViewerUser(wireMockServer);
 
-            String token = tokens.generateToken(2);
+            String token = tokens.generateToken(user);
+
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newStompClient()
+                    .connectAsync(webSocketUrl + newAuthQueryParam(token), sessionHandler)
+                    .get(1000, TimeUnit.MILLISECONDS);
+            session.subscribe("/user/queue/reply", sessionHandler);
+
+            GameOutputMessage message = GameOutputMessage.builder().data("haloo").build();
+            session.send("/app/game", message);
+
+            assertThat(session.isConnected()).isTrue();
+            assertThat(capturedOutput.getAll()).doesNotContain("Failed to authorize message with authorization manager");
+
+            session.disconnect();
+        }
+
+        @SneakyThrows
+        @Test
+        void givenSendMessageToGame_withNonAllowedRole_thenDisconnected(CapturedOutput capturedOutput) {
+            stubForViewerUser(wireMockServer);
+
+            String token = tokens.generateToken(USER_ID_VIEWER);
 
             StompSession session = newStompClient()
                     .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
                     .get(1000, TimeUnit.MILLISECONDS);
-            StompSession.Receiptable receipt = session.send("/app/game", GameLogMessage.builder().data("haloo").build());
+
+            StompSession.Receiptable receipt = session.send(
+                    "/app/game",
+                    GameOutputMessage.builder().data("haloo").build()
+            );
             assertThat(receipt.getReceiptId()).isNull();
 
             TestStompSessionHandlerAdapter.Frame frame = logMessageQueue.poll(1000, TimeUnit.MILLISECONDS);
@@ -145,10 +195,90 @@ class GameControllerIT extends WireMockGameProcessTest {
 
         @SneakyThrows
         @Test
-        void givenSubscribeToGame_whenNotAdmin_thenSubscriptionOk() {
-            stubForNormalUser(wireMockServer);
+        void givenUserIsConnected_whenTokenExpires_andUserSendsMessageToGame_thenDisconnected(CapturedOutput capturedOutput) {
+            stubForAdminUser(wireMockServer);
 
-            String token = tokens.generateToken(2);
+            String token = tokens.generateTokenExpiringIn(1, Duration.ofSeconds(1));
+
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newStompClient()
+                    .connectAsync(webSocketUrl + newAuthQueryParam(token), sessionHandler)
+                    .get(1000, TimeUnit.MILLISECONDS);
+            session.subscribe("/user/queue/reply", sessionHandler);
+
+            Thread.sleep(2000);
+
+            // Token expired by now
+            StompSession.Receiptable receipt = session.send(
+                    "/app/game",
+                    GameOutputMessage.builder().data("haloo").build());
+            assertThat(receipt).isNotNull();
+
+            TestStompSessionHandlerAdapter.Frame userReplyFrame =
+                    userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(userReplyFrame).isNull();
+            assertThat(session.isConnected()).isFalse();
+            assertThat(capturedOutput.getAll()).contains("Access revoked from STOMP session with an expired JWT, principal=1");
+        }
+
+        @SneakyThrows
+        @Test
+        void givenUserIsConnected_whenTokenExpires_andExpiredSessionIsEvicted_thenDisconnected(@Autowired SessionStore sessionStore,
+                                                                                                CapturedOutput capturedOutput) {
+            mockGameProcess();
+
+            stubForAdminUser(wireMockServer);
+            String token = tokens.generateTokenExpiringIn(1, Duration.ofSeconds(2));
+
+            HttpHeaders httpHeaders = newAuthHeader(token);
+
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newSession(token, sessionHandler);
+            session.subscribe("/user/queue/reply", sessionHandler);
+            session.subscribe("/topic/game/logs", sessionHandler);
+            session.subscribe("/topic/game/lifecycle", sessionHandler);
+
+            given()
+                    .headers(httpHeaders)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(new JSONObject().put("action", "start").toString())
+                    .post("/game-api/game/process")
+                    .then().assertThat()
+                    .statusCode(200);
+
+            Thread.sleep(2000);
+
+            sessionStore.evictExpiredSessions();
+
+            outputAsServerProcess(SERVER_START_LOG);
+            assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+            assertThat(session.isConnected()).isFalse();
+            assertThat(capturedOutput.getAll()).contains("Closed session with expired JWT");
+
+            // Eviction happened after the start command was invoked -> there should be a "starting" lifecycle message
+            TestStompSessionHandlerAdapter.Frame lifecycleFrame =
+                    lifecycleMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(lifecycleFrame).isNotNull();
+
+            // Eviction happened before the executable logged that it's ready for connection -> no more lifecycle messages
+            lifecycleFrame = lifecycleMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(lifecycleFrame).isNull();
+
+            assertThat(sessionStore.sessionCount()).isEqualTo(0);
+
+            stop(session);
+        }
+
+        @SneakyThrows
+        @ParameterizedTest
+        @MethodSource("subscriptionToGameAllowedUserArgs")
+        void givenSubscribeToGame_withAllowedRole_thenSubscriptionOk(Integer user) {
+            stubForAdminUser(wireMockServer);
+            stubForNormalUser(wireMockServer);
+            stubForViewerUser(wireMockServer);
+
+            String token = tokens.generateToken(user);
 
             StompSession session = newStompClient()
                     .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
@@ -164,10 +294,47 @@ class GameControllerIT extends WireMockGameProcessTest {
 
             session.disconnect();
         }
+
+        static Stream<Arguments> sendMessageToGameAllowedUserArgs() {
+            return Stream.of(
+                    Arguments.of(Named.of("ADMIN", USER_ID_ADMIN)),
+                    Arguments.of(Named.of("USER", USER_ID_USER))
+            );
+        }
+
+        static Stream<Arguments> subscriptionToGameAllowedUserArgs() {
+            return Stream.of(
+                    Arguments.of(Named.of("ADMIN", USER_ID_ADMIN)),
+                    Arguments.of(Named.of("USER", USER_ID_USER)),
+                    Arguments.of(Named.of("VIEWER", USER_ID_VIEWER))
+            );
+        }
     }
 
     @Nested
     class ResourceFunctionalityIT {
+        @SneakyThrows
+        @Test
+        void testRawWebSocketSessionIsStoredOnConnectAndRemovedOnDisconnect(@Autowired SessionStore sessionStore,
+                                                                            CapturedOutput capturedOutput) {
+            assertThat(sessionStore.sessionCount()).isZero();
+
+            stubForAdminUser(wireMockServer);
+            String token = tokens.generateToken(1);
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newSession(token, sessionHandler);
+
+            assertThat(sessionStore.sessionCount()).isEqualTo(1);
+
+            session.disconnect();
+
+            Thread.sleep(2000);
+
+            assertThat(capturedOutput.getAll().contains("Connection closed in WS session"));
+            assertThat(capturedOutput.getAll().contains("Session removed with id"));
+            assertThat(sessionStore.sessionCount()).isZero();
+        }
+
         @SneakyThrows
         @Test
         void testConnectWithHttpProtocol_thenExceptionIsThrown() {
@@ -194,6 +361,7 @@ class GameControllerIT extends WireMockGameProcessTest {
 
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newSession(token, sessionHandler);
+            session.subscribe("/user/queue/reply", sessionHandler);
             session.subscribe("/topic/game/logs", sessionHandler);
             session.subscribe("/topic/game/lifecycle", sessionHandler);
 
@@ -291,13 +459,14 @@ class GameControllerIT extends WireMockGameProcessTest {
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newSession(token, sessionHandler);
             session.subscribe("/user/queue/reply", sessionHandler);
+            session.subscribe("/user/queue/reply", sessionHandler);
             session.subscribe("/topic/game/logs", sessionHandler);
 
             TestStompSessionHandlerAdapter.Frame userReplyFrame = userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS); // Poll the history message
             assertThat(userReplyFrame).isNotNull();
             assertThat(userReplyFrame.getPayloadAs(GameUserReplyMessage.class).getTyp()).isEqualTo(GameUserReplyMessage.Type.HISTORY);
 
-            GameLogMessage msg = GameLogMessage.builder().data("/weather clear").build();
+            GameOutputMessage msg = GameOutputMessage.builder().data("/weather clear").build();
             session.send("/app/game", msg);
 
             TestStompSessionHandlerAdapter.Frame logFrame = logMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -418,7 +587,7 @@ class GameControllerIT extends WireMockGameProcessTest {
 
         @SneakyThrows
         @Test
-        void testSendInvalidMessage() {
+        void testSendMessageToGame_whenMessageInvalid_thenErrorMessageReceived() {
             stubForAdminUser(wireMockServer);
             String token = tokens.generateToken(1);
 
@@ -433,13 +602,6 @@ class GameControllerIT extends WireMockGameProcessTest {
             assertThat(userReplyFrame).isNotNull();
             assertThat(userReplyFrame.getPayloadAs(GameUserReplyMessage.class).getData()).isEqualTo("Invalid message");
         }
-    }
-
-    @SneakyThrows
-    void stop(StompSession session) {
-        session.disconnect();
-        gameProcessService.stopForcibly();
-        assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
     }
 
     @SneakyThrows
