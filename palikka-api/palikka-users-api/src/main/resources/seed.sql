@@ -1,11 +1,11 @@
 insert into palikka_user (id, username, password, salt, active, root)
-values (1, 'root', 'AMpMjzUFd7nR6Pc4l3BTmeOMQmJuLDQEHr7qp82QLt0=', 'pa2agTlplJ9FsYEmElH4iA==', true, true);
+values (1, 'admin', 'AMpMjzUFd7nR6Pc4l3BTmeOMQmJuLDQEHr7qp82QLt0=', 'pa2agTlplJ9FsYEmElH4iA==', true, true);
 
 insert into palikka_user (id, username, password, salt, active, root)
-values (2, 'demouser', 'AMpMjzUFd7nR6Pc4l3BTmeOMQmJuLDQEHr7qp82QLt0=', 'pa2agTlplJ9FsYEmElH4iA==', true, false);
+values (2, 'user', 'AMpMjzUFd7nR6Pc4l3BTmeOMQmJuLDQEHr7qp82QLt0=', 'pa2agTlplJ9FsYEmElH4iA==', true, false);
 
 insert into palikka_user (id, username, password, salt, active, root)
-values (3, 'demoviewer', 'AMpMjzUFd7nR6Pc4l3BTmeOMQmJuLDQEHr7qp82QLt0=', 'pa2agTlplJ9FsYEmElH4iA==', true, false);
+values (3, 'viewer', 'AMpMjzUFd7nR6Pc4l3BTmeOMQmJuLDQEHr7qp82QLt0=', 'pa2agTlplJ9FsYEmElH4iA==', true, false);
 
 insert into palikka_role (id, name, description)
 values (1, 'ROLE_ADMIN', 'Access to view & modify all data');

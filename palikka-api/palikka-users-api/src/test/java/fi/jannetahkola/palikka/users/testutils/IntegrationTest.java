@@ -27,7 +27,7 @@ public abstract class IntegrationTest {
     /**
      * Root user id. See {@link SqlForUsers}
      */
-    protected static final int USER_ID_ROOT = 3;
+    protected static final int USER_ID_VIEWER = 3;
 
     @Autowired
     protected TestTokenUtils tokens;
@@ -48,6 +48,10 @@ public abstract class IntegrationTest {
 
     protected Header newUserToken() {
         return newToken(USER_ID_USER);
+    }
+
+    protected Header newViewerToken() {
+        return newToken(USER_ID_VIEWER);
     }
 
     protected Header newSystemToken() {

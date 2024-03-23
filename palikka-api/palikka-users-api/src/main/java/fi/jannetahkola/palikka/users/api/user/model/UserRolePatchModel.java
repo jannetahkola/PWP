@@ -4,9 +4,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.Locale;
 import java.util.Set;
@@ -15,15 +17,19 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Validated
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class UserRolePatchModel {
     @NotNull
     @Size(min = 1)
     @Singular
+    @Valid // This must be here instead of the model below
     Set<UserRolePatch> patches;
 
-    @Value
+    @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public static class UserRolePatch {
         @NotNull

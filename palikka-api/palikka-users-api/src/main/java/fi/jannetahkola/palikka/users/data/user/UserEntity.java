@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -32,6 +33,12 @@ public class UserEntity {
 
     @Column(nullable = false)
     private Boolean root = false;
+
+    @Column(columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", nullable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(columnDefinition = "TIMESTAMP")
+    private OffsetDateTime lastUpdatedAt;
 
     @Setter(AccessLevel.NONE)
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})

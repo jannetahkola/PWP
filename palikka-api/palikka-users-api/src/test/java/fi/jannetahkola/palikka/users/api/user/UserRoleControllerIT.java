@@ -3,9 +3,18 @@ package fi.jannetahkola.palikka.users.api.user;
 import fi.jannetahkola.palikka.users.api.user.model.UserRolePatchModel;
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
 import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
+import lombok.SneakyThrows;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.http.MediaType;
+
+import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
@@ -16,8 +25,13 @@ class UserRoleControllerIT extends IntegrationTest {
     @Nested
     class ResourceSecurityIT {
         @Test
-        void givenGetUserRolesRequest_whenNoTokenOrRole_thenForbiddenResponse() {
+        void givenGetUserRolesRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
             given()
+                    .get("/users-api/users/" + USER_ID_ADMIN + "/roles")
+                    .then().assertThat()
+                    .statusCode(403);
+            given()
+                    .header(newViewerToken())
                     .get("/users-api/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403);
@@ -29,7 +43,12 @@ class UserRoleControllerIT extends IntegrationTest {
         }
 
         @Test
-        void givenGetUserRolesRequest_whenNoRoleButRequestedForSelf_thenOkResponse() {
+        void givenGetUserRolesRequest_whenNoAllowedRoleButRequestedForSelf_thenOkResponse() {
+            given()
+                    .header(newViewerToken())
+                    .get("/users-api/users/" + USER_ID_VIEWER + "/roles")
+                    .then().assertThat()
+                    .statusCode(200);
             given()
                     .header(newUserToken())
                     .get("/users-api/users/" + USER_ID_USER + "/roles")
@@ -38,7 +57,7 @@ class UserRoleControllerIT extends IntegrationTest {
         }
 
         @Test
-        void givenPatchUserRolesRequest_whenNoTokenOrRole_thenForbiddenResponse() {
+        void givenPatchUserRolesRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
             UserRolePatchModel patch = UserRolePatchModel.builder()
                     .patch(
                             UserRolePatchModel.UserRolePatch.builder()
@@ -84,21 +103,21 @@ class UserRoleControllerIT extends IntegrationTest {
                     .patch(
                             UserRolePatchModel.UserRolePatch.builder()
                                     .action(UserRolePatchModel.Action.ADD)
-                                    .roleId(2).build())
+                                    .roleId(1).build())
                     .patch(
                             UserRolePatchModel.UserRolePatch.builder()
                                     .action(UserRolePatchModel.Action.DELETE)
-                                    .roleId(1).build())
+                                    .roleId(2).build())
                     .build();
             given()
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users-api/users/" + USER_ID_ADMIN + "/roles")
+                    .patch("/users-api/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(202)
                     .body("_embedded.roles", hasSize(1))
-                    .body("_embedded.roles[0].id", equalTo(2));
+                    .body("_embedded.roles[0].id", equalTo(1));
         }
 
         @Test
@@ -113,10 +132,10 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users-api/users/3/roles")
+                    .patch("/users-api/users/999/roles")
                     .then().assertThat()
                     .statusCode(404)
-                    .body("message", equalTo("User with id '3' not found"));
+                    .body("message", equalTo("User with id '999' not found"));
         }
 
         @Test
@@ -125,13 +144,13 @@ class UserRoleControllerIT extends IntegrationTest {
                     .patch(
                             UserRolePatchModel.UserRolePatch.builder()
                                     .action(UserRolePatchModel.Action.ADD)
-                                    .roleId(3).build())
+                                    .roleId(999).build())
                     .build();
             given()
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users-api/users/" + USER_ID_ADMIN + "/roles")
+                    .patch("/users-api/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(202)
                     .body("_embedded.roles", hasSize(1));
@@ -149,15 +168,76 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
-                    .patch("/users-api/users/" + USER_ID_ROOT + "/roles")
+                    .patch("/users-api/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(400)
                     .body("message", equalTo("Root user not updatable"));
         }
 
-        @Test
-        void givenPatchUserRolesRequest_whenParametersInvalid_thenBadRequestResponse() {
-            // TODO Parameterized test
+        @SneakyThrows
+        @ParameterizedTest
+        @MethodSource("invalidPatchUserRolesParameters")
+        void givenPatchUserRolesRequest_whenParametersInvalid_thenBadRequestResponse(JSONObject json,
+                                                                                     String expectedMessageSubstring) {
+            given()
+                    .header(newAdminToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json.toString())
+                    .patch("/users-api/users/" + USER_ID_USER + "/roles")
+                    .then().log().all().assertThat()
+                    .statusCode(400)
+                    .body("message", equalTo(expectedMessageSubstring));
+        }
+
+        @SneakyThrows
+        static Stream<Arguments> invalidPatchUserRolesParameters() {
+            return Stream.of(
+                    Arguments.of(
+                            Named.of(
+                                    "Missing action",
+                                    new JSONObject().put(
+                                            "patches",
+                                            new JSONArray().put(
+                                                    new JSONObject()
+                                                            .put("role_id", 1)))),
+                            "patches[].action: must not be null"
+                    ),
+                    Arguments.of(
+                            Named.of(
+                                    "Invalid action",
+                                    new JSONObject().put(
+                                                    "patches",
+                                                    new JSONArray().put(
+                                                            new JSONObject()
+                                                                    .put("role_id", 1)
+                                                                    .put("action", "unknown")))),
+                            "Invalid request"
+                    ),
+                    Arguments.of(
+                            Named.of(
+                                    "Missing role",
+                                    new JSONObject().put(
+                                            "patches",
+                                            new JSONArray().put(
+                                                    new JSONObject()
+                                                            .put("action", "delete")))),
+                            "patches[].roleId: must not be null"
+                    ),
+                    Arguments.of(
+                            Named.of(
+                                    "Empty patch list",
+                                    new JSONObject().put(
+                                            "patches",
+                                            new JSONArray())),
+                            "patches: size must be between 1 and 2147483647"
+                    ),
+                    Arguments.of(
+                            Named.of(
+                                    "No patch list",
+                                    new JSONObject()),
+                            "patches: must not be null"
+                    )
+            );
         }
     }
 }

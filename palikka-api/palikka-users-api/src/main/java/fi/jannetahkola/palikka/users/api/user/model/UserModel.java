@@ -9,6 +9,7 @@ import lombok.*;
 import org.springframework.hateoas.RepresentationModel;
 import org.springframework.hateoas.server.core.Relation;
 
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -33,6 +34,12 @@ public class UserModel extends RepresentationModel<UserModel> {
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     Boolean root;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    OffsetDateTime createdAt;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    OffsetDateTime lastUpdatedAt;
 
     @Builder.Default
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)

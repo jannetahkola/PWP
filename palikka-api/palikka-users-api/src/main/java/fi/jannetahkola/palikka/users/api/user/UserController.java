@@ -19,6 +19,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+
 @Slf4j
 @RestController
 @RequestMapping("/users-api/users")
@@ -36,7 +40,11 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ROLE_SYSTEM') or hasRole('ROLE_ADMIN') or (hasRole('ROLE_USER') and #userId == authentication.principal)")
+    @PreAuthorize(
+            "hasAnyRole('ROLE_SYSTEM', 'ROLE_ADMIN') " +
+                    "or (hasRole('ROLE_USER') and #userId == authentication.principal) " +
+                    "or (hasRole('ROLE_VIEWER') and #userId == authentication.principal)"
+    )
     public ResponseEntity<UserModel> getUser(@PathVariable("id") Integer userId) {
         UserModel userModel = userRepository.findById(userId)
                 .map(userModelAssembler::toModel)
@@ -47,7 +55,7 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    @PreAuthorize("hasRole('ROLE_USER') or hasRole('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
     public ResponseEntity<UserModel> getCurrentUser(Authentication authentication) {
         UserModel userModel = userRepository.findById(Integer.valueOf(authentication.getName()))
                 .map(userModelAssembler::toModel)
@@ -75,6 +83,7 @@ public class UserController {
         userEntity.setRoot(false);
         userEntity.setSalt(salt);
         userEntity.setPassword(hash);
+        userEntity.setCreatedAt(nowUtcTime());
 
         UserModel createdUser = userModelAssembler.toModel(userRepository.save(userEntity));
 
@@ -114,11 +123,12 @@ public class UserController {
         userEntity.setRoot(existingUserEntity.getRoot());
         userEntity.setSalt(existingUserEntity.getSalt());
         userEntity.setPassword(existingUserEntity.getPassword());
+        userEntity.setCreatedAt(existingUserEntity.getCreatedAt());
+        userEntity.setLastUpdatedAt(nowUtcTime());
         existingUserEntity.getRoles().forEach(userEntity::addRole);
 
         if (userToPut.getPassword() != null) {
-            // TODO Password updated at timestamp
-            // TODO Don't allow setting the same password?
+            // New password can be the same as before, but new salt is generated
             log.info("Updating password for user id '{}'", userEntity.getId());
             String salt = CryptoUtils.generateSalt();
             String hash = CryptoUtils.hash(userToPut.getPassword(), salt);
@@ -131,5 +141,9 @@ public class UserController {
         return ResponseEntity
                 .accepted()
                 .body(updatedUser);
+    }
+
+    private OffsetDateTime nowUtcTime() {
+        return OffsetDateTime.ofInstant(Instant.now(), ZoneId.of("UTC"));
     }
 }

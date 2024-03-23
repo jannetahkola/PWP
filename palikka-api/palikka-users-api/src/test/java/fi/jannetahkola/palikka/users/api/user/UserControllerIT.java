@@ -5,6 +5,9 @@ import fi.jannetahkola.palikka.users.data.user.UserRepository;
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
 import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import fi.jannetahkola.palikka.users.util.CryptoUtils;
+import io.restassured.http.Header;
+import io.restassured.response.ValidatableResponse;
+import io.restassured.specification.RequestSpecification;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Named;
@@ -17,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
@@ -37,8 +41,13 @@ class UserControllerIT extends IntegrationTest {
         }
 
         @Test
-        void givenGetUserRequest_whenNoTokenOrRole_thenForbiddenResponse() {
+        void givenGetUserRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
             given()
+                    .get("/users-api/users/" + USER_ID_ADMIN)
+                    .then().assertThat()
+                    .statusCode(403);
+            given()
+                    .header(newViewerToken())
                     .get("/users-api/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(403);
@@ -50,7 +59,12 @@ class UserControllerIT extends IntegrationTest {
         }
 
         @Test
-        void givenGetUserRequest_whenNoRoleButRequestedForSelf_thenOkResponse() {
+        void givenGetUserRequest_whenNoAllowedRoleButRequestedForSelf_thenOkResponse() {
+            given()
+                    .header(newViewerToken())
+                    .get("/users-api/users/" + USER_ID_VIEWER)
+                    .then().assertThat()
+                    .statusCode(200);
             given()
                     .header(newUserToken())
                     .get("/users-api/users/" + USER_ID_USER)
@@ -59,8 +73,13 @@ class UserControllerIT extends IntegrationTest {
         }
 
         @Test
-        void givenGetUsersRequest_whenNoTokenOrRole_thenForbiddenResponse() {
+        void givenGetUsersRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
             given()
+                    .get("/users-api/users")
+                    .then().assertThat()
+                    .statusCode(403);
+            given()
+                    .header(newViewerToken())
                     .get("/users-api/users")
                     .then().assertThat()
                     .statusCode(403);
@@ -82,7 +101,7 @@ class UserControllerIT extends IntegrationTest {
         @Test
         void givenGetCurrentUserRequest_whenAnyRole_thenOkResponse() {
             given()
-                    .header(newAdminToken())
+                    .header(newViewerToken())
                     .get("/users-api/users/me")
                     .then().assertThat()
                     .statusCode(200);
@@ -91,66 +110,72 @@ class UserControllerIT extends IntegrationTest {
                     .get("/users-api/users/me")
                     .then().assertThat()
                     .statusCode(200);
+            given()
+                    .header(newAdminToken())
+                    .get("/users-api/users/me")
+                    .then().assertThat()
+                    .statusCode(200);
         }
 
         @SneakyThrows
         @Test
-        void givenGetPostUserRequest_whenNoTokenOrRole_thenForbiddenResponse() {
+        void givenGetPostUserRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
             String json = new JSONObject()
                     .put("username", "mock-user-3")
                     .put("password", "mock-pass")
                     .put("active", true)
                     .toString();
-            given()
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(json)
-                    .post("/users-api/users")
-                    .then().assertThat()
-                    .statusCode(403);
-            given()
-                    .header(newUserToken())
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(json)
-                    .post("/users-api/users")
-                    .then().assertThat()
-                    .statusCode(403);
-            given() // TODO add this to the other test too -> parameterized tests?
-                    .header(newSystemToken())
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(json)
-                    .post("/users-api/users")
-                    .then().assertThat()
-                    .statusCode(403);
+
+            Function<Header, ValidatableResponse> postRequest = (Header authorizationHeader) -> {
+                RequestSpecification spec = given();
+                if (authorizationHeader != null) {
+                    spec.header(authorizationHeader);
+                }
+                return spec
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .body(json)
+                        .post("/users-api/users")
+                        .then();
+            };
+
+            postRequest.apply(null).assertThat().statusCode(403);
+            postRequest.apply(newViewerToken()).assertThat().statusCode(403);
+            postRequest.apply(newUserToken()).assertThat().statusCode(403);
+            postRequest.apply(newSystemToken()).assertThat().statusCode(403);
         }
 
         @SneakyThrows
         @Test
-        void givenPutUserRequest_whenNoTokenOrRole_thenForbiddenResponse() {
+        void givenPutUserRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
             String json = new JSONObject()
-                    .put("username", "mock-user-3")
+                    .put("username", "mock-user-updated")
                     .put("password", "new-pass")
                     .put("active", false)
                     .toString();
-            given()
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(json)
-                    .put("/users-api/users/" + USER_ID_ADMIN)
-                    .then().assertThat()
-                    .statusCode(403);
-            given()
-                    .header(newUserToken())
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(json)
-                    .put("/users-api/users/" + USER_ID_ADMIN)
-                    .then().assertThat()
-                    .statusCode(403);
+
+            Function<Header, ValidatableResponse> putRequest = (Header authorizationHeader) -> {
+                RequestSpecification spec = given();
+                if (authorizationHeader != null) {
+                    spec.header(authorizationHeader);
+                }
+                return spec
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .body(json)
+                        .put("/users-api/users/" + USER_ID_ADMIN)
+                        .then();
+            };
+
+            putRequest.apply(null).assertThat().statusCode(403);
+            putRequest.apply(newViewerToken()).assertThat().statusCode(403);
+            putRequest.apply(newUserToken()).assertThat().statusCode(403);
+            putRequest.apply(newSystemToken()).assertThat().statusCode(403);
         }
 
         @SneakyThrows
         @Test
-        void givenPutUserRequest_whenNoRoleButRequestedForSelf_thenAcceptedResponse() {
+        void givenPutUserRequest_whenNoAllowedRoleButRequestedForSelf_thenAcceptedResponse() {
             String json = new JSONObject()
-                    .put("username", "mock-user-3")
+                    .put("username", "mock-user-updated")
                     .put("active", false) // Cannot update unless admin
                     .toString();
             given()
@@ -160,7 +185,7 @@ class UserControllerIT extends IntegrationTest {
                     .put("/users-api/users/" + USER_ID_USER)
                     .then().assertThat()
                     .statusCode(202)
-                    .body("username", equalTo("mock-user-3"))
+                    .body("username", equalTo("mock-user-updated"))
                     .body("active", equalTo(true));
         }
     }
@@ -178,7 +203,7 @@ class UserControllerIT extends IntegrationTest {
                     .body("username", equalTo("mock-user"))
                     .body("password", nullValue())
                     .body("active", equalTo(true))
-                    .body("root", equalTo(false))
+                    .body("root", equalTo(true))
                     .body("roles", hasSize(1))
                     .body("roles", contains("ROLE_ADMIN"))
                     .body("_links.self.href", endsWith("/users-api/users/" + USER_ID_ADMIN))
@@ -219,16 +244,18 @@ class UserControllerIT extends IntegrationTest {
                     .get("/users-api/users")
                     .then().assertThat()
                     .statusCode(200)
-                    .body("_embedded.users", hasSize(2))
+                    .body("_embedded.users", hasSize(3))
                     .body("_links.self.href", endsWith("/users"));
         }
 
         @SneakyThrows
         @Test
         void givenPostUserRequest_thenOkResponse(@Autowired UserRepository userRepository) {
+            final int expectedUserId = 4;
+
             // Using JSONObject because password won't be included during serialization in the model
             String json = new JSONObject()
-                    .put("username", "mock-user-3")
+                    .put("username", "mock-user-updated")
                     .put("password", "mock-pass")
                     .put("active", true)
                     .put("root", true) // Cannot be set by clients, should be false
@@ -242,17 +269,19 @@ class UserControllerIT extends IntegrationTest {
                     .post("/users-api/users")
                     .then().assertThat()
                     .statusCode(201)
-                    .header(HttpHeaders.LOCATION, endsWith("/users-api/users/3"))
-                    .body("id", equalTo(3))
-                    .body("username", equalTo("mock-user-3"))
+                    .header(HttpHeaders.LOCATION, endsWith("/users-api/users/" + expectedUserId))
+                    .body("id", equalTo(expectedUserId))
+                    .body("username", equalTo("mock-user-updated"))
                     .body("password", nullValue())
                     .body("salt", nullValue())
                     .body("active", equalTo(true))
                     .body("root", equalTo(false))
+                    .body("created_at", endsWith("Z"))
+                    .body("last_updated_at", nullValue())
                     .body("roles", hasSize(0))
-                    .body("_links.self.href", endsWith("/users-api/users/3"));
+                    .body("_links.self.href", endsWith("/users-api/users/" + expectedUserId));
 
-            UserEntity createdUser = userRepository.findById(3).orElseThrow();
+            UserEntity createdUser = userRepository.findById(expectedUserId).orElseThrow();
             String salt = createdUser.getSalt();
             String expectedPassword = createdUser.getPassword();
             assertThat(CryptoUtils.validatePassword("mock-pass", salt, expectedPassword)).isTrue();
@@ -295,7 +324,7 @@ class UserControllerIT extends IntegrationTest {
         @Test
         void givenPutUserRequest_thenAcceptedResponse(@Autowired UserRepository userRepository) {
             String json = new JSONObject()
-                    .put("username", "mock-user-3")
+                    .put("username", "mock-user-updated")
                     .put("password", "new-pass")
                     .put("active", false) // Admin can update
                     .put("root", true) // Cannot be updated, should stay false
@@ -304,19 +333,21 @@ class UserControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .put("/users-api/users/" + USER_ID_ADMIN)
+                    .put("/users-api/users/" + USER_ID_USER)
                     .then().assertThat()
                     .statusCode(202)
-                    .body("username", equalTo("mock-user-3"))
+                    .body("username", equalTo("mock-user-updated"))
                     .body("password", nullValue())
                     .body("salt", nullValue())
                     .body("active", equalTo(false))
                     .body("root", equalTo(false))
+                    .body("created_at", endsWith("Z"))
+                    .body("last_updated_at", endsWith("Z"))
                     .body("roles", hasSize(1));
 
-            UserEntity createdUser = userRepository.findById(USER_ID_ADMIN).orElseThrow();
-            String salt = createdUser.getSalt();
-            String expectedPassword = createdUser.getPassword();
+            UserEntity updatedUser = userRepository.findById(USER_ID_USER).orElseThrow();
+            String salt = updatedUser.getSalt();
+            String expectedPassword = updatedUser.getPassword();
             assertThat(CryptoUtils.validatePassword("new-pass", salt, expectedPassword)).isTrue();
         }
 
@@ -347,32 +378,68 @@ class UserControllerIT extends IntegrationTest {
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .put("/users-api/users/" + USER_ID_ROOT)
+                    .put("/users-api/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(400)
                     .body("message", equalTo("Root user not updatable"));
         }
 
+        @SneakyThrows
         @Test
         void givenPutUserRequest_whenParametersInvalid_thenBadRequestResponse() {
-            // TODO
+            String json = new JSONObject().toString();
+            given()
+                    .header(newAdminToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .put("/users-api/users/" + USER_ID_USER)
+                    .then().assertThat()
+                    .statusCode(400)
+                    .body("message", equalTo("username: must not be blank"));
+        }
+
+        @SneakyThrows
+        @Test
+        void givenPutUserRequest_thenOtherFieldsNotChanged_andAcceptedResponse(@Autowired UserRepository userRepository) {
+            String json = new JSONObject()
+                    .put("username", "mock-user-updated")
+                    .toString();
+            given()
+                    .header(newAdminToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .put("/users-api/users/" + USER_ID_USER)
+                    .then().assertThat()
+                    .statusCode(202)
+                    .body("username", equalTo("mock-user-updated"))
+                    .body("password", nullValue())
+                    .body("salt", nullValue())
+                    .body("active", equalTo(true))
+                    .body("root", equalTo(false))
+                    .body("last_updated_at", not(nullValue()))
+                    .body("roles", hasSize(1)).log().all();
+
+            // Check password stays the same
+            UserEntity updatedUser = userRepository.findById(USER_ID_USER).orElseThrow();
+            assertThat(updatedUser.getSalt()).isEqualTo("mock-salt");
+            assertThat(updatedUser.getPassword()).isEqualTo("mock-pass");
         }
 
         @SneakyThrows
         @Test
         void givenPutUserRequest_whenUsernameTaken_thenConflictResponse() {
             String json = new JSONObject()
-                    .put("username", "mock-user-2")
+                    .put("username", "mock-user")
                     .put("active", false)
                     .toString();
             given()
                     .header(newAdminToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
-                    .put("/users-api/users/" + USER_ID_ADMIN)
+                    .put("/users-api/users/" + USER_ID_USER)
                     .then().assertThat()
                     .statusCode(409)
-                    .body("message", equalTo("User with username 'mock-user-2' already exists"));
+                    .body("message", equalTo("User with username 'mock-user' already exists"));
         }
 
         @SneakyThrows

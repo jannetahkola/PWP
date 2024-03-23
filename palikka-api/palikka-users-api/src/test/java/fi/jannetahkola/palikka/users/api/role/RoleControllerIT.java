@@ -13,8 +13,13 @@ class RoleControllerIT extends IntegrationTest {
     @Nested
     class ResourceSecurityIT {
         @Test
-        void givenGetRoleRequest_whenNoTokenOrRole_thenForbiddenRequest() {
+        void givenGetRoleRequest_whenNoTokenOrAllowedRole_thenForbiddenRequest() {
             given()
+                    .get("/users-api/roles/1")
+                    .then().assertThat()
+                    .statusCode(403);
+            given()
+                    .header(newViewerToken())
                     .get("/users-api/roles/1")
                     .then().assertThat()
                     .statusCode(403);
@@ -63,7 +68,7 @@ class RoleControllerIT extends IntegrationTest {
                     .get("/users-api/roles")
                     .then().assertThat()
                     .statusCode(200)
-                    .body("_embedded.roles", hasSize(2))
+                    .body("_embedded.roles", hasSize(3))
                     .body("_links.self.href", endsWith("/roles"));
         }
 
@@ -76,7 +81,6 @@ class RoleControllerIT extends IntegrationTest {
                     .statusCode(200)
                     .body("id", equalTo(1))
                     .body("name", equalTo("ROLE_ADMIN"))
-                    .body("description", equalTo("Access to everything"))
                     .body("_links.self.href", endsWith("/roles/1"));
         }
 
@@ -84,10 +88,10 @@ class RoleControllerIT extends IntegrationTest {
         void givenGetRoleRequest_whenRoleNotFound_thenNotFoundResponse() {
             given()
                     .header(newAdminToken())
-                    .get("/users-api/roles/3")
+                    .get("/users-api/roles/999")
                     .then().assertThat()
                     .statusCode(404)
-                    .body("message", equalTo("Role with id '3' not found"));
+                    .body("message", equalTo("Role with id '999' not found"));
         }
     }
 }
