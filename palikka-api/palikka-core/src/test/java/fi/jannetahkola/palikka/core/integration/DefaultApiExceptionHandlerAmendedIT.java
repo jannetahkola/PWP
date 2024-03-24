@@ -1,7 +1,9 @@
 package fi.jannetahkola.palikka.core.integration;
 
-import fi.jannetahkola.palikka.core.api.exception.ApiErrorModel;
 import fi.jannetahkola.palikka.core.api.exception.DefaultApiExceptionHandler;
+import fi.jannetahkola.palikka.core.api.exception.model.BadRequestErrorModel;
+import fi.jannetahkola.palikka.core.api.exception.model.ErrorModel;
+import fi.jannetahkola.palikka.core.api.exception.model.ServerErrorModel;
 import fi.jannetahkola.palikka.core.config.meta.EnableDefaultApiExceptionHandling;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import static fi.jannetahkola.palikka.core.api.exception.ExceptionUtil.errorResponseOf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.mockito.ArgumentMatchers.any;
@@ -95,21 +98,16 @@ class DefaultApiExceptionHandlerAmendedIT {
         @EnableDefaultApiExceptionHandling
         static class TestApplicationExceptionHandler {
             @ExceptionHandler
-            public ResponseEntity<ApiErrorModel> handleSomethingElse(IllegalArgumentException e) {
+            public ResponseEntity<ErrorModel> handleSomethingElse(IllegalArgumentException e) {
                 log.info("Illegal argument exception occurred", e);
-                return ApiErrorModel
-                        .badRequest(e)
-                        .toResponse();
+                return errorResponseOf(new BadRequestErrorModel(e));
             }
 
             // Should override the method from default handler
             @ExceptionHandler
-            public ResponseEntity<ApiErrorModel> unhandledException(Exception e) {
+            public ResponseEntity<ErrorModel> unhandledException(Exception e) {
                 log.info("Unhandled exception occurred and handler overwritten", e);
-                return ApiErrorModel
-                        .internalServerError(e)
-                        .withMessage("Something went wrong")
-                        .toResponse();
+                return errorResponseOf(new ServerErrorModel("Something went wrong"));
             }
         }
     }

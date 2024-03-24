@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.core.api.exception;
 
+import fi.jannetahkola.palikka.core.api.exception.model.*;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,9 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static fi.jannetahkola.palikka.core.api.exception.ExceptionUtil.errorResponseOf;
+
+// TODO Check exception log levels
 /**
  * Provides default exception handling. Usage:
  * <pre>{@code
@@ -39,45 +43,37 @@ public class DefaultApiExceptionHandler {
     }
 
     @ExceptionHandler
-    public ResponseEntity<ApiErrorModel> badRequestException(BadRequestException e) {
+    public ResponseEntity<ErrorModel> badRequestException(BadRequestException e) {
         log.debug("Bad request exception occurred", e);
-        return ApiErrorModel.badRequest(e).toResponse();
+        return errorResponseOf(new BadRequestErrorModel(e.getMessage()));
     }
 
     @ExceptionHandler
-    public ResponseEntity<ApiErrorModel> accessDeniedException(AccessDeniedException e) {
-        log.info("Access denied exception occurred", e); // TODO Check log levels
-        return ApiErrorModel
-                .forbidden(e)
-                .toResponse();
+    public ResponseEntity<ErrorModel> accessDeniedException(AccessDeniedException e) {
+        log.info("Access denied exception occurred", e);
+        return errorResponseOf(new ForbiddenErrorModel(e));
     }
 
     @ExceptionHandler
-    public ResponseEntity<ApiErrorModel> noResourceFoundException(NoResourceFoundException e) {
+    public ResponseEntity<ErrorModel> noResourceFoundException(NoResourceFoundException e) {
         log.debug("No resource found exception occurred", e);
-        return ApiErrorModel
-                .notFound(e)
-                .toResponse();
+        return errorResponseOf(new NotFoundErrorModel(e));
     }
 
     @ExceptionHandler
-    public ResponseEntity<ApiErrorModel> notFoundException(NotFoundException e) {
+    public ResponseEntity<ErrorModel> notFoundException(NotFoundException e) {
         log.info("Not found exception occurred", e);
-        return ApiErrorModel
-                .notFound(e)
-                .toResponse();
+        return errorResponseOf(new NotFoundErrorModel(e));
     }
 
     @ExceptionHandler
-    public ResponseEntity<ApiErrorModel> conflictException(ConflictException e) {
+    public ResponseEntity<ErrorModel> conflictException(ConflictException e) {
         log.info("Conflict exception occurred", e);
-        return ApiErrorModel
-                .conflict(e)
-                .toResponse();
+        return errorResponseOf(new ConflictErrorModel(e));
     }
 
     @ExceptionHandler
-    public ResponseEntity<ApiErrorModel> methodArgumentNotValidException(MethodArgumentNotValidException e) {
+    public ResponseEntity<ErrorModel> methodArgumentNotValidException(MethodArgumentNotValidException e) {
         log.info("Method argument not valid exception occurred", e);
         List<FieldError> fieldErrors = e.getBindingResult().getFieldErrors();
         String errorMessage = fieldErrors.stream()
@@ -85,35 +81,24 @@ public class DefaultApiExceptionHandler {
                         fieldError.getField(),
                         fieldError.getDefaultMessage()))
                 .collect(Collectors.joining(", "));
-        return ApiErrorModel
-                .badRequest(e)
-                .withMessage(errorMessage)
-                .toResponse();
+        return errorResponseOf(new BadRequestErrorModel(errorMessage));
     }
 
     @ExceptionHandler
-    public ResponseEntity<ApiErrorModel> httpMessageNotReadableException(HttpMessageNotReadableException e) {
+    public ResponseEntity<ErrorModel> httpMessageNotReadableException(HttpMessageNotReadableException e) {
         log.info("HTTP message not readable exception occurred", e);
-        return ApiErrorModel
-                .badRequest(e)
-                .withMessage("Invalid request")
-                .toResponse();
+        return errorResponseOf(new BadRequestErrorModel("Invalid request"));
     }
 
     @ExceptionHandler
-    public ResponseEntity<ApiErrorModel> httpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException e) {
+    public ResponseEntity<ErrorModel> httpMediaTypeNotSupportedException(HttpMediaTypeNotSupportedException e) {
         log.info("HTTP media type not supported exception occurred", e);
-        return ApiErrorModel
-                .badRequest(e)
-                .toResponse();
+        return errorResponseOf(new BadRequestErrorModel(e.getMessage()));
     }
 
     @ExceptionHandler
-    public ResponseEntity<ApiErrorModel> unhandledException(Exception e) {
+    public ResponseEntity<ErrorModel> unhandledException(Exception e) {
         log.info("Unhandled exception occurred", e);
-        return ApiErrorModel
-                .internalServerError(e)
-                .withMessage("Something went wrong")
-                .toResponse();
+        return errorResponseOf(new ServerErrorModel("Something went wrong"));
     }
 }
