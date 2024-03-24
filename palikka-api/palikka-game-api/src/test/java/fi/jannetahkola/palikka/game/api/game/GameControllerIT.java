@@ -146,6 +146,21 @@ class GameControllerIT extends WireMockGameProcessTest {
         }
 
         @SneakyThrows
+        @Test
+        void givenConnectRequest_withSystemToken_thenForbiddenResponse() {
+            try {
+                String token = tokens.generateSystemToken();
+                newStompClient()
+                        .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
+                        .get(1000, TimeUnit.MILLISECONDS);
+            } catch (ExecutionException e) {
+                assertTrue(e.getMessage().contains("403"));
+                return;
+            }
+            fail("Expected exception but none was thrown");
+        }
+
+        @SneakyThrows
         @ParameterizedTest
         @MethodSource("sendMessageToGameAllowedUserArgs")
         void givenSendMessageToGame_withAllowedRole_thenMessageOk(Integer user, CapturedOutput capturedOutput) {

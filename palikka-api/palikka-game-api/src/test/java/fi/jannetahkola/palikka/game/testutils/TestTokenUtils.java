@@ -15,6 +15,13 @@ import java.util.Date;
 public class TestTokenUtils {
     private final JwtService jwtService;
 
+    public String generateSystemToken() {
+        return jwtService.sign(
+                new JWTClaimsSet.Builder(),
+                PalikkaJwtType.SYSTEM
+        ).orElseThrow();
+    }
+
     public String generateToken(Integer userId) {
         return jwtService.sign(
                 new JWTClaimsSet.Builder().subject(String.valueOf(userId)),

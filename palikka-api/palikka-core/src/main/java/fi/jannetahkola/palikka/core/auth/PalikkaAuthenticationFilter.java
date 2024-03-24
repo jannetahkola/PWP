@@ -29,12 +29,6 @@ public class PalikkaAuthenticationFilter extends OncePerRequestFilter {
         log.debug("At authentication filter for request {} {}",
                 request.getMethod(), request.getRequestURI());
 
-        if (request.getRequestURI().startsWith("/ws")) { // todo should make this configurable and set it here and in security config
-            log.debug("Abort, open path detected");
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         String token;
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (!StringUtils.hasText(header) || !header.startsWith("Bearer ")) {

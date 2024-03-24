@@ -1,6 +1,8 @@
 package fi.jannetahkola.palikka.core.util;
 
 import com.nimbusds.jwt.JWTClaimsSet;
+import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationDetails;
+import fi.jannetahkola.palikka.core.auth.PalikkaSystemAuthenticationToken;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import lombok.experimental.UtilityClass;
@@ -21,14 +23,14 @@ public class AuthenticationUtil {
         jwtService.parse(token)
                 .ifPresentOrElse(claims -> {
                     if (claims.getSubject() != null) {
-                        authenticateUserToken(claims, usersClient);
+                        authenticateUserToken(token, claims, usersClient);
                         return;
                     }
-                    authenticateSystemToken();
+                    authenticateSystemToken(token);
                 }, () -> log.debug("Authentication failed - invalid token"));
     }
 
-    private void authenticateUserToken(JWTClaimsSet claims, UsersClient usersClient) {
+    private void authenticateUserToken(String token, JWTClaimsSet claims, UsersClient usersClient) {
         var userId = Integer.valueOf(claims.getSubject());
         var user = usersClient.getUser(userId);
         if (user == null) {
@@ -47,6 +49,10 @@ public class AuthenticationUtil {
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(user.getId(), null, authorities);
+
+        PalikkaAuthenticationDetails details = new PalikkaAuthenticationDetails();
+        details.setToken(token);
+        authentication.setDetails(details);
 //                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -55,10 +61,14 @@ public class AuthenticationUtil {
                 "with authorities={}", user.getId(), authentication.getAuthorities());
     }
 
-    private void authenticateSystemToken() {
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        "sys", null, List.of(new SimpleGrantedAuthority("ROLE_SYSTEM")));
+    private void authenticateSystemToken(String token) {
+        PalikkaSystemAuthenticationToken authentication =
+                new PalikkaSystemAuthenticationToken(
+                        List.of(new SimpleGrantedAuthority("ROLE_SYSTEM")));
+
+        PalikkaAuthenticationDetails details = new PalikkaAuthenticationDetails();
+        details.setToken(token);
+        authentication.setDetails(details);
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
