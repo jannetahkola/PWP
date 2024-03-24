@@ -16,7 +16,6 @@ import org.springframework.http.MediaType;
 
 import java.util.stream.Stream;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @SqlForUsers
@@ -93,8 +92,9 @@ class UserRoleControllerIT extends IntegrationTest {
                     .get("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(200)
-                    .body("_embedded.roles", hasSize(1))
-                    .body("_links.self.href", endsWith("/users/1/roles"));
+                    .body("content", hasSize(1))
+                    .body("links[0].rel", equalTo("self"))
+                    .body("links[0].href", endsWith("/users/1/roles"));
         }
 
         @Test
@@ -116,8 +116,8 @@ class UserRoleControllerIT extends IntegrationTest {
                     .patch("/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(202)
-                    .body("_embedded.roles", hasSize(1))
-                    .body("_embedded.roles[0].id", equalTo(1));
+                    .body("content", hasSize(1))
+                    .body("content[0].id", equalTo(1));
         }
 
         @Test
@@ -153,7 +153,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .patch("/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(202)
-                    .body("_embedded.roles", hasSize(1));
+                    .body("content", hasSize(1));
         }
 
         @Test

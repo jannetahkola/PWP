@@ -23,7 +23,6 @@ import org.springframework.http.MediaType;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 
@@ -206,8 +205,10 @@ class UserControllerIT extends IntegrationTest {
                     .body("root", equalTo(true))
                     .body("roles", hasSize(1))
                     .body("roles", contains("ROLE_ADMIN"))
-                    .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN))
-                    .body("_links.roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));
+                    .body("links[0].rel", equalTo("self"))
+                    .body("links[0].href", endsWith("/users/" + USER_ID_ADMIN))
+                    .body("links[1].rel", equalTo("roles"))
+                    .body("links[1].href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));
         }
 
         @Test
@@ -233,8 +234,10 @@ class UserControllerIT extends IntegrationTest {
                     .body("active", equalTo(true))
                     .body("roles", hasSize(1))
                     .body("roles", contains("ROLE_ADMIN"))
-                    .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN))
-                    .body("_links.roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));
+                    .body("links[0].rel", equalTo("self"))
+                    .body("links[0].href", endsWith("/users/" + USER_ID_ADMIN))
+                    .body("links[1].rel", equalTo("roles"))
+                    .body("links[1].href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));
         }
 
         @Test
@@ -244,8 +247,9 @@ class UserControllerIT extends IntegrationTest {
                     .get("/users")
                     .then().assertThat()
                     .statusCode(200)
-                    .body("_embedded.users", hasSize(3))
-                    .body("_links.self.href", endsWith("/users"));
+                    .body("content", hasSize(3))
+                    .body("links[0].rel", equalTo("self"))
+                    .body("links[0].href", endsWith("/users"));
         }
 
         @SneakyThrows
@@ -279,7 +283,8 @@ class UserControllerIT extends IntegrationTest {
                     .body("created_at", endsWith("Z"))
                     .body("last_updated_at", nullValue())
                     .body("roles", hasSize(0))
-                    .body("_links.self.href", endsWith("/users/" + expectedUserId));
+                    .body("links[0].rel", equalTo("self"))
+                    .body("links[0].href", endsWith("/users/" + expectedUserId));
 
             UserEntity createdUser = userRepository.findById(expectedUserId).orElseThrow();
             String salt = createdUser.getSalt();
@@ -417,7 +422,7 @@ class UserControllerIT extends IntegrationTest {
                     .body("active", equalTo(true))
                     .body("root", equalTo(false))
                     .body("last_updated_at", not(nullValue()))
-                    .body("roles", hasSize(1)).log().all();
+                    .body("roles", hasSize(1));
 
             // Check password stays the same
             UserEntity updatedUser = userRepository.findById(USER_ID_USER).orElseThrow();
@@ -449,7 +454,7 @@ class UserControllerIT extends IntegrationTest {
                             Named.of(
                                     "Missing username",
                                     new JSONObject()
-                                            .put("password", "pass")
+                                            .put("password", "password")
                                             .put("active", true)),
                             "username: must not be blank"
                     ),
@@ -458,15 +463,42 @@ class UserControllerIT extends IntegrationTest {
                                     "Blank username",
                                     new JSONObject()
                                             .put("username", "")
-                                            .put("password", "pass")
+                                            .put("password", "password")
                                             .put("active", true)),
                             "username: must not be blank"
                     ),
                     Arguments.of(
                             Named.of(
-                                    "Missing password",
+                                    "Invalid username - too short",
                                     new JSONObject()
                                             .put("username", "user")
+                                            .put("password", "password")
+                                            .put("active", true)),
+                            "username: must match"
+                    ),
+                    Arguments.of(
+                            Named.of(
+                                    "Invalid username - contains invalid characters",
+                                    new JSONObject()
+                                            .put("username", "user")
+                                            .put("password", "password$")
+                                            .put("active", true)),
+                            "username: must match"
+                    ),
+                    Arguments.of(
+                            Named.of(
+                                    "Invalid username - contains spaces",
+                                    new JSONObject()
+                                            .put("username", "user")
+                                            .put("password", "password ")
+                                            .put("active", true)),
+                            "username: must match"
+                    ),
+                    Arguments.of(
+                            Named.of(
+                                    "Missing password",
+                                    new JSONObject()
+                                            .put("username", "username")
                                             .put("active", true)),
                             "password: must not be blank"
                     ),
@@ -474,26 +506,44 @@ class UserControllerIT extends IntegrationTest {
                             Named.of(
                                     "Blank password",
                                     new JSONObject()
-                                            .put("username", "user")
+                                            .put("username", "username")
                                             .put("password", "")
                                             .put("active", true)),
                             "password: must not be blank"
                     ),
                     Arguments.of(
                             Named.of(
+                                    "Invalid password - too short",
+                                    new JSONObject()
+                                            .put("username", "username")
+                                            .put("password", "pass")
+                                            .put("active", true)),
+                            "password: must match"
+                    ),
+                    Arguments.of(
+                            Named.of(
+                                    "Invalid password - contains spaces",
+                                    new JSONObject()
+                                            .put("username", "username")
+                                            .put("password", "password ")
+                                            .put("active", true)),
+                            "password: must match"
+                    ),
+                    Arguments.of(
+                            Named.of(
                                     "Missing active",
                                     new JSONObject()
-                                            .put("username", "user")
-                                            .put("password", "pass")),
+                                            .put("username", "username")
+                                            .put("password", "password")),
                             "active: must not be null"
                     ),
                     Arguments.of(
                             Named.of(
                                     "Missing active",
                                     new JSONObject()
-                                            .put("username", "user")
+                                            .put("username", "username")
                                             .put("active", "")
-                                            .put("password", "pass")),
+                                            .put("password", "password")),
                             "active: must not be null"
                     )
             );

@@ -5,6 +5,8 @@ server:
 
 spring:
   hateoas:
+    # Required to produce correct Swagger for JSON with HATEOAS
+    # see https://github.com/springdoc/springdoc-openapi/issues/401
     use-hal-as-default-json-media-type: false
   datasource:
     url: jdbc:h2:mem:palikka_users_db;TIME ZONE=UTC

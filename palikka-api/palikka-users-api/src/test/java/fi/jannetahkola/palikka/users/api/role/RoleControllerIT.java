@@ -5,7 +5,6 @@ import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @SqlForUsers
@@ -54,8 +53,8 @@ class RoleControllerIT extends IntegrationTest {
                     .get("/roles")
                     .then().assertThat()
                     .statusCode(200)
-                    .body("_embedded.roles", hasSize(1))
-                    .body("_embedded.roles[0].name", equalTo("ROLE_USER"));
+                    .body("content", hasSize(1))
+                    .body("content[0].name", equalTo("ROLE_USER"));
         }
     }
 
@@ -68,8 +67,9 @@ class RoleControllerIT extends IntegrationTest {
                     .get("/roles")
                     .then().assertThat()
                     .statusCode(200)
-                    .body("_embedded.roles", hasSize(3))
-                    .body("_links.self.href", endsWith("/roles"));
+                    .body("content.roles", hasSize(3))
+                    .body("links[0].rel", equalTo("self"))
+                    .body("links[0].href", endsWith("/roles"));
         }
 
         @Test
@@ -81,7 +81,8 @@ class RoleControllerIT extends IntegrationTest {
                     .statusCode(200)
                     .body("id", equalTo(1))
                     .body("name", equalTo("ROLE_ADMIN"))
-                    .body("_links.self.href", endsWith("/roles/1"));
+                    .body("links[0].rel", equalTo("self"))
+                    .body("links[0].href", endsWith("/roles/1"));
         }
 
         @Test

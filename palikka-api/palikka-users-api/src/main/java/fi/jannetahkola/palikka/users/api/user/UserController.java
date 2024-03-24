@@ -2,6 +2,9 @@ package fi.jannetahkola.palikka.users.api.user;
 
 import fi.jannetahkola.palikka.core.api.exception.BadRequestException;
 import fi.jannetahkola.palikka.core.api.exception.ConflictException;
+import fi.jannetahkola.palikka.core.api.exception.model.BadRequestErrorModel;
+import fi.jannetahkola.palikka.core.api.exception.model.ConflictErrorModel;
+import fi.jannetahkola.palikka.core.api.exception.model.NotFoundErrorModel;
 import fi.jannetahkola.palikka.core.util.AuthorizationUtil;
 import fi.jannetahkola.palikka.users.api.user.model.UserModel;
 import fi.jannetahkola.palikka.users.api.user.model.UserModelAssembler;
@@ -9,29 +12,46 @@ import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
 import fi.jannetahkola.palikka.users.exception.UsersNotFoundException;
 import fi.jannetahkola.palikka.users.util.CryptoUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.IanaLinkRelations;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 
+@Tag(name = "Users")
 @Slf4j
 @RestController
-@RequestMapping("/users")
+@RequestMapping(
+        value = "/users",
+        produces = MediaType.APPLICATION_JSON_VALUE,
+        consumes = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
 public class UserController {
     private final UserRepository userRepository;
     private final UserModelAssembler userModelAssembler;
 
+    @Operation(summary = "Get all users")
     @GetMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<CollectionModel<UserModel>> getUsers() {
@@ -39,6 +59,19 @@ public class UserController {
                 .ok(userModelAssembler.toCollectionModel(userRepository.findAll()));
     }
 
+    @Operation(summary = "Get a user")
+    @Parameter(
+            in = ParameterIn.PATH,
+            name = "id",
+            description = "Identifier of the user")
+    @ApiResponse(
+            responseCode = "200",
+            description = "OK",
+            content = @Content(schema = @Schema(implementation = UserModel.class)))
+    @ApiResponse(
+            responseCode = "404",
+            description = "Not found",
+            content = @Content(schema = @Schema(implementation = NotFoundErrorModel.class)))
     @GetMapping("/{id}")
     @PreAuthorize(
             "hasAnyRole('ROLE_SYSTEM', 'ROLE_ADMIN') " +
@@ -54,6 +87,15 @@ public class UserController {
                 .body(userModel);
     }
 
+    @Operation(summary = "Get current user")
+    @ApiResponse(
+            responseCode = "200",
+            description = "OK",
+            content = @Content(schema = @Schema(implementation = UserModel.class)))
+    @ApiResponse(
+            responseCode = "404",
+            description = "Not found",
+            content = @Content(schema = @Schema(implementation = NotFoundErrorModel.class)))
     @GetMapping("/me")
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
     public ResponseEntity<UserModel> getCurrentUser(Authentication authentication) {
@@ -66,6 +108,24 @@ public class UserController {
                 .body(userModel);
     }
 
+    @Operation(summary = "Create a user")
+    @ApiResponse(
+            responseCode = "201",
+            description = "Created",
+            content = @Content(schema = @Schema(implementation = UserModel.class)),
+            headers = {
+                    @Header(
+                            name = HttpHeaders.LOCATION,
+                            description = "Link to the created user",
+                            schema = @Schema(implementation = URI.class))})
+    @ApiResponse(
+            responseCode = "400",
+            description = "Bad request",
+            content = @Content(schema = @Schema(implementation = BadRequestErrorModel.class)))
+    @ApiResponse(
+            responseCode = "409",
+            description = "Conflict",
+            content = @Content(schema = @Schema(implementation = ConflictErrorModel.class)))
     @PostMapping
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<UserModel> postUser(@Validated(UserModel.PostGroup.class) @RequestBody UserModel userToPost) {
@@ -92,6 +152,23 @@ public class UserController {
                 .body(createdUser);
     }
 
+    @Operation(summary = "Update a user")
+    @Parameter(
+            in = ParameterIn.PATH,
+            name = "id",
+            description = "Identifier of the user")
+    @ApiResponse(
+            responseCode = "202",
+            description = "Accepted",
+            content = @Content(schema = @Schema(implementation = UserModel.class)))
+    @ApiResponse(
+            responseCode = "400",
+            description = "Bad request",
+            content = @Content(schema = @Schema(implementation = BadRequestErrorModel.class)))
+    @ApiResponse(
+            responseCode = "409",
+            description = "Conflict",
+            content = @Content(schema = @Schema(implementation = ConflictErrorModel.class)))
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ROLE_ADMIN') or (hasRole('ROLE_USER') and #userId == authentication.principal)")
     public ResponseEntity<UserModel> putUser(@PathVariable("id") Integer userId,
@@ -112,7 +189,8 @@ public class UserController {
 
         // Default to current value, but allow update if current user has privileges (silent)
         Boolean isActive = existingUserEntity.getActive();
-        if (userToPut.getActive() != null && AuthorizationUtil.hasAnyAuthority(authentication, "ROLE_ADMIN")) {
+        if (userToPut.getActive() != null
+                && AuthorizationUtil.hasAnyAuthority(authentication, "ROLE_ADMIN")) {
             isActive = userToPut.getActive();
         }
 
