@@ -1,5 +1,7 @@
 package fi.jannetahkola.palikka.game.websocket;
 
+import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationDetails;
+import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilter;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import fi.jannetahkola.palikka.core.util.AuthenticationUtil;
@@ -20,7 +22,8 @@ import java.util.Map;
 
 /**
  * Authenticates the connection from query parameters before proceeding with the handshake. Query parameters are used
- * because of difficulties in providing HTTP headers with JavaScript STOMP implementations.
+ * because of difficulties in providing HTTP headers with JavaScript STOMP implementations. This is skipped
+ * if {@link PalikkaAuthenticationFilter} gets called first - as it should be.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -44,7 +47,6 @@ public class AuthenticationHandshakeInterceptor implements HandshakeInterceptor 
         if (authentication != null
                 && authentication.isAuthenticated()
                 && authentication instanceof UsernamePasswordAuthenticationToken) {
-            // todo check if this ever happens
             log.debug("Already authenticated, proceeding with handshake");
             return true;
         }
@@ -60,7 +62,9 @@ public class AuthenticationHandshakeInterceptor implements HandshakeInterceptor 
             if (newAuthentication != null
                     && newAuthentication.isAuthenticated()
                     && newAuthentication instanceof UsernamePasswordAuthenticationToken authenticationToken) {
-                authenticationToken.setDetails(token); // todo proper object
+                PalikkaAuthenticationDetails details = new PalikkaAuthenticationDetails();
+                details.setToken(token);
+                authenticationToken.setDetails(details);
                 return true;
             }
         }

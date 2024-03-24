@@ -78,13 +78,14 @@ class GameControllerIT extends WireMockGameProcessTest {
 
     @BeforeEach
     void beforeEach(@LocalServerPort int localServerPort) {
+        RestAssured.basePath = "/game-api";
         RestAssured.port = localServerPort;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
         logMessageQueue.clear();
         lifecycleMessageQueue.clear();;
 
-        webSocketUrl = "ws://localhost:" + localServerPort + "/ws";
+        webSocketUrl = "ws://localhost:" + localServerPort + "/game-api/ws";
     }
 
     @DynamicPropertySource
@@ -242,7 +243,7 @@ class GameControllerIT extends WireMockGameProcessTest {
                     .headers(httpHeaders)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/game-api/game/process")
+                    .post("/game/process")
                     .then().assertThat()
                     .statusCode(200);
 
@@ -369,7 +370,7 @@ class GameControllerIT extends WireMockGameProcessTest {
                     .headers(httpHeaders)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/game-api/game/process")
+                    .post("/game/process")
                     .then().assertThat()
                     .statusCode(200);
 
@@ -406,7 +407,7 @@ class GameControllerIT extends WireMockGameProcessTest {
                     .headers(httpHeaders)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/game-api/game/process")
+                    .post("/game/process")
                     .then().assertThat()
                     .statusCode(200);
 
@@ -449,7 +450,7 @@ class GameControllerIT extends WireMockGameProcessTest {
                     .headers(httpHeaders)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/game-api/game/process")
+                    .post("/game/process")
                     .then().assertThat()
                     .statusCode(200);
 
@@ -499,7 +500,7 @@ class GameControllerIT extends WireMockGameProcessTest {
                     .headers(httpHeaders)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/game-api/game/process")
+                    .post("/game/process")
                     .then().assertThat()
                     .statusCode(200);
 
@@ -546,7 +547,7 @@ class GameControllerIT extends WireMockGameProcessTest {
                     .headers(httpHeaders)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/game-api/game/process")
+                    .post("/game/process")
                     .then().assertThat()
                     .statusCode(200);
 
@@ -562,7 +563,7 @@ class GameControllerIT extends WireMockGameProcessTest {
                     .headers(httpHeaders)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(new JSONObject().put("action", "start").toString())
-                    .post("/game-api/game/process")
+                    .post("/game/process")
                     .then().assertThat()
                     .statusCode(200);
 

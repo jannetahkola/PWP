@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 
 @Slf4j
 @RestController
-@RequestMapping("/game-api/game/status")
+@RequestMapping("/game/status")
 @RequiredArgsConstructor
 public class GameStatusController {
     private final GameProperties properties;
@@ -31,6 +31,7 @@ public class GameStatusController {
 
     @GetMapping
     public GameStatusResponse getGameStatus() {
+        // See https://wiki.vg/Server_List_Ping
         GameProperties.StatusProperties statusProperties = properties.getStatus();
         log.debug("Fetching game status with config={}", statusProperties);
 

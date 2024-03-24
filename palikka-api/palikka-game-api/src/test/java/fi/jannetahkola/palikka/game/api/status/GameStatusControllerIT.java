@@ -57,7 +57,7 @@ class GameStatusControllerIT extends WireMockTest {
         when(gameStatusController.getGameStatus()).thenReturn(gameStatus);
 
         mockMvc.perform(
-                get("/game-api/game/status")
+                get("/game/status")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(1))
         ).andExpect(status().isOk());
     }

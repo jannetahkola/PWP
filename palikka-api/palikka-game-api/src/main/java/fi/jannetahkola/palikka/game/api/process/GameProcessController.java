@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/game-api/game/process")
+@RequestMapping("/game/process")
 @Validated
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ROLE_ADMIN')")

@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.game.websocket;
 
+import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationDetails;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
@@ -41,8 +42,10 @@ public class PreSendAuthorizationChannelInterceptor implements ChannelIntercepto
         // Note that using StompHeaderAccessor directly will not work as it won't mutate the headers
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
         if (accessor != null && Objects.equals(accessor.getCommand(), StompCommand.SEND)) {
+            // Token type is known at this point so cast without checks
             var authenticationToken = (UsernamePasswordAuthenticationToken) accessor.getUser();
-            if (authenticationToken != null && jwtService.isExpired((String) authenticationToken.getDetails())) {
+            if (authenticationToken != null
+                    && jwtService.isExpired(((PalikkaAuthenticationDetails) authenticationToken.getDetails()).getToken())) {
                 // This is enough to fail authorization in AuthorizationChannelInterceptor and
                 // disconnect the session - no need to clear security context
                 accessor.setUser(null);

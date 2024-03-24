@@ -52,6 +52,7 @@ class GameFileControllerIT extends WireMockTest {
 
     @BeforeEach
     void beforeEach(@LocalServerPort int localServerPort) {
+        RestAssured.basePath = "/game-api";
         RestAssured.port = localServerPort;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
     }
@@ -68,12 +69,12 @@ class GameFileControllerIT extends WireMockTest {
             stubForNormalUser(wireMockServer);
 
             given()
-                    .get("/game-api/game/files/download")
+                    .get("/game/files/download")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(2))
-                    .get("/game-api/game/files/download")
+                    .get("/game/files/download")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -87,14 +88,14 @@ class GameFileControllerIT extends WireMockTest {
             given()
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game-api/game/files/download")
+                    .post("/game/files/download")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(2))
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game-api/game/files/download")
+                    .post("/game/files/download")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -104,12 +105,12 @@ class GameFileControllerIT extends WireMockTest {
             stubForNormalUser(wireMockServer);
 
             given()
-                    .get("/game-api/game/files/config")
+                    .get("/game/files/config")
                     .then().assertThat()
                     .statusCode(403);
             given()
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(2))
-                    .get("/game-api/game/files/config")
+                    .get("/game/files/config")
                     .then().assertThat()
                     .statusCode(403);
         }
@@ -138,7 +139,7 @@ class GameFileControllerIT extends WireMockTest {
         void givenGetDownloadStatusRequest_thenOkResponse() {
             given()
                     .header(authorizationHeader)
-                    .get("/game-api/game/files/download")
+                    .get("/game/files/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("idle"));
@@ -152,14 +153,14 @@ class GameFileControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game-api/game/files/download")
+                    .post("/game/files/download")
                     .then().assertThat()
                     .statusCode(204)
                     .header(HttpHeaders.LOCATION, endsWith("/game/files/download"));
 
             given()
                     .header(authorizationHeader)
-                    .get("/game-api/game/files/download")
+                    .get("/game/files/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("success"));
@@ -167,7 +168,7 @@ class GameFileControllerIT extends WireMockTest {
             // Check that status is reset after
             given()
                     .header(authorizationHeader)
-                    .get("/game-api/game/files/download")
+                    .get("/game/files/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("idle"));
@@ -181,12 +182,12 @@ class GameFileControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game-api/game/files/download")
+                    .post("/game/files/download")
                     .then().assertThat()
                     .statusCode(204);
             given()
                     .header(authorizationHeader)
-                    .get("/game-api/game/files/download")
+                    .get("/game/files/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("failed"));
@@ -194,7 +195,7 @@ class GameFileControllerIT extends WireMockTest {
             // Check that status is reset after
             given()
                     .header(authorizationHeader)
-                    .get("/game-api/game/files/download")
+                    .get("/game/files/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("idle"));
@@ -211,12 +212,12 @@ class GameFileControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game-api/game/files/download")
+                    .post("/game/files/download")
                     .then().assertThat()
                     .statusCode(204);
             given()
                     .header(authorizationHeader)
-                    .get("/game-api/game/files/download")
+                    .get("/game/files/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("working"));
@@ -225,7 +226,7 @@ class GameFileControllerIT extends WireMockTest {
 
             given()
                     .header(authorizationHeader)
-                    .get("/game-api/game/files/download")
+                    .get("/game/files/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("success"));
@@ -241,7 +242,7 @@ class GameFileControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game-api/game/files/download")
+                    .post("/game/files/download")
                     .then().assertThat()
                     .statusCode(400)
                     .body("message", is("Game files cannot be modified when game status is not DOWN"));
@@ -256,7 +257,7 @@ class GameFileControllerIT extends WireMockTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game-api/game/files/download")
+                    .post("/game/files/download")
                     .then().assertThat()
                     .statusCode(400)
                     .body("message", is("Invalid download URL"));
@@ -279,7 +280,7 @@ class GameFileControllerIT extends WireMockTest {
             // todo test error cases
             given()
                     .header(authorizationHeader)
-                    .get("/game-api/game/files/config")
+                    .get("/game/files/config")
                     .then().assertThat()
                     .statusCode(200)
                     .body("config", hasSize(0));

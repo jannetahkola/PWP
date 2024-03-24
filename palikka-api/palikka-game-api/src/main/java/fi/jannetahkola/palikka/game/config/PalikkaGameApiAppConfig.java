@@ -47,8 +47,10 @@ public class PalikkaGameApiAppConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             PalikkaAuthenticationFilterConfigurer authenticationFilterConfigurer) {
         http
-                .sessionManagement(sessions -> sessions.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sessions -> sessions
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests -> requests
+                        // Goes through authentication filter to WebSocket security configs
                         .requestMatchers("/ws").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)

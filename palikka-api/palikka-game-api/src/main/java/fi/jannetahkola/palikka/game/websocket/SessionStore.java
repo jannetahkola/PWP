@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.game.websocket;
 
+import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationDetails;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +46,8 @@ public class SessionStore {
         int count = 0;
         for (WebSocketSession session : sessions.values()) {
             var authenticationToken = (UsernamePasswordAuthenticationToken) session.getPrincipal();
-            if (authenticationToken != null && jwtService.isExpired((String) authenticationToken.getDetails())) {
+            if (authenticationToken != null
+                    && jwtService.isExpired(((PalikkaAuthenticationDetails) authenticationToken.getDetails()).getToken())) {
                 if (!session.isOpen()) {
                     log.warn("Removing a stale closed session with an expired " +
                             "JWT, session id={}, principal={}", session.getId(), authenticationToken.getName());

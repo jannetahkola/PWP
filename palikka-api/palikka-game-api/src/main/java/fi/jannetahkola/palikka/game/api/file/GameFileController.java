@@ -27,7 +27,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Slf4j
 @RestController
-@RequestMapping("/game-api/game/files")
+@RequestMapping("/game/files")
 @Validated
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ROLE_ADMIN')")
