@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.users.api.auth;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -28,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -43,6 +45,7 @@ import java.util.function.Predicate;
         produces = MediaType.APPLICATION_JSON_VALUE,
         consumes = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
+@Validated
 public class AuthenticationController {
     private final UserRepository userRepository;
     private final JwtService jwtService;
@@ -64,7 +67,7 @@ public class AuthenticationController {
             description = "Log in failed. No further information is provided for security reasons",
             content = @Content(schema = @Schema(implementation = BadRequestErrorModel.class)))
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         LoginResponse loginResponse = userRepository
                 .findByUsername(loginRequest.getUsername())
                 .filter(user -> passwordMatches(loginRequest).test(user))
@@ -128,14 +131,17 @@ public class AuthenticationController {
     @Schema(description = "Log in parameters")
     @Data
     @Valid
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class LoginRequest {
         @Schema(description = "Unique username of the user")
         @NotBlank
-        @Pattern(regexp = "^[a-zA-Z\\d]{6,20}$")
+        @Pattern(regexp = "^[a-zA-Z\\d-]{6,20}$")
         String username;
 
         @Schema(description = "Password of the user")
         @NotBlank
+        @Pattern(regexp = "^[^\\s]{6,20}$")
         String password;
     }
 }

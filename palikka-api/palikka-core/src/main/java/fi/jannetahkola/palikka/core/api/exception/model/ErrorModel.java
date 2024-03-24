@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.core.api.exception.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatusCode;
 @Getter
 public abstract class ErrorModel {
     @Hidden
+    @JsonIgnore
     private final HttpStatusCode statusCode;
 
     @Schema(
