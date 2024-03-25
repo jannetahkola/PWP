@@ -1,11 +1,10 @@
 server:
+  error:
+    whitelabel:
+      enabled: false
   servlet:
     context-path: /game-api
   port: 8082
-
-#spring:
-#  hateoas:
-#    use-hal-as-default-json-media-type: false
 
 palikka:
   jwt:

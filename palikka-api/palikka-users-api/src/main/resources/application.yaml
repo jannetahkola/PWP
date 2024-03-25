@@ -1,13 +1,17 @@
 server:
+  error:
+    whitelabel:
+      enabled: false
   servlet:
     context-path: /users-api
   port: 8080
 
 spring:
-#  hateoas:
-    # Required to produce correct Swagger for JSON with HATEOAS
-    # see https://github.com/springdoc/springdoc-openapi/issues/401
-#    use-hal-as-default-json-media-type: false
+  # setting this to false will produce correct Swagger for JSON with HATEOAS (no HAL)
+  # users API uses HAL so here for reference
+  # see https://github.com/springdoc/springdoc-openapi/issues/401
+  hateoas:
+    use-hal-as-default-json-media-type: true
   datasource:
     url: jdbc:h2:mem:palikka_users_db;TIME ZONE=UTC
   sql:

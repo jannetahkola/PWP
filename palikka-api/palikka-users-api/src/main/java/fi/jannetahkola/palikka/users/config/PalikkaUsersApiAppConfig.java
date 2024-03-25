@@ -38,7 +38,6 @@ public class PalikkaUsersApiAppConfig {
         http
                 .sessionManagement(sessions -> sessions.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/auth/login").permitAll()
                         // todo do not expose unless ran locally
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
