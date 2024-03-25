@@ -1,8 +1,6 @@
 package fi.jannetahkola.palikka.users.api.user;
 
 import fi.jannetahkola.palikka.core.api.exception.BadRequestException;
-import fi.jannetahkola.palikka.core.api.exception.model.BadRequestErrorModel;
-import fi.jannetahkola.palikka.core.api.exception.model.NotFoundErrorModel;
 import fi.jannetahkola.palikka.users.api.role.model.RoleModel;
 import fi.jannetahkola.palikka.users.api.role.model.RoleModelAssembler;
 import fi.jannetahkola.palikka.users.api.user.model.UserRolePatchModel;
@@ -23,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -39,10 +38,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @Tag(name = "User roles")
 @Slf4j
 @RestController
-@RequestMapping(
-        value = "/users",
-        produces = MediaTypes.HAL_JSON_VALUE,
-        consumes = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/users")
 @RequiredArgsConstructor
 @Validated
 public class UserRoleController {
@@ -58,9 +54,11 @@ public class UserRoleController {
             content = @Content(array = @ArraySchema(schema = @Schema(implementation = RoleModel.class))))
     @ApiResponse(
             responseCode = "404",
-            description = "Not found",
-            content = @Content(schema = @Schema(implementation = NotFoundErrorModel.class)))
-    @GetMapping("/{user-id}/roles")
+            description = "Not Found",
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+    @GetMapping(value = "/{user-id}/roles", produces = MediaTypes.HAL_JSON_VALUE)
     // todo system token
     @PreAuthorize("hasRole('ROLE_ADMIN') or #userId == authentication.principal")
     public ResponseEntity<CollectionModel<RoleModel>> getUserRoles(@PathVariable("user-id") Integer userId) {
@@ -81,13 +79,20 @@ public class UserRoleController {
             content = @Content(array = @ArraySchema(schema = @Schema(implementation = RoleModel.class))))
     @ApiResponse(
             responseCode = "400",
-            description = "Bad request",
-            content = @Content(schema = @Schema(implementation = BadRequestErrorModel.class)))
+            description = "Bad Request",
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
     @ApiResponse(
             responseCode = "404",
-            description = "Not found",
-            content = @Content(schema = @Schema(implementation = NotFoundErrorModel.class)))
-    @PatchMapping("/{user-id}/roles")
+            description = "Not Found",
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+    @PatchMapping(
+            value = "/{user-id}/roles",
+            produces = MediaTypes.HAL_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<CollectionModel<RoleModel>> patchUserRoles(@PathVariable("user-id") Integer userId,
                                                                      @Valid @RequestBody UserRolePatchModel patchModel) {

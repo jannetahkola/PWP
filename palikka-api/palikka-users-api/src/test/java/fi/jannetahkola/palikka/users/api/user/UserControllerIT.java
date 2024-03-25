@@ -5,9 +5,6 @@ import fi.jannetahkola.palikka.users.data.user.UserRepository;
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
 import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import fi.jannetahkola.palikka.users.util.CryptoUtils;
-import io.restassured.http.Header;
-import io.restassured.response.ValidatableResponse;
-import io.restassured.specification.RequestSpecification;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Named;
@@ -17,12 +14,13 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
-import java.util.function.Function;
 import java.util.stream.Stream;
 
+import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 
@@ -40,21 +38,31 @@ class UserControllerIT extends IntegrationTest {
         }
 
         @Test
-        void givenGetUserRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
+        void givenGetUserRequest_whenNoToken_thenForbiddenResponse() {
             given()
                     .get("/users/" + USER_ID_ADMIN)
                     .then().assertThat()
-                    .statusCode(403);
+                    .statusCode(403)
+                    .body("detail", equalTo("Full authentication is required to access this resource"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        }
+
+        @Test
+        void givenGetUserRequest_whenNoAllowedRole_thenForbiddenResponse() {
             given()
                     .header(newViewerToken())
                     .get("/users/" + USER_ID_ADMIN)
                     .then().assertThat()
-                    .statusCode(403);
+                    .statusCode(403)
+                    .body("detail", equalTo("Access Denied"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
             given()
                     .header(newUserToken())
                     .get("/users/" + USER_ID_ADMIN)
                     .then().assertThat()
-                    .statusCode(403);
+                    .statusCode(403)
+                    .body("detail", equalTo("Access Denied"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         }
 
         @Test
@@ -72,48 +80,104 @@ class UserControllerIT extends IntegrationTest {
         }
 
         @Test
-        void givenGetUsersRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
+        void givenGetUsersRequest_whenNoToken_thenForbiddenResponse() {
             given()
                     .get("/users")
                     .then().assertThat()
-                    .statusCode(403);
+                    .statusCode(403)
+                    .body("detail", equalTo("Full authentication is required to access this resource"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        }
+
+        @Test
+        void givenGetUsersRequest_whenNoAllowedRole_thenForbiddenResponse() {
             given()
                     .header(newViewerToken())
                     .get("/users")
                     .then().assertThat()
-                    .statusCode(403);
+                    .statusCode(403)
+                    .body("detail", equalTo("Access Denied"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
             given()
                     .header(newUserToken())
                     .get("/users")
                     .then().assertThat()
-                    .statusCode(403);
+                    .statusCode(403)
+                    .body("detail", equalTo("Access Denied"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         }
 
         @SneakyThrows
         @Test
-        void givenGetPostUserRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
+        void givenGetPostUserRequest_whenNoToken_thenForbiddenResponse() {
             String json = new JSONObject()
                     .put("username", "mock-user-3")
                     .put("password", "mock-pass")
                     .put("active", true)
                     .toString();
+            given()
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .post("/users")
+                    .then().assertThat()
+                    .statusCode(403)
+                    .body("detail", equalTo("Full authentication is required to access this resource"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        }
 
-            Function<Header, ValidatableResponse> postRequest = (Header authorizationHeader) -> {
-                RequestSpecification spec = given();
-                if (authorizationHeader != null) {
-                    spec.header(authorizationHeader);
-                }
-                return spec
-                        .contentType(MediaType.APPLICATION_JSON_VALUE)
-                        .body(json)
-                        .post("/users")
-                        .then();
-            };
+        @SneakyThrows
+        @Test
+        void givenGetPostUserRequest_whenNoAllowedRole_thenForbiddenResponse() {
+            String json = new JSONObject()
+                    .put("username", "mock-user-3")
+                    .put("password", "mock-pass")
+                    .put("active", true)
+                    .toString();
+            given()
+                    .header(newViewerToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .post("/users")
+                    .then().assertThat()
+                    .statusCode(403)
+                    .body("detail", equalTo("Access Denied"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            given()
+                    .header(newUserToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .post("/users")
+                    .then().assertThat()
+                    .statusCode(403)
+                    .body("detail", equalTo("Access Denied"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            given()
+                    .header(newSystemToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .post("/users")
+                    .then().assertThat()
+                    .statusCode(403)
+                    .body("detail", equalTo("Access Denied"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        }
 
-            postRequest.apply(null).assertThat().statusCode(403);
-            postRequest.apply(newViewerToken()).assertThat().statusCode(403);
-            postRequest.apply(newUserToken()).assertThat().statusCode(403);
-            postRequest.apply(newSystemToken()).assertThat().statusCode(403);
+        @SneakyThrows
+        @Test
+        void givenPutUserRequest_whenNoToken_thenForbiddenResponse() {
+            String json = new JSONObject()
+                    .put("username", "mock-user-updated")
+                    .put("password", "new-pass")
+                    .put("active", false)
+                    .toString();
+            given()
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .put("/users/" + USER_ID_ADMIN)
+                    .then().assertThat()
+                    .statusCode(403)
+                    .body("detail", equalTo("Full authentication is required to access this resource"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         }
 
         @SneakyThrows
@@ -124,23 +188,33 @@ class UserControllerIT extends IntegrationTest {
                     .put("password", "new-pass")
                     .put("active", false)
                     .toString();
-
-            Function<Header, ValidatableResponse> putRequest = (Header authorizationHeader) -> {
-                RequestSpecification spec = given();
-                if (authorizationHeader != null) {
-                    spec.header(authorizationHeader);
-                }
-                return spec
-                        .contentType(MediaType.APPLICATION_JSON_VALUE)
-                        .body(json)
-                        .put("/users/" + USER_ID_ADMIN)
-                        .then();
-            };
-
-            putRequest.apply(null).assertThat().statusCode(403);
-            putRequest.apply(newViewerToken()).assertThat().statusCode(403);
-            putRequest.apply(newUserToken()).assertThat().statusCode(403);
-            putRequest.apply(newSystemToken()).assertThat().statusCode(403);
+            given()
+                    .header(newViewerToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .put("/users/" + USER_ID_ADMIN)
+                    .then().assertThat()
+                    .statusCode(403)
+                    .body("detail", equalTo("Access Denied"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            given()
+                    .header(newUserToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .put("/users/" + USER_ID_ADMIN)
+                    .then().assertThat()
+                    .statusCode(403)
+                    .body("detail", equalTo("Access Denied"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            given()
+                    .header(newSystemToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(json)
+                    .put("/users/" + USER_ID_ADMIN)
+                    .then().assertThat()
+                    .statusCode(403)
+                    .body("detail", equalTo("Access Denied"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
         }
 
         @SneakyThrows
@@ -169,7 +243,7 @@ class UserControllerIT extends IntegrationTest {
             given()
                     .header(newAdminToken())
                     .options("/users")
-                    .then().assertThat()
+                    .then().log().all().assertThat()
                     .statusCode(200)
                     .header(HttpHeaders.ALLOW, containsString("GET"))
                     .header(HttpHeaders.ALLOW, containsString("POST"))
@@ -193,7 +267,7 @@ class UserControllerIT extends IntegrationTest {
             given()
                     .header(newAdminToken())
                     .get("/users/" + USER_ID_ADMIN)
-                    .then().assertThat()
+                    .then().log().all().assertThat()
                     .statusCode(200)
                     .body("id", equalTo(1))
                     .body("username", equalTo("mock-user"))
@@ -203,7 +277,19 @@ class UserControllerIT extends IntegrationTest {
                     .body("roles", hasSize(1))
                     .body("roles", contains("ROLE_ADMIN"))
                     .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN))
-                    .body("_links.roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));;
+                    .body("_links.roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
+        }
+
+        @Test
+        void testForms() {
+            // todo add proper support for hal+forms
+            given()
+                    .accept(MediaTypes.HAL_FORMS_JSON_VALUE)
+                    .header(newAdminToken())
+                    .get("/users/" + USER_ID_ADMIN)
+                    .then().log().all().assertThat()
+                    .statusCode(200);
         }
 
         @Test
@@ -213,7 +299,8 @@ class UserControllerIT extends IntegrationTest {
                     .get("/users/9999")
                     .then().assertThat()
                     .statusCode(404)
-                    .body("message", equalTo("User with id '9999' not found"));
+                    .body("detail", equalTo("User with id '9999' not found"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @Test
@@ -225,7 +312,8 @@ class UserControllerIT extends IntegrationTest {
                     .statusCode(200)
                     .body("_embedded.users", hasSize(3))
                     .body("_links.self.href", endsWith("/users"))
-                    .body("_links.user.href", endsWith("/users/{id}"));
+                    .body("_links.user.href", endsWith("/users/{id}"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -260,7 +348,8 @@ class UserControllerIT extends IntegrationTest {
                     .body("last_updated_at", nullValue())
                     .body("roles", hasSize(0))
                     .body("_links.self.href", endsWith("/users/" + expectedUserId))
-                    .body("_links.roles.href", endsWith("/users/" + expectedUserId + "/roles"));
+                    .body("_links.roles.href", endsWith("/users/" + expectedUserId + "/roles"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
 
             UserEntity createdUser = userRepository.findById(expectedUserId).orElseThrow();
             String salt = createdUser.getSalt();
@@ -279,7 +368,8 @@ class UserControllerIT extends IntegrationTest {
                     .post("/users")
                     .then().assertThat()
                     .statusCode(400)
-                    .body("message", containsString(expectedMessageSubstring));
+                    .body("detail", containsString(expectedMessageSubstring))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -298,7 +388,8 @@ class UserControllerIT extends IntegrationTest {
                     .post("/users")
                     .then().assertThat()
                     .statusCode(409)
-                    .body("message", equalTo("User with username 'mock-user' already exists"));
+                    .body("detail", equalTo("User with username 'mock-user' already exists"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -326,7 +417,8 @@ class UserControllerIT extends IntegrationTest {
                     .body("last_updated_at", endsWith("Z"))
                     .body("roles", hasSize(1))
                     .body("_links.self.href", endsWith("/users/" + USER_ID_USER))
-                    .body("_links.roles.href", endsWith("/users/" + USER_ID_USER + "/roles"));
+                    .body("_links.roles.href", endsWith("/users/" + USER_ID_USER + "/roles"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
 
             UserEntity updatedUser = userRepository.findById(USER_ID_USER).orElseThrow();
             String salt = updatedUser.getSalt();
@@ -348,7 +440,8 @@ class UserControllerIT extends IntegrationTest {
                     .put("/users/9999")
                     .then().assertThat()
                     .statusCode(404)
-                    .body("message", equalTo("User with id '9999' not found"));
+                    .body("detail", equalTo("User with id '9999' not found"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -364,7 +457,8 @@ class UserControllerIT extends IntegrationTest {
                     .put("/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(400)
-                    .body("message", equalTo("Root user not updatable"));
+                    .body("detail", equalTo("Root user not updatable"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -378,7 +472,8 @@ class UserControllerIT extends IntegrationTest {
                     .put("/users/" + USER_ID_USER)
                     .then().assertThat()
                     .statusCode(400)
-                    .body("message", equalTo("username: must not be blank"));
+                    .body("detail", equalTo("username: must not be blank"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -400,7 +495,8 @@ class UserControllerIT extends IntegrationTest {
                     .body("active", equalTo(true))
                     .body("root", equalTo(false))
                     .body("last_updated_at", not(nullValue()))
-                    .body("roles", hasSize(1));
+                    .body("roles", hasSize(1))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
 
             // Check password stays the same
             UserEntity updatedUser = userRepository.findById(USER_ID_USER).orElseThrow();
@@ -422,7 +518,32 @@ class UserControllerIT extends IntegrationTest {
                     .put("/users/" + USER_ID_USER)
                     .then().assertThat()
                     .statusCode(409)
-                    .body("message", equalTo("User with username 'mock-user' already exists"));
+                    .body("detail", equalTo("User with username 'mock-user' already exists"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+        }
+
+        @Test
+        void givenPostUserRequest_withoutContentType_thenUnsupportedMediaTypeResponse() {
+            given()
+                    .header(newAdminToken())
+                    .noContentType()
+                    .post("/users")
+                    .then().assertThat()
+                    .statusCode(415)
+                    .body("detail", equalTo("Content-Type 'null' is not supported."))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+        }
+
+        @Test
+        void givenPutUserRequest_withoutContentType_thenUnsupportedMediaTypeResponse() {
+            given()
+                    .header(newAdminToken())
+                    .noContentType()
+                    .put("/users/" + USER_ID_USER)
+                    .then().assertThat()
+                    .statusCode(415)
+                    .body("detail", equalTo("Content-Type 'null' is not supported."))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows

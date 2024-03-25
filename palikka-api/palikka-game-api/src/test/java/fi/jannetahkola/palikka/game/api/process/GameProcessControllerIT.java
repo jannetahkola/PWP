@@ -32,6 +32,7 @@ import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForAdminUser;
 import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForNormalUser;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 
 /**
@@ -115,7 +116,7 @@ class GameProcessControllerIT extends WireMockGameProcessTest {
                     .header(authorizationHeader)
                     .get("/game/process")
                     .then().assertThat()
-                    .statusCode(200) // TODO 403 if method/content-type not supported, change?
+                    .statusCode(200)
                     .body("status", equalTo("down"));
         }
 
@@ -129,7 +130,8 @@ class GameProcessControllerIT extends WireMockGameProcessTest {
                     .post("/game/process")
                     .then().assertThat()
                     .statusCode(400)
-                    .body("message", equalTo("Invalid request"));
+                    .body("detail", containsString("No enum constant"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
 
             given()
                     .header(authorizationHeader)
@@ -138,7 +140,8 @@ class GameProcessControllerIT extends WireMockGameProcessTest {
                     .post("/game/process")
                     .then().assertThat()
                     .statusCode(400)
-                    .body("message", equalTo("action: must not be null"));
+                    .body("detail", equalTo("action: must not be null"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows

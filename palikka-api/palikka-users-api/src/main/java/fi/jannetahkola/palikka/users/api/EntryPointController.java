@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.hateoas.RepresentationModel;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,15 +17,12 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @Tag(name = "Entry point")
 @RestController
-@RequestMapping(
-        value = "/",
-        produces = MediaTypes.HAL_JSON_VALUE,
-        consumes = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/")
 public class EntryPointController {
     @Operation(
             summary = "Get the entry point for the API",
             description = "Response contains suggested starting links for navigating the API")
-    @GetMapping
+    @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
     @PreAuthorize("hasAnyRole('ROLE_SYSTEM', 'ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
     @SuppressWarnings("squid:S1452") // No model type, links only
     public ResponseEntity<RepresentationModel<?>> getLinks() {

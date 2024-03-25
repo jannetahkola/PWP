@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.nimbusds.jwt.JWTClaimsSet;
-import fi.jannetahkola.palikka.core.api.exception.model.BadRequestErrorModel;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.auth.jwt.PalikkaJwtType;
 import fi.jannetahkola.palikka.users.data.auth.TokenEntity;
@@ -32,6 +31,7 @@ import org.springframework.hateoas.MediaTypes;
 import org.springframework.hateoas.RepresentationModel;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -45,10 +45,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @Tag(name = "Authentication")
 @Slf4j
 @RestController
-@RequestMapping(
-        value = "/auth",
-        produces = MediaTypes.HAL_JSON_VALUE,
-        consumes = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 @Validated
 public class AuthenticationController {
@@ -67,9 +64,15 @@ public class AuthenticationController {
             content = @Content(schema = @Schema(implementation = LoginResponse.class)))
     @ApiResponse(
             responseCode = "400",
+            // todo actually now there may be, test and update
             description = "Log in failed. No further information is provided for security reasons",
-            content = @Content(schema = @Schema(implementation = BadRequestErrorModel.class)))
-    @PostMapping("/login")
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+    @PostMapping(
+            value = "/login",
+            produces = MediaTypes.HAL_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         LoginResponse loginResponse = userRepository
                 .findByUsername(loginRequest.getUsername())
@@ -93,7 +96,10 @@ public class AuthenticationController {
     }
 
     @Operation(summary = "Log out")
-    @PostMapping("/logout")
+    @PostMapping(
+            value = "/logout",
+            produces = MediaTypes.HAL_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     @SuppressWarnings("squid:S1452") // No model type, links only
     public ResponseEntity<RepresentationModel<?>> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
         jwtService.parse(authorizationHeader.split("Bearer ")[1]) // Auth filter has validated the format already

@@ -245,7 +245,8 @@ class GameFileControllerIT extends WireMockTest {
                     .post("/game/files/download")
                     .then().assertThat()
                     .statusCode(400)
-                    .body("message", is("Game files cannot be modified when game status is not DOWN"));
+                    .body("detail", is("Game files cannot be modified when game status is not DOWN"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -260,7 +261,8 @@ class GameFileControllerIT extends WireMockTest {
                     .post("/game/files/download")
                     .then().assertThat()
                     .statusCode(400)
-                    .body("message", is("Invalid download URL"));
+                    .body("detail", is("Invalid download URL"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         // todo synchronization tests

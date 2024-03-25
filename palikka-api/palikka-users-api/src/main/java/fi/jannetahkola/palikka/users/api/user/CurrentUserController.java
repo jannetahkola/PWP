@@ -1,6 +1,5 @@
 package fi.jannetahkola.palikka.users.api.user;
 
-import fi.jannetahkola.palikka.core.api.exception.model.NotFoundErrorModel;
 import fi.jannetahkola.palikka.users.api.user.model.UserModel;
 import fi.jannetahkola.palikka.users.api.user.model.UserModelAssembler;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
@@ -13,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -22,10 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Current user")
 @RestController
-@RequestMapping(
-        value = "/current-user",
-        produces = MediaTypes.HAL_JSON_VALUE,
-        consumes = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/current-user")
 @RequiredArgsConstructor
 public class CurrentUserController {
     private final UserRepository userRepository;
@@ -40,10 +37,12 @@ public class CurrentUserController {
             content = @Content(schema = @Schema(implementation = UserModel.class)))
     @ApiResponse(
             responseCode = "404",
-            description = "Not found",
-            content = @Content(schema = @Schema(implementation = NotFoundErrorModel.class)))
+            description = "Not Found",
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
-    @GetMapping
+    @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
     public ResponseEntity<UserModel> getCurrentUser(Authentication authentication) {
         UserModel userModel = userRepository.findById(Integer.valueOf(authentication.getName()))
                 .map(userModelAssembler::toModel)

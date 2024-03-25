@@ -2,6 +2,7 @@ package fi.jannetahkola.palikka.core.config;
 
 import fi.jannetahkola.palikka.core.LoggingFilter;
 import fi.jannetahkola.palikka.core.api.exception.DefaultApiExceptionHandler;
+import fi.jannetahkola.palikka.core.api.exception.DelegatedAuthenticationEntryPoint;
 import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilterConfigurer;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.config.meta.EnableRequestAndResponseLoggingSupport;
@@ -33,6 +34,8 @@ class NoConfigsEnabledTests {
         // api exception handler
         assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
                 .isThrownBy(() -> context.getBean(DefaultApiExceptionHandler.class));
+        assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
+                .isThrownBy(() -> context.getBean(DelegatedAuthenticationEntryPoint.class));
 
         // logging
         assertThatExceptionOfType(NoSuchBeanDefinitionException.class)

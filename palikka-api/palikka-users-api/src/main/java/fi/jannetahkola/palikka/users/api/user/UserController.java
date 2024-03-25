@@ -2,9 +2,6 @@ package fi.jannetahkola.palikka.users.api.user;
 
 import fi.jannetahkola.palikka.core.api.exception.BadRequestException;
 import fi.jannetahkola.palikka.core.api.exception.ConflictException;
-import fi.jannetahkola.palikka.core.api.exception.model.BadRequestErrorModel;
-import fi.jannetahkola.palikka.core.api.exception.model.ConflictErrorModel;
-import fi.jannetahkola.palikka.core.api.exception.model.NotFoundErrorModel;
 import fi.jannetahkola.palikka.core.util.AuthorizationUtil;
 import fi.jannetahkola.palikka.users.api.user.model.UserModel;
 import fi.jannetahkola.palikka.users.api.user.model.UserModelAssembler;
@@ -27,6 +24,7 @@ import org.springframework.hateoas.IanaLinkRelations;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -41,10 +39,7 @@ import java.time.ZoneId;
 @Tag(name = "Users")
 @Slf4j
 @RestController
-@RequestMapping(
-        value = "/users",
-        produces = MediaTypes.HAL_JSON_VALUE,
-        consumes = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/users")
 @RequiredArgsConstructor
 @Validated
 public class UserController {
@@ -52,7 +47,7 @@ public class UserController {
     private final UserModelAssembler userModelAssembler;
 
     @Operation(summary = "Get all users")
-    @GetMapping
+    @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<CollectionModel<UserModel>> getUsers() {
         return ResponseEntity
@@ -70,9 +65,16 @@ public class UserController {
             content = @Content(schema = @Schema(implementation = UserModel.class)))
     @ApiResponse(
             responseCode = "404",
-            description = "Not found",
-            content = @Content(schema = @Schema(implementation = NotFoundErrorModel.class)))
-    @GetMapping("/{id}")
+            description = "Not Found",
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+    @GetMapping(
+            value = "/{id}",
+            produces = {
+                    MediaTypes.HAL_JSON_VALUE,
+                    // todo add proper support for this
+                    MediaTypes.HAL_FORMS_JSON_VALUE})
     @PreAuthorize(
             "hasAnyRole('ROLE_SYSTEM', 'ROLE_ADMIN') " +
                     "or (hasRole('ROLE_USER') and #userId == authentication.principal) " +
@@ -99,13 +101,19 @@ public class UserController {
                             schema = @Schema(implementation = URI.class))})
     @ApiResponse(
             responseCode = "400",
-            description = "Bad request",
-            content = @Content(schema = @Schema(implementation = BadRequestErrorModel.class)))
+            description = "Bad Request",
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
     @ApiResponse(
             responseCode = "409",
             description = "Conflict",
-            content = @Content(schema = @Schema(implementation = ConflictErrorModel.class)))
-    @PostMapping
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+    @PostMapping(
+            produces = MediaTypes.HAL_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<UserModel> postUser(@Validated(UserModel.PostGroup.class) @RequestBody UserModel userToPost) {
         if (userRepository.existsByUsername(userToPost.getUsername())) {
@@ -142,13 +150,26 @@ public class UserController {
             content = @Content(schema = @Schema(implementation = UserModel.class)))
     @ApiResponse(
             responseCode = "400",
-            description = "Bad request",
-            content = @Content(schema = @Schema(implementation = BadRequestErrorModel.class)))
+            description = "Bad Request",
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+    @ApiResponse(
+            responseCode = "404",
+            description = "Not Found",
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
     @ApiResponse(
             responseCode = "409",
             description = "Conflict",
-            content = @Content(schema = @Schema(implementation = ConflictErrorModel.class)))
-    @PutMapping("/{id}")
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+    @PutMapping(
+            value = "/{id}",
+            produces = MediaTypes.HAL_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('ROLE_ADMIN') or (hasRole('ROLE_USER') and #userId == authentication.principal)")
     public ResponseEntity<UserModel> putUser(@PathVariable("id") Integer userId,
                                              @Validated(UserModel.PutGroup.class) @RequestBody UserModel userToPut,

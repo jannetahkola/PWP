@@ -1,6 +1,5 @@
 package fi.jannetahkola.palikka.users.api.role;
 
-import fi.jannetahkola.palikka.core.api.exception.model.NotFoundErrorModel;
 import fi.jannetahkola.palikka.core.util.AuthorizationUtil;
 import fi.jannetahkola.palikka.users.api.role.model.RoleModel;
 import fi.jannetahkola.palikka.users.api.role.model.RoleModelAssembler;
@@ -16,9 +15,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.hateoas.CollectionModel;
-import org.springframework.http.HttpStatus;
+import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
@@ -31,18 +32,15 @@ import java.util.List;
 
 @Tag(name = "Roles")
 @RestController
-@RequestMapping(
-        value = "/roles",
-        consumes = MediaType.APPLICATION_JSON_VALUE,
-        produces = MediaType.APPLICATION_JSON_VALUE)
+@RequestMapping("/roles")
 @RequiredArgsConstructor
 @Validated
 public class RoleController {
     private final RoleRepository roleRepository;
     private final RoleModelAssembler roleModelAssembler;
 
-    @Operation(summary = "Get all roles")
-    @GetMapping
+    @Operation(summary = "Get all roles", description = "Results may be filtered depending on the user's authorities")
+    @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER')")
     public ResponseEntity<CollectionModel<RoleModel>> getRoles(Authentication authentication) {
         List<RoleEntity> roles = roleRepository.findAll();
@@ -66,9 +64,11 @@ public class RoleController {
             content = @Content(schema = @Schema(implementation = RoleModel.class)))
     @ApiResponse(
             responseCode = "404",
-            description = "Not found",
-            content = @Content(schema = @Schema(implementation = NotFoundErrorModel.class)))
-    @GetMapping("/{id}")
+            description = "Not Found",
+            content = @Content(
+                    schema = @Schema(implementation = ProblemDetail.class),
+                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
+    @GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER')")
     public ResponseEntity<RoleModel> getRole(@PathVariable("id") Integer roleId, Authentication authentication) {
         RoleModel roleModel = roleRepository.findById(roleId)
@@ -76,9 +76,7 @@ public class RoleController {
                 .orElseThrow(() -> UsersNotFoundException.ofRole(roleId));
         // Check that user has either admin role, or the requested role
         if (!AuthorizationUtil.hasAnyAuthority(authentication, "USER_ADMIN", roleModel.getName())) {
-            return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN.value())
-                    .build();
+            throw new AccessDeniedException("Access Denied");
         }
         return ResponseEntity
                 .ok()
