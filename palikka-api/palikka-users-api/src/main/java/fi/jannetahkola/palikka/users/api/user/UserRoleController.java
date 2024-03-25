@@ -21,6 +21,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,8 +41,8 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RestController
 @RequestMapping(
         value = "/users",
-        consumes = MediaType.APPLICATION_JSON_VALUE,
-        produces = MediaType.APPLICATION_JSON_VALUE)
+        produces = MediaTypes.HAL_JSON_VALUE,
+        consumes = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
 public class UserRoleController {
@@ -60,6 +61,7 @@ public class UserRoleController {
             description = "Not found",
             content = @Content(schema = @Schema(implementation = NotFoundErrorModel.class)))
     @GetMapping("/{user-id}/roles")
+    // todo system token
     @PreAuthorize("hasRole('ROLE_ADMIN') or #userId == authentication.principal")
     public ResponseEntity<CollectionModel<RoleModel>> getUserRoles(@PathVariable("user-id") Integer userId) {
         Set<RoleEntity> roleEntities = userRepository.findById(userId)
@@ -128,6 +130,7 @@ public class UserRoleController {
 
         return ResponseEntity
                 .accepted()
-                .body(CollectionModel.of(updatedUserRoles));
+                .body(CollectionModel.of(updatedUserRoles,
+                        linkTo(methodOn(UserRoleController.class).patchUserRoles(userId, null)).withSelfRel()));
     }
 }

@@ -8,6 +8,6 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 public abstract class WireMockTest {
     @RegisterExtension
     protected static WireMockExtension wireMockServer = WireMockExtension.newInstance()
-            .options(wireMockConfig().dynamicPort())
+            .options(wireMockConfig().dynamicPort().globalTemplating(true))
             .build();
 }

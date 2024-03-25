@@ -4,6 +4,7 @@ import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
 import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 
 import static org.hamcrest.Matchers.*;
 
@@ -53,13 +54,39 @@ class RoleControllerIT extends IntegrationTest {
                     .get("/roles")
                     .then().assertThat()
                     .statusCode(200)
-                    .body("content", hasSize(1))
-                    .body("content[0].name", equalTo("ROLE_USER"));
+                    .body("_embedded.roles", hasSize(1))
+                    .body("_embedded.roles[0].name", equalTo("ROLE_USER"));
         }
     }
 
     @Nested
     class ResourceFunctionalityIT {
+        @Test
+        void givenAllRolesOptionsRequest_thenAllowedMethodsReturned() {
+            given()
+                    .header(newAdminToken())
+                    .options("/roles")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .header(HttpHeaders.ALLOW, containsString("GET"))
+                    .header(HttpHeaders.ALLOW, not(containsString("POST")))
+                    .header(HttpHeaders.ALLOW, not(containsString("PUT")))
+                    .header(HttpHeaders.ALLOW, not(containsString("PATCH")));
+        }
+
+        @Test
+        void givenSingleRoleOptionsRequest_thenAllowedMethodsReturned() {
+            given()
+                    .header(newAdminToken())
+                    .options("/roles/1")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .header(HttpHeaders.ALLOW, containsString("GET"))
+                    .header(HttpHeaders.ALLOW, not(containsString("POST")))
+                    .header(HttpHeaders.ALLOW, not(containsString("PUT")))
+                    .header(HttpHeaders.ALLOW, not(containsString("PATCH")));
+        }
+
         @Test
         void givenGetRolesRequest_thenOkResponse() {
             given()
@@ -67,9 +94,9 @@ class RoleControllerIT extends IntegrationTest {
                     .get("/roles")
                     .then().assertThat()
                     .statusCode(200)
-                    .body("content.roles", hasSize(3))
-                    .body("links[0].rel", equalTo("self"))
-                    .body("links[0].href", endsWith("/roles"));
+                    .body("_embedded.roles", hasSize(3))
+                    .body("_embedded.roles[0]._links.self.href", not(emptyOrNullString()))
+                    .body("_links.self.href", endsWith("/users-api/roles"));
         }
 
         @Test
@@ -81,8 +108,7 @@ class RoleControllerIT extends IntegrationTest {
                     .statusCode(200)
                     .body("id", equalTo(1))
                     .body("name", equalTo("ROLE_ADMIN"))
-                    .body("links[0].rel", equalTo("self"))
-                    .body("links[0].href", endsWith("/roles/1"));
+                    .body("_links.self.href", endsWith("/users-api/roles/1"));
         }
 
         @Test

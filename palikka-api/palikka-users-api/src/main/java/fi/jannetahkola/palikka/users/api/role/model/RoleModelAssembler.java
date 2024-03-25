@@ -5,7 +5,6 @@ import fi.jannetahkola.palikka.users.data.role.RoleEntity;
 import jakarta.annotation.Nonnull;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
-import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.stereotype.Component;
 
 import java.util.stream.Collectors;
@@ -25,7 +24,7 @@ public class RoleModelAssembler implements RepresentationModelAssembler<RoleEnti
                 .description(entity.getDescription())
                 .build();
 
-        roleModel.add(WebMvcLinkBuilder.linkTo(methodOn(RoleController.class).getRole(roleModel.getId(), null)).withSelfRel());
+        roleModel.add(linkTo(methodOn(RoleController.class).getRole(roleModel.getId(), null)).withSelfRel());
 
         return roleModel;
     }

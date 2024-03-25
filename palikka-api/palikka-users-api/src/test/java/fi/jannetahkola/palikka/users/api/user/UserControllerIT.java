@@ -89,33 +89,6 @@ class UserControllerIT extends IntegrationTest {
                     .statusCode(403);
         }
 
-        @Test
-        void givenGetCurrentUserRequest_whenNoToken_thenForbiddenResponse() {
-            given()
-                    .get("/users/me")
-                    .then().assertThat()
-                    .statusCode(403);
-        }
-
-        @Test
-        void givenGetCurrentUserRequest_whenAnyRole_thenOkResponse() {
-            given()
-                    .header(newViewerToken())
-                    .get("/users/me")
-                    .then().assertThat()
-                    .statusCode(200);
-            given()
-                    .header(newUserToken())
-                    .get("/users/me")
-                    .then().assertThat()
-                    .statusCode(200);
-            given()
-                    .header(newAdminToken())
-                    .get("/users/me")
-                    .then().assertThat()
-                    .statusCode(200);
-        }
-
         @SneakyThrows
         @Test
         void givenGetPostUserRequest_whenNoTokenOrAllowedRole_thenForbiddenResponse() {
@@ -192,6 +165,30 @@ class UserControllerIT extends IntegrationTest {
     @Nested
     class ResourceFunctionalityIT {
         @Test
+        void givenAllUsersOptionsRequest_thenAllowedMethodsReturned() {
+            given()
+                    .header(newAdminToken())
+                    .options("/users")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .header(HttpHeaders.ALLOW, containsString("GET"))
+                    .header(HttpHeaders.ALLOW, containsString("POST"))
+                    .header(HttpHeaders.ALLOW, not(containsString("PUT")));
+        }
+
+        @Test
+        void givenSingleUserOptionsRequest_thenAllowedMethodsReturned() {
+            given()
+                    .header(newAdminToken())
+                    .options("/users/" + USER_ID_ADMIN)
+                    .then().assertThat()
+                    .statusCode(200)
+                    .header(HttpHeaders.ALLOW, containsString("GET"))
+                    .header(HttpHeaders.ALLOW, containsString("PUT"))
+                    .header(HttpHeaders.ALLOW, not(containsString("POST")));
+        }
+
+        @Test
         void givenGetUserRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
@@ -205,10 +202,8 @@ class UserControllerIT extends IntegrationTest {
                     .body("root", equalTo(true))
                     .body("roles", hasSize(1))
                     .body("roles", contains("ROLE_ADMIN"))
-                    .body("links[0].rel", equalTo("self"))
-                    .body("links[0].href", endsWith("/users/" + USER_ID_ADMIN))
-                    .body("links[1].rel", equalTo("roles"))
-                    .body("links[1].href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));
+                    .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN))
+                    .body("_links.roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));;
         }
 
         @Test
@@ -222,34 +217,15 @@ class UserControllerIT extends IntegrationTest {
         }
 
         @Test
-        void givenGetCurrentUserRequest_thenOkResponse() {
-            given()
-                    .header(newAdminToken())
-                    .get("/users/me")
-                    .then().assertThat()
-                    .statusCode(200)
-                    .body("id", equalTo(1))
-                    .body("username", equalTo("mock-user"))
-                    .body("password", nullValue())
-                    .body("active", equalTo(true))
-                    .body("roles", hasSize(1))
-                    .body("roles", contains("ROLE_ADMIN"))
-                    .body("links[0].rel", equalTo("self"))
-                    .body("links[0].href", endsWith("/users/" + USER_ID_ADMIN))
-                    .body("links[1].rel", equalTo("roles"))
-                    .body("links[1].href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));
-        }
-
-        @Test
         void givenGetUsersRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
                     .get("/users")
                     .then().assertThat()
                     .statusCode(200)
-                    .body("content", hasSize(3))
-                    .body("links[0].rel", equalTo("self"))
-                    .body("links[0].href", endsWith("/users"));
+                    .body("_embedded.users", hasSize(3))
+                    .body("_links.self.href", endsWith("/users"))
+                    .body("_links.user.href", endsWith("/users/{id}"));
         }
 
         @SneakyThrows
@@ -283,8 +259,8 @@ class UserControllerIT extends IntegrationTest {
                     .body("created_at", endsWith("Z"))
                     .body("last_updated_at", nullValue())
                     .body("roles", hasSize(0))
-                    .body("links[0].rel", equalTo("self"))
-                    .body("links[0].href", endsWith("/users/" + expectedUserId));
+                    .body("_links.self.href", endsWith("/users/" + expectedUserId))
+                    .body("_links.roles.href", endsWith("/users/" + expectedUserId + "/roles"));
 
             UserEntity createdUser = userRepository.findById(expectedUserId).orElseThrow();
             String salt = createdUser.getSalt();
@@ -348,7 +324,9 @@ class UserControllerIT extends IntegrationTest {
                     .body("root", equalTo(false))
                     .body("created_at", endsWith("Z"))
                     .body("last_updated_at", endsWith("Z"))
-                    .body("roles", hasSize(1));
+                    .body("roles", hasSize(1))
+                    .body("_links.self.href", endsWith("/users/" + USER_ID_USER))
+                    .body("_links.roles.href", endsWith("/users/" + USER_ID_USER + "/roles"));
 
             UserEntity updatedUser = userRepository.findById(USER_ID_USER).orElseThrow();
             String salt = updatedUser.getSalt();

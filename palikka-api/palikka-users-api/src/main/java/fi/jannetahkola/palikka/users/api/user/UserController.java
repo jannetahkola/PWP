@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.IanaLinkRelations;
+import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -42,7 +43,7 @@ import java.time.ZoneId;
 @RestController
 @RequestMapping(
         value = "/users",
-        produces = MediaType.APPLICATION_JSON_VALUE,
+        produces = MediaTypes.HAL_JSON_VALUE,
         consumes = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 @Validated
@@ -81,27 +82,6 @@ public class UserController {
         UserModel userModel = userRepository.findById(userId)
                 .map(userModelAssembler::toModel)
                 .orElseThrow(() -> UsersNotFoundException.ofUser(userId));
-        return ResponseEntity
-                .ok()
-                .body(userModel);
-    }
-
-    @Operation(summary = "Get current user")
-    @ApiResponse(
-            responseCode = "200",
-            description = "OK",
-            content = @Content(schema = @Schema(implementation = UserModel.class)))
-    @ApiResponse(
-            responseCode = "404",
-            description = "Not found",
-            content = @Content(schema = @Schema(implementation = NotFoundErrorModel.class)))
-    @GetMapping("/me")
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
-    public ResponseEntity<UserModel> getCurrentUser(Authentication authentication) {
-        UserModel userModel = userRepository.findById(Integer.valueOf(authentication.getName()))
-                .map(userModelAssembler::toModel)
-                // todo in this case we should log the hell out
-                .orElseThrow(() -> UsersNotFoundException.ofUser(Integer.valueOf(authentication.getName())));
         return ResponseEntity
                 .ok()
                 .body(userModel);

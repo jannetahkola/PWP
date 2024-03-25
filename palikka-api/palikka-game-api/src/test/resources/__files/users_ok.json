@@ -1,0 +1,88 @@
+{
+  "_embedded": {
+    "users": [
+      {
+        "id": 1,
+        "username": "mock-user-1",
+        "active": true,
+        "root": true,
+        "created_at": "2024-03-24T22:22:39.531Z",
+        "last_updated_at": null,
+        "roles": [
+          "ROLE_ADMIN"
+        ],
+        "_links": {
+          "self": {
+            "href": "{{request.baseUrl}}/users-api/users/1"
+          },
+          "roles": {
+            "href": "{{request.baseUrl}}/users-api/users/1/roles"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "username": "mock-user-2",
+        "active": true,
+        "root": false,
+        "created_at": "2024-03-24T22:22:39.533Z",
+        "last_updated_at": null,
+        "roles": [
+          "ROLE_USER"
+        ],
+        "_links": {
+          "self": {
+            "href": "{{request.baseUrl}}/users-api/users/2"
+          },
+          "roles": {
+            "href": "{{request.baseUrl}}/users-api/users/2/roles"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "username": "mock-user-3",
+        "active": true,
+        "root": false,
+        "created_at": "2024-03-24T22:22:39.534Z",
+        "last_updated_at": null,
+        "roles": [
+          "ROLE_VIEWER"
+        ],
+        "_links": {
+          "self": {
+            "href": "{{request.baseUrl}}/users-api/users/3"
+          },
+          "roles": {
+            "href": "{{request.baseUrl}}/users-api/users/3/roles"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "{{request.baseUrl}}/users-api/users"
+    },
+    "user": [
+      {
+        "href": "{{request.baseUrl}}/users-api/users/{id}",
+        "type": "GET",
+        "templated": true
+      },
+      {
+        "href": "{{request.baseUrl}}/users-api/users",
+        "type": "POST"
+      },
+      {
+        "href": "{{request.baseUrl}}/users-api/users/{id}",
+        "type": "PUT",
+        "templated": true
+      }
+    ],
+    "me": {
+      "href": "{{request.baseUrl}}/users-api/users/me",
+      "type": "GET"
+    }
+  }
+}

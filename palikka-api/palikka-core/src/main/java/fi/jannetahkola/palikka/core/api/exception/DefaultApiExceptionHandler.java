@@ -11,6 +11,7 @@ import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
@@ -82,6 +83,12 @@ public class DefaultApiExceptionHandler {
                         fieldError.getDefaultMessage()))
                 .collect(Collectors.joining(", "));
         return errorResponseOf(new BadRequestErrorModel(errorMessage));
+    }
+
+    @ExceptionHandler
+    public ResponseEntity<ErrorModel> methodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
+        log.info("Method argument type mismatch exception occurred", e);
+        return errorResponseOf(new BadRequestErrorModel("Invalid request"));
     }
 
     @ExceptionHandler

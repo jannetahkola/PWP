@@ -169,6 +169,17 @@ class DefaultApiExceptionHandlerIT {
         assertThat(capturedOutput).contains("Method argument not valid exception occurred");
     }
 
+    @SneakyThrows
+    @Test
+    void testMethodArgumentTypeMismatchException(CapturedOutput capturedOutput) {
+        when(exceptionHandlerMock.methodArgumentTypeMismatchException(any())).thenCallRealMethod();
+        mockMvc.perform(get("/resource/{id}", "id", "nan"))
+                .andExpect(status().is(400))
+                .andExpect(jsonPath("message", equalTo("Invalid request")));
+        verify(exceptionHandlerMock, times(1)).methodArgumentTypeMismatchException(any());
+        assertThat(capturedOutput).contains("Method argument type mismatch exception occurred");
+    }
+
     @RestController
     @Validated
     @SpringBootApplication
@@ -204,6 +215,11 @@ class DefaultApiExceptionHandlerIT {
 
         @PostMapping
         public void testInvalidPostRequest(@Valid @RequestBody ValidatedRequestObject request) {
+        }
+
+        @GetMapping("/resource/{id}")
+        public String testInvalidParam(@PathVariable("id") Integer id) {
+            return String.valueOf(id);
         }
 
         @EnableAutoConfiguration(exclude = {

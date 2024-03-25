@@ -6,8 +6,9 @@ spring:
       ddl-auto: create-drop
   sql:
     init:
-      # override main config to not run any scripts
+      # override main config
       data-locations:
+        - classpath:seed_roles.sql
 
 springdoc:
   swagger-ui:

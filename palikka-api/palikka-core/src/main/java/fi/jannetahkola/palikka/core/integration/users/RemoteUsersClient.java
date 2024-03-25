@@ -7,70 +7,111 @@ import fi.jannetahkola.palikka.core.config.properties.RemoteUsersIntegrationProp
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
-import jakarta.validation.ValidatorFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.*;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.MediaTypes;
+import org.springframework.hateoas.client.Traverson;
+import org.springframework.hateoas.server.core.TypeReferences;
+import org.springframework.http.HttpHeaders;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
-import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.client.Hop.rel;
 
 @Slf4j
 public class RemoteUsersClient implements UsersClient {
+    private static final Validator VALIDATOR;
+
+    static {
+        try (var validatorFactory = Validation.buildDefaultValidatorFactory()) {
+            VALIDATOR = validatorFactory.getValidator();
+        }
+    }
+
     private final RemoteUsersIntegrationProperties properties;
     private final JwtService jwtService;
-    private final Validator validator;
 
-    public RemoteUsersClient(RemoteUsersIntegrationProperties properties, JwtService jwtService) {
+    public RemoteUsersClient(RemoteUsersIntegrationProperties properties,
+                             JwtService jwtService) {
         this.properties = properties;
         this.jwtService = jwtService;
-        try (ValidatorFactory validatorFactory = Validation.buildDefaultValidatorFactory()) {
-            this.validator = validatorFactory.getValidator();
-        }
     }
 
     @Override
     public User getUser(Integer userId) {
-        RestTemplate restTemplate = new RestTemplate();
-        URI uri = properties.getBaseUri().resolve("/users-api/users/" + userId);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        jwtService.sign(new JWTClaimsSet.Builder(), PalikkaJwtType.SYSTEM).ifPresent(headers::setBearerAuth);
-
-        HttpEntity<Void> httpEntity = new HttpEntity<>(null, headers);
-
-        log.debug(">> GET {}", uri);
+        log.debug(">> GET user");
 
         try {
+            URI baseUri = properties.getBaseUri().resolve("/users-api/users");
+            HttpHeaders httpHeaders = new HttpHeaders();
+            jwtService.sign(new JWTClaimsSet.Builder(), PalikkaJwtType.SYSTEM)
+                    .ifPresent(httpHeaders::setBearerAuth);
+            log.debug(">> GET user - Bearer auth present={}", httpHeaders.containsKey(HttpHeaders.AUTHORIZATION));
 
-            ResponseEntity<User> exchange = restTemplate.exchange(uri, HttpMethod.GET, httpEntity, User.class);
+            var modelType = new TypeReferences.EntityModelType<User>() {};
+            Traverson traverson = new Traverson(baseUri, MediaTypes.HAL_JSON);
+            EntityModel<User> userModel = traverson
+                    .follow(rel("user").withParameter("id", userId))
+                    .withHeaders(httpHeaders)
+                    .toObject(modelType);
 
-            if (exchange.getStatusCode().is2xxSuccessful()) {
-                User user = exchange.getBody();
-                Set<ConstraintViolation<User>> violations = this.validator.validate(user);
-                if (violations.isEmpty()) {
-                    return user;
-                }
-                String formattedViolationMessage = violations.stream()
-                        .map(violation -> String.format("%s: %s", violation.getPropertyPath(), violation.getMessage()))
-                        .collect(Collectors.joining(", "));
-                log.warn("Request 'GET {}' failed on invalid response. Status={}, response={}, violations={}",
-                        uri, exchange.getStatusCode(), user, formattedViolationMessage);
-                return null;
+            if (userModel == null) return null;
+
+            User user = userModel.getContent();
+            Set<ConstraintViolation<User>> violations = VALIDATOR.validate(user);
+
+            if (violations.isEmpty()) {
+                log.debug("<< GET user - ok");
+                return user;
             }
-            log.warn("Request 'GET {}' failed on invalid status. Status={}, response={}", uri, exchange.getStatusCode(), exchange.getBody());
-        } catch (RestClientException e) {
-            if (e instanceof HttpClientErrorException httpException) {
-                log.warn("Request 'GET {}' failed on exception. Status={}, body={}",
-                        uri, httpException.getStatusCode(), httpException.getResponseBodyAsString(), httpException);
-            } else {
-                log.warn("Request 'GET {}' failed on exception. Message={}", uri, e.getMessage(), e);
-            }
+
+            log.warn("<< GET user - response has constraint violations={}", violations);
+        } catch (Exception e) {
+            log.error("<< GET user - request failed on exception", e);
         }
+
         return null;
+    }
+
+    @Override
+    public Collection<Role> getUserRoles(Integer userId) {
+        log.debug(">> GET user roles");
+
+        try {
+            URI baseUri = properties.getBaseUri().resolve("/users-api/users");
+            HttpHeaders httpHeaders = new HttpHeaders();
+            jwtService.sign(new JWTClaimsSet.Builder(), PalikkaJwtType.SYSTEM)
+                    .ifPresent(httpHeaders::setBearerAuth);
+            log.debug(">> GET user roles - Bearer auth present={}", httpHeaders.containsKey(HttpHeaders.AUTHORIZATION));
+
+            var modelType = new TypeReferences.CollectionModelType<Role>() {};
+
+            Traverson traverson = new Traverson(baseUri, MediaTypes.HAL_JSON);
+            CollectionModel<Role> roleCollectionModel = traverson
+                    .follow(rel("user").withParameter("id", userId))
+                    .follow("roles")
+                    .withHeaders(httpHeaders)
+                    .toObject(modelType);
+
+            if (roleCollectionModel == null) return Collections.emptyList();
+
+            Collection<Role> roleCollection = roleCollectionModel.getContent();
+            Set<ConstraintViolation<Collection<Role>>> violations = VALIDATOR.validate(roleCollection);
+
+            if (violations.isEmpty()) {
+                log.debug("<< GET user roles - ok");
+                return roleCollection;
+            }
+
+            log.warn("<< GET user roles - response has constraint violations={}", violations);
+        } catch (Exception e) {
+            log.error("<< GET user roles - request failed on exception", e);
+        }
+
+        return Collections.emptyList();
     }
 }

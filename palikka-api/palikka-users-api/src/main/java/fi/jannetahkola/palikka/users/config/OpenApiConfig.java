@@ -6,6 +6,7 @@ import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
@@ -18,8 +19,10 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.customizers.OperationCustomizer;
 import org.springframework.context.annotation.Bean;
+import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.method.HandlerMethod;
 
@@ -35,6 +38,11 @@ public class OpenApiConfig {
                 .info(
                         new Info()
                                 .title("Users API")
+                                .contact(
+                                        new Contact()
+                                                .name("Janne Tahkola")
+                                                .email("janne.tahkola@gmail.com")
+                                                .url("https://github.com/jannetahkola"))
                                 .description("User & access management"))
                 .components(
                         new Components()
@@ -102,17 +110,20 @@ public class OpenApiConfig {
                                 .example("Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...")
                 );
             }
-            // Content-Type always required
-            return operation
-                    .addParametersItem(
-                            new Parameter()
-                                    .in("header")
-                                    .required(true)
-                                    .name(HttpHeaders.CONTENT_TYPE)
-                                    .description("JSON content type")
-                                    .schema(new Schema<>().type("string"))
-                                    .example(org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
-                    );
+            if (!handlerMethod.hasMethodAnnotation(GetMapping.class)) {
+                // Content-Type required when not GET
+                operation
+                        .addParametersItem(
+                                new Parameter()
+                                        .in("header")
+                                        .required(true)
+                                        .name(HttpHeaders.CONTENT_TYPE)
+                                        .description("JSON content type")
+                                        .schema(new Schema<>().type("string"))
+                                        .example(org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
+                        );
+            }
+            return operation;
         };
     }
 
@@ -124,7 +135,7 @@ public class OpenApiConfig {
                 .content(
                         new Content()
                                 .addMediaType(
-                                        org.springframework.http.MediaType.APPLICATION_JSON_VALUE,
+                                        MediaTypes.HAL_JSON_VALUE,
                                         mediaType));
     }
 }

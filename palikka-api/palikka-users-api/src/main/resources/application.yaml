@@ -4,16 +4,18 @@ server:
   port: 8080
 
 spring:
-  hateoas:
+#  hateoas:
     # Required to produce correct Swagger for JSON with HATEOAS
     # see https://github.com/springdoc/springdoc-openapi/issues/401
-    use-hal-as-default-json-media-type: false
+#    use-hal-as-default-json-media-type: false
   datasource:
     url: jdbc:h2:mem:palikka_users_db;TIME ZONE=UTC
   sql:
     init:
       # specify a different file than the default 'data.sql' to prevent seeding during tests
-      data-locations: classpath:seed.sql
+      data-locations:
+        - classpath:seed_roles.sql
+        - classpath:seed.sql
   jpa:
     # let hibernate create the schema before seed data is inserted
     # see https://www.baeldung.com/spring-boot-h2-database#2-hibernate-and-datasql

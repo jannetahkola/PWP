@@ -2,16 +2,18 @@
   "id": 2,
   "username": "mock-user-2",
   "active": true,
-  "root": false,
+  "root": true,
+  "created_at": "2024-03-24T21:35:37.287Z",
+  "last_updated_at": null,
   "roles": [
     "ROLE_USER"
   ],
   "_links": {
     "self": {
-      "href": "http://localhost:39981/users-api/users/2"
+      "href": "{{request.baseUrl}}/users-api/users/2"
     },
     "roles": {
-      "href": "http://localhost:39981/users-api/users/2/roles"
+      "href": "{{request.baseUrl}}/users-api/users/2/roles"
     }
   }
 }

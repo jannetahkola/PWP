@@ -22,7 +22,8 @@ import static org.hamcrest.Matchers.equalTo;
         properties = {
                 "springdoc.api-docs.enabled=true",
                 "springdoc.swagger-ui.enabled=true",
-                "spring.sql.init.data-locations=",
+                "spring.sql.init.data-locations=classpath:seed_roles.sql",
+                "spring.jpa.hibernate.ddl-auto=create-drop",
                 "palikka.jwt.keystore.signing.path=keystore-dev.p12",
                 "palikka.jwt.keystore.signing.pass=password",
                 "palikka.jwt.keystore.signing.type=pkcs12",

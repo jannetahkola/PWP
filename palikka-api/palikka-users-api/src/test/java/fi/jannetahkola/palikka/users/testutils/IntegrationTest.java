@@ -17,7 +17,8 @@ import org.springframework.test.context.ActiveProfiles;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD) // New context for each test to clear database between them
 @ActiveProfiles("test")
 public abstract class IntegrationTest {
-    protected static final Header CONTENT_TYPE = new Header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+    protected static final Header CONTENT_TYPE =
+            new Header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
 
     /**
      * Admin user id. See {@link SqlForUsers}

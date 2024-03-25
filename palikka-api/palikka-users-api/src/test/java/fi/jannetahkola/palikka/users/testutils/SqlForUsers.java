@@ -16,13 +16,6 @@ import java.lang.annotation.*;
 @SqlGroup(value = {
         @Sql(
                 statements = {
-                        "insert into palikka_role (name) values ('ROLE_ADMIN')",
-                        "insert into palikka_role (name) values ('ROLE_USER')",
-                        "insert into palikka_role (name) values ('ROLE_VIEWER')"},
-                executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD
-        ),
-        @Sql(
-                statements = {
                         "insert into palikka_user (username, password, salt, active, root) " +
                                 "values ('mock-user', 'AMpMjzUFd7nR6Pc4l3BTmeOMQmJuLDQEHr7qp82QLt0=', 'pa2agTlplJ9FsYEmElH4iA==', true, true)",
                         "insert into palikka_user_role (user_id, role_id) values (1, 1)"},

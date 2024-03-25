@@ -49,7 +49,11 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
                 .collect(Collectors.collectingAndThen(
                                 Collectors.toList(),
                                 users -> CollectionModel.of(users,
-                                        linkTo(methodOn(UserController.class).getUsers()).withSelfRel())
+                                        linkTo(methodOn(UserController.class).getUsers())
+                                                .withSelfRel(),
+                                        linkTo(methodOn(UserController.class).getUser(null))
+                                                .withRel("user")
+                                )
                         )
                 );
     }

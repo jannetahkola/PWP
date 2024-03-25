@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 import java.util.stream.Stream;
@@ -86,15 +87,30 @@ class UserRoleControllerIT extends IntegrationTest {
     @Nested
     class ResourceFunctionalityIT {
         @Test
+        void givenAllRolesOptionsRequest_thenAllowedMethodsReturned() {
+            given()
+                    .header(newAdminToken())
+                    .options("/users/" + USER_ID_ADMIN + "/roles")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .header(HttpHeaders.ALLOW, containsString("GET"))
+                    .header(HttpHeaders.ALLOW, containsString("PATCH"))
+                    .header(HttpHeaders.ALLOW, not(containsString("POST")))
+                    .header(HttpHeaders.ALLOW, not(containsString("PUT")));
+        }
+
+        @Test
         void givenGetUserRolesRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
                     .get("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(200)
-                    .body("content", hasSize(1))
-                    .body("links[0].rel", equalTo("self"))
-                    .body("links[0].href", endsWith("/users/1/roles"));
+                    .body("_embedded.roles", hasSize(1))
+                    .body("_embedded.roles[0].id", equalTo(1))
+                    .body("_embedded.roles[0].name", equalTo("ROLE_ADMIN"))
+                    .body("_embedded.roles[0]._links.self.href", endsWith("/users-api/roles/1"))
+                    .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));
         }
 
         @Test
@@ -116,8 +132,10 @@ class UserRoleControllerIT extends IntegrationTest {
                     .patch("/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(202)
-                    .body("content", hasSize(1))
-                    .body("content[0].id", equalTo(1));
+                    .body("_embedded.roles", hasSize(1))
+                    .body("_embedded.roles[0].id", equalTo(1))
+                    .body("_embedded.roles[0]._links.self.href", endsWith("/users-api/roles/1"))
+                    .body("_links.self.href", endsWith("/users/" + USER_ID_USER + "/roles"));
         }
 
         @Test
@@ -153,7 +171,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .patch("/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(202)
-                    .body("content", hasSize(1));
+                    .body("_embedded.roles", hasSize(1));
         }
 
         @Test

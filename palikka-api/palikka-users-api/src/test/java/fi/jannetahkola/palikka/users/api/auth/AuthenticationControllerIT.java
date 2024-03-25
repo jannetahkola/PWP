@@ -22,7 +22,9 @@ class AuthenticationControllerIT extends IntegrationTest {
                 .post("/auth/login")
                 .then().assertThat()
                 .statusCode(200)
-                .body("token", not(emptyOrNullString()));
+                .body("token", not(emptyOrNullString()))
+                .body("expires_at", endsWith("Z"))
+                .body("_links.self.href", endsWith("/users-api/auth/login"));
     }
 
     @SneakyThrows
