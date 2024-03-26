@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -28,8 +29,8 @@ public class PrivilegeController {
     private final PrivilegeRepository privilegeRepository;
     private final PrivilegeModelAssembler privilegeModelAssembler;
 
-    @Operation(summary = "Get privileges", description = "Results may be filtered depending on the user's authorities")
-    @GetMapping
+    @Operation(summary = "Get all privileges", description = "Results may be filtered depending on the user's authorities")
+    @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
     public ResponseEntity<CollectionModel<PrivilegeModel>> getPrivileges(Authentication authentication) {
         List<PrivilegeEntity> privileges = privilegeRepository.findAll();

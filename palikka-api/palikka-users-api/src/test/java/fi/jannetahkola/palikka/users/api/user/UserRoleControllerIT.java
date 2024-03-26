@@ -33,29 +33,29 @@ class UserRoleControllerIT extends IntegrationTest {
                     .then().log().all().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Full authentication is required to access this resource"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @Test
-        void givenGetUserRolesRequest_whenNoAllowedRole_thenForbiddenResponse() {
+        void givenGetUserRolesRequest_whenNotAdmin_andNotRequestedForTheirOwnRole_thenForbiddenResponse() {
             given()
                     .header(newViewerToken())
                     .get("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
             given()
                     .header(newUserToken())
                     .get("/users/" + USER_ID_ADMIN + "/roles")
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @Test
-        void givenGetUserRolesRequest_whenNoAllowedRoleButRequestedForSelf_thenOkResponse() {
+        void givenGetUserRolesRequest_whenNotAdminButRequestedForSelf_thenOkResponse() {
             given()
                     .header(newViewerToken())
                     .get("/users/" + USER_ID_VIEWER + "/roles")
@@ -63,6 +63,20 @@ class UserRoleControllerIT extends IntegrationTest {
                     .statusCode(200);
             given()
                     .header(newUserToken())
+                    .get("/users/" + USER_ID_USER + "/roles")
+                    .then().assertThat()
+                    .statusCode(200);
+        }
+
+        @Test
+        void givenGetUserRolesRequest_whenSystemOrAdmin_andRequestedForAnyRole_thenOkResponse() {
+            given()
+                    .header(newSystemToken())
+                    .get("/users/" + USER_ID_VIEWER + "/roles")
+                    .then().assertThat()
+                    .statusCode(200);
+            given()
+                    .header(newAdminToken())
                     .get("/users/" + USER_ID_USER + "/roles")
                     .then().assertThat()
                     .statusCode(200);
@@ -83,7 +97,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Full authentication is required to access this resource"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @Test
@@ -102,7 +116,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
     }
 
@@ -155,7 +169,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
                     .patch("/users/" + USER_ID_USER + "/roles")
-                    .then().log().all().assertThat()
+                    .then().assertThat()
                     .statusCode(202)
                     .body("_embedded.roles", hasSize(1))
                     .body("_embedded.roles[0].id", equalTo(1))
@@ -164,7 +178,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .body("_embedded.roles[0].privileges[0].name", not(emptyOrNullString()))
                     .body("_embedded.roles[0]._links.self.href", endsWith("/users-api/roles/1"))
                     .body("_links.self.href", endsWith("/users/" + USER_ID_USER + "/roles"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
         }
 
         @Test
@@ -224,7 +238,6 @@ class UserRoleControllerIT extends IntegrationTest {
                     .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));;
         }
 
-        @SneakyThrows
         @ParameterizedTest
         @MethodSource("invalidPatchUserRolesParameters")
         void givenPatchUserRolesRequest_whenParametersInvalid_thenBadRequestResponse(JSONObject json,
@@ -280,7 +293,7 @@ class UserRoleControllerIT extends IntegrationTest {
                                     new JSONObject().put(
                                             "patches",
                                             new JSONArray())),
-                            "patches: size must be between 1 and 2147483647"
+                            "patches: size must be between 1 and 20"
                     ),
                     Arguments.of(
                             Named.of(

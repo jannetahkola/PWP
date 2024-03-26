@@ -46,7 +46,11 @@ public class RoleModelAssembler implements RepresentationModelAssembler<RoleEnti
                 .collect(Collectors.collectingAndThen(
                                 Collectors.toList(),
                                 roles -> CollectionModel.of(roles,
-                                        linkTo(methodOn(RoleController.class).getRoles(null)).withSelfRel())
+                                        linkTo(methodOn(RoleController.class).getRoles(null))
+                                                .withSelfRel(),
+                                        linkTo(methodOn(RoleController.class).getRole(null, null))
+                                                .withRel("role")
+                                )
                         )
                 );
     }

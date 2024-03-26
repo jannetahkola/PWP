@@ -75,7 +75,8 @@ public class RoleController {
                 .map(roleModelAssembler::toModel)
                 .orElseThrow(() -> UsersNotFoundException.ofRole(roleId));
         // Check that user has either admin role, or the requested role
-        if (!AuthorizationUtil.hasAnyAuthority(authentication, "USER_ADMIN", roleModel.getName())) {
+        // todo test test in role controller
+        if (!AuthorizationUtil.hasAnyAuthority(authentication, "ROLE_ADMIN", roleModel.getName())) {
             throw new AccessDeniedException("Access Denied");
         }
         return ResponseEntity

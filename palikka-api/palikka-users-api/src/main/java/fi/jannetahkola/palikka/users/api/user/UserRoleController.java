@@ -10,6 +10,8 @@ import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
 import fi.jannetahkola.palikka.users.exception.UsersNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -47,7 +49,7 @@ public class UserRoleController {
 
     private final RoleModelAssembler roleModelAssembler;
 
-    @Operation(summary = "Get a user's roles")
+    @Operation(summary = "Get all roles associated with a user")
     @ApiResponse(
             responseCode = "200",
             description = "OK",
@@ -59,8 +61,10 @@ public class UserRoleController {
                     schema = @Schema(implementation = ProblemDetail.class),
                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
     @GetMapping(value = "/{user-id}/roles", produces = MediaTypes.HAL_JSON_VALUE)
-    // todo system token
-    @PreAuthorize("hasRole('ROLE_ADMIN') or #userId == authentication.principal.id")
+    @PreAuthorize(
+            "hasAnyRole('ROLE_ADMIN', 'ROLE_SYSTEM') " +
+                    "or (hasAnyRole('ROLE_USER', 'ROLE_VIEWER') " +
+                    "&& #userId == authentication.principal.id)")
     public ResponseEntity<CollectionModel<RoleModel>> getUserRoles(@PathVariable("user-id") Integer userId) {
         Set<RoleEntity> roleEntities = userRepository.findById(userId)
                 .map(UserEntity::getRoles)
@@ -72,7 +76,22 @@ public class UserRoleController {
                         linkTo(methodOn(UserRoleController.class).getUserRoles(userId)).withSelfRel()));
     }
 
-    @Operation(summary = "Update a user's roles")
+    @Operation(
+            summary = "Modify a user's role associations",
+            description = """
+                    Applies a list of patch operations to a user's role associations. Supported operations are 'add' and 'delete'.
+                    
+                    - If the patch operations list references the same role for both actions, the 'delete' action is applied
+                    - Patch operations referencing roles that do not exist are ignored
+                    - Root users' role associations are not modifiable. Request to do so will result in an error
+                    
+                    The API may respond with accepted status even if no patches have been applied. This occurs
+                     when the patch list doesn't contain any valid modifying operations.
+                    """)
+    @Parameter(
+            in = ParameterIn.PATH,
+            name = "id",
+            description = "Identifier of the user")
     @ApiResponse(
             responseCode = "202",
             description = "Accepted",
@@ -117,7 +136,6 @@ public class UserRoleController {
                     .forEach(userEntity::addRole);
         }
 
-        // TODO Note that if both add & delete contain the same role, delete will be applied
         if (patchesByActionMap.containsKey(UserRolePatchModel.Action.DELETE)) {
             roleRepository
                     .findAllById(
