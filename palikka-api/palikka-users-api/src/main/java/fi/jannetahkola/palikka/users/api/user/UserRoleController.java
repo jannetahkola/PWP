@@ -60,7 +60,7 @@ public class UserRoleController {
                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
     @GetMapping(value = "/{user-id}/roles", produces = MediaTypes.HAL_JSON_VALUE)
     // todo system token
-    @PreAuthorize("hasRole('ROLE_ADMIN') or #userId == authentication.principal")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or #userId == authentication.principal.id")
     public ResponseEntity<CollectionModel<RoleModel>> getUserRoles(@PathVariable("user-id") Integer userId) {
         Set<RoleEntity> roleEntities = userRepository.findById(userId)
                 .map(UserEntity::getRoles)

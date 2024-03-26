@@ -2,6 +2,8 @@ package fi.jannetahkola.palikka.core.auth;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
+import fi.jannetahkola.palikka.core.integration.users.Privilege;
+import fi.jannetahkola.palikka.core.integration.users.Role;
 import fi.jannetahkola.palikka.core.integration.users.User;
 import fi.jannetahkola.palikka.core.integration.users.RemoteUsersClient;
 import lombok.SneakyThrows;
@@ -19,6 +21,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextImpl;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -134,7 +137,29 @@ class PalikkaAuthenticationFilterTests {
         var filter = new PalikkaAuthenticationFilter(jwtService, usersClient);
 
         when(jwtService.parse(any())).thenReturn(Optional.of(new JWTClaimsSet.Builder().subject("1").build()));
-        when(usersClient.getUser(any())).thenReturn(User.builder().id(1).username("user").roles(Set.of("USERS_ALL")).active(true).build());
+        when(usersClient.getUser(any())).thenReturn(
+                User.builder()
+                        .id(1)
+                        .username("user")
+                        .roles(Set.of("ROLE_ADMIN"))
+                        .active(true)
+                        .root(true)
+                        .build()
+        );
+        when(usersClient.getUserRoles(any())).thenReturn(
+                List.of(
+                        Role.builder()
+                                .id(1)
+                                .name("ROLE_ADMIN")
+                                .privileges(
+                                        Set.of(
+                                                Privilege.builder()
+                                                        .id(1)
+                                                        .category("COMMAND")
+                                                        .name("weather")
+                                                        .build()))
+                                .build())
+        );
 
         try (MockedStatic<SecurityContextHolder> securityContextMock = Mockito.mockStatic(SecurityContextHolder.class)) {
             securityContextMock.when(SecurityContextHolder::getContext).thenReturn(new SecurityContextImpl());
@@ -152,7 +177,8 @@ class PalikkaAuthenticationFilterTests {
 
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             assertThat(authentication.isAuthenticated()).isTrue();
-            assertThat(authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList()).contains("USERS_ALL");
+            assertThat(authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList())
+                    .contains("ROLE_ADMIN", "COMMAND_weather");
         }
     }
 
