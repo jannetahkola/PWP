@@ -1,7 +1,9 @@
 package fi.jannetahkola.palikka.users.api.role.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import fi.jannetahkola.palikka.users.api.privilege.model.PrivilegeModel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,6 +12,9 @@ import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.springframework.hateoas.RepresentationModel;
 import org.springframework.hateoas.server.core.Relation;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Schema(description = "User role")
 @Value
@@ -28,4 +33,9 @@ public class RoleModel extends RepresentationModel<RoleModel> {
 
     @Schema(description = "Description of the role", example = "Access to limited functionality")
     String description;
+
+    @Schema(description = "Privileges that the role has")
+    @Builder.Default
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    Set<PrivilegeModel> privileges = new HashSet<>();
 }

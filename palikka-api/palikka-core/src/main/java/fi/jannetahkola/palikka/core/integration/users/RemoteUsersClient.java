@@ -43,7 +43,7 @@ public class RemoteUsersClient implements UsersClient {
 
     @Override
     public User getUser(Integer userId) {
-        log.debug(">> GET user");
+        log.debug(">> GET user, user id={}", userId);
 
         try {
             URI baseUri = properties.getBaseUri().resolve("/users-api/users");
@@ -79,7 +79,7 @@ public class RemoteUsersClient implements UsersClient {
 
     @Override
     public Collection<Role> getUserRoles(Integer userId) {
-        log.debug(">> GET user roles");
+        log.debug(">> GET user roles, user id={}", userId);
 
         try {
             URI baseUri = properties.getBaseUri().resolve("/users-api/users");

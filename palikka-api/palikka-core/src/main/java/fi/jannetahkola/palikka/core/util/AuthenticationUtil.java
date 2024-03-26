@@ -2,8 +2,10 @@ package fi.jannetahkola.palikka.core.util;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationDetails;
+import fi.jannetahkola.palikka.core.auth.PalikkaPrincipal;
 import fi.jannetahkola.palikka.core.auth.PalikkaSystemAuthenticationToken;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
+import fi.jannetahkola.palikka.core.integration.users.Role;
 import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +15,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Slf4j
@@ -42,23 +45,32 @@ public class AuthenticationUtil {
             return;
         }
 
+        // Add roles and privileges to authorities
+        Collection<Role> userRoles = usersClient.getUserRoles(userId);
         List<GrantedAuthority> authorities = new ArrayList<>();
-        user.getRoles()
-                .ifPresent(roles -> roles
-                        .forEach(role -> authorities.add(new SimpleGrantedAuthority(role))));
+        userRoles.forEach(role -> {
+            authorities.add(new SimpleGrantedAuthority(role.getName()));
+            role.getPrivileges().ifPresent(privileges ->
+                    privileges.forEach(privilege ->
+                            authorities.add(new SimpleGrantedAuthority(
+                                    privilege.getCategory() + "_" + privilege.getName()))));
+        });
 
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(user.getId(), null, authorities);
-
+        // Store original token for validating session expiry after WS session is established
         PalikkaAuthenticationDetails details = new PalikkaAuthenticationDetails();
         details.setToken(token);
+
+        PalikkaPrincipal principal = new PalikkaPrincipal(userId, user.getUsername());
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(principal, null, authorities);
         authentication.setDetails(details);
-//                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         log.debug("User token with user id '{}' authenticated successfully " +
-                "with authorities={}", user.getId(), authentication.getAuthorities());
+                "with principal={} authorities={}, details={}",
+                user.getId(), authentication.getPrincipal(),
+                authentication.getAuthorities(), authentication.getDetails());
     }
 
     private void authenticateSystemToken(String token) {

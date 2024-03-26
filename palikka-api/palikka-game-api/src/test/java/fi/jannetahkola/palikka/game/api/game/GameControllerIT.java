@@ -82,6 +82,8 @@ class GameControllerIT extends WireMockGameProcessTest {
         RestAssured.port = localServerPort;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 
+        wireMockServer.resetAll();
+
         logMessageQueue.clear();
         lifecycleMessageQueue.clear();;
 
@@ -187,7 +189,7 @@ class GameControllerIT extends WireMockGameProcessTest {
 
         @SneakyThrows
         @Test
-        void givenSendMessageToGame_withNonAllowedRole_thenDisconnected(CapturedOutput capturedOutput) {
+        void givenSendMessageToGame_whenNoRoleToSendCommands_thenDisconnected(CapturedOutput capturedOutput) {
             stubForViewerUser(wireMockServer);
 
             String token = tokens.generateToken(USER_ID_VIEWER);
@@ -198,7 +200,7 @@ class GameControllerIT extends WireMockGameProcessTest {
 
             StompSession.Receiptable receipt = session.send(
                     "/app/game",
-                    GameOutputMessage.builder().data("haloo").build()
+                    GameOutputMessage.builder().data("/weather clear").build()
             );
             assertThat(receipt.getReceiptId()).isNull();
 
@@ -207,6 +209,53 @@ class GameControllerIT extends WireMockGameProcessTest {
 
             assertThat(capturedOutput.getAll()).contains("Failed to authorize message with authorization manager");
             assertThat(session.isConnected()).isFalse(); // should disconnect session
+        }
+
+        @SneakyThrows
+        @Test
+        void givenSendMessageToGame_whenNoAuthorityForCommand_thenErrorReplyReceived() {
+            mockGameProcess();
+            stubForAdminUser(wireMockServer);
+
+            String adminToken = tokens.generateToken(USER_ID_ADMIN);
+            HttpHeaders httpHeaders = newAuthHeader(adminToken);
+
+            // Process needs to be up for commands the get processed - only admin can start
+            given()
+                    .headers(httpHeaders)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(new JSONObject().put("action", "start").toString())
+                    .post("/game/process")
+                    .then().assertThat()
+                    .statusCode(200);
+
+            outputAsServerProcess(SERVER_START_LOG);
+            assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+            stubForNormalUser(wireMockServer);
+            String token = tokens.generateToken(USER_ID_USER);
+            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
+            StompSession session = newStompClient()
+                    .connectAsync(webSocketUrl + newAuthQueryParam(token), sessionHandler)
+                    .get(1000, TimeUnit.MILLISECONDS);
+            session.subscribe("/user/queue/reply", sessionHandler);
+
+            StompSession.Receiptable receipt = session.send(
+                    "/app/game",
+                    GameOutputMessage.builder().data("haloo").build());
+            assertThat(receipt).isNotNull();
+
+            TestStompSessionHandlerAdapter.Frame userReplyFrame =
+                    userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            assertThat(userReplyFrame).isNotNull();
+            GameUserReplyMessage replyMessage = userReplyFrame.getPayloadAs(GameUserReplyMessage.class);
+            assertThat(replyMessage).isNotNull();
+            assertThat(replyMessage.getTyp()).isEqualTo(GameUserReplyMessage.Type.ERROR);
+            assertThat(replyMessage.getData()).isEqualTo("Access denied to command='haloo'");
+
+            assertThat(session.isConnected()).isTrue();
+
+            stop(session);
         }
 
         @SneakyThrows
@@ -611,12 +660,36 @@ class GameControllerIT extends WireMockGameProcessTest {
             StompSession session = newSession(token, sessionHandler);
             session.subscribe("/user/queue/reply", sessionHandler);
 
-            GameOutputMessage msg = GameOutputMessage.builder().data(" ").build();
-            session.send("/app/game", msg);
+            Runnable assertReply = () -> {
+                TestStompSessionHandlerAdapter.Frame userReplyFrame;
+                try {
+                    userReplyFrame = userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                assertThat(userReplyFrame).isNotNull();
+                assertThat(userReplyFrame.getPayloadAs(GameUserReplyMessage.class).getData()).isEqualTo("Invalid message");
+            };
 
-            TestStompSessionHandlerAdapter.Frame userReplyFrame = userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
-            assertThat(userReplyFrame).isNotNull();
-            assertThat(userReplyFrame.getPayloadAs(GameUserReplyMessage.class).getData()).isEqualTo("Invalid message");
+            GameOutputMessage msg = GameOutputMessage.builder().data("").build();
+            session.send("/app/game", msg);
+            assertReply.run();
+
+            msg = GameOutputMessage.builder().data(" ").build();
+            session.send("/app/game", msg);
+            assertReply.run();
+
+            msg = GameOutputMessage.builder().data(" /weather").build();
+            session.send("/app/game", msg);
+            assertReply.run();
+
+            msg = GameOutputMessage.builder().data("/ weather").build();
+            session.send("/app/game", msg);
+            assertReply.run();
+
+            msg = GameOutputMessage.builder().data("@weather").build();
+            session.send("/app/game", msg);
+            assertReply.run();
         }
     }
 

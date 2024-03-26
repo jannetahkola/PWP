@@ -5,6 +5,7 @@ import fi.jannetahkola.palikka.game.api.game.model.GameLogMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameOutputMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameUserReplyMessage;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
+import fi.jannetahkola.palikka.game.util.GameCommandUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
@@ -15,6 +16,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SubscribeMapping;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
@@ -26,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 @Controller
 @RequiredArgsConstructor
 public class GameController {
+
     /**
      * Destination to target specific users.
      * @see <a href="https://docs.spring.io/spring-framework/reference/web/websocket/stomp/user-destination.html">User destinations</a>
@@ -95,15 +98,15 @@ public class GameController {
 
     @MessageMapping("/game")
     public void handleMessageToGame(@Payload GameOutputMessage msg,
-                                    Principal principal) {
+                                    Authentication authentication) {
         Set<ConstraintViolation<GameOutputMessage>> violations = VALIDATOR.validate(msg);
         if (!violations.isEmpty()) {
-            log.debug("Failed to process message with constraint violations: {}", violations);
+            log.debug("Failed to process message with constraint violations={}", violations);
             GameUserReplyMessage reply = GameUserReplyMessage.builder()
                     .typ(GameUserReplyMessage.Type.ERROR)
                     .data("Invalid message")
                     .build();
-            messagingTemplate.convertAndSendToUser(principal.getName(), DEST_USER, reply);
+            messagingTemplate.convertAndSendToUser(authentication.getName(), DEST_USER, reply);
             return;
         }
 
@@ -114,11 +117,23 @@ public class GameController {
                     .typ(GameUserReplyMessage.Type.ERROR)
                     .data("Cannot process message - game is not UP")
                     .build();
-            messagingTemplate.convertAndSendToUser(principal.getName(), DEST_USER, reply);
+            messagingTemplate.convertAndSendToUser(authentication.getName(), DEST_USER, reply);
             return;
         }
 
-        log.info("Outputting to game as principal '{}'", principal.getName());
+        String normalizedCommand = GameCommandUtil.normalizeCommand(msg.getData());
+
+        if (!GameCommandUtil.authorizeCommand(authentication, normalizedCommand)) {
+            log.debug("Access denied to command={}", msg.getData());
+            GameUserReplyMessage reply = GameUserReplyMessage.builder()
+                    .typ(GameUserReplyMessage.Type.ERROR)
+                    .data("Access denied to command='" + msg.getData() + "'")
+                    .build();
+            messagingTemplate.convertAndSendToUser(authentication.getName(), DEST_USER, reply);
+            return;
+        }
+
+        log.info("Outputting to game as principal '{}'", authentication.getName());
         CompletableFuture.runAsync(() -> {
             log.debug("Passing output message to game process");
             gameProcessService.addOutput(msg.getData());

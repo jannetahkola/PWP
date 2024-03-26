@@ -8,6 +8,7 @@ spring:
     init:
       # override main config
       data-locations:
+        - classpath:seed_privileges.sql
         - classpath:seed_roles.sql
 
 springdoc:

@@ -44,7 +44,7 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Full authentication is required to access this resource"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @Test
@@ -55,18 +55,18 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
             given()
                     .header(newUserToken())
                     .get("/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @Test
-        void givenGetUserRequest_whenNoAllowedRoleButRequestedForSelf_thenOkResponse() {
+        void givenGetUserRequest_whenLimitedRoleButRequestedForSelf_thenOkResponse() {
             given()
                     .header(newViewerToken())
                     .get("/users/" + USER_ID_VIEWER)
@@ -86,25 +86,49 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Full authentication is required to access this resource"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @Test
-        void givenGetUsersRequest_whenNoAllowedRole_thenForbiddenResponse() {
+        void givenGetUsersRequest_whenSystemToken_thenForbiddenResponse() {
             given()
-                    .header(newViewerToken())
+                    .header(newSystemToken())
                     .get("/users")
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+        }
+
+        @ParameterizedTest
+        @MethodSource("usersWithRolesAllowedToGetUsers")
+        void givenGetUsersRequest_whenAllowedRole_thenOkResponse(Integer user) {
+            given()
+                    .header(newToken(user))
+                    .get("/users")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
+        }
+
+        static Stream<Arguments> usersWithRolesAllowedToGetUsers() {
+            return Stream.of(
+                    Arguments.of(Named.of("ADMIN", 1)),
+                    Arguments.of(Named.of("USER", 2)),
+                    Arguments.of(Named.of("VIEWER", 3))
+            );
+        }
+
+        @Test
+        void givenGetUsersRequest_whenLimited_thenResultsFiltered_andOkResponse() {
             given()
                     .header(newUserToken())
                     .get("/users")
                     .then().assertThat()
-                    .statusCode(403)
-                    .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .statusCode(200)
+                    .body("_embedded.users", hasSize(1))
+                    .body("_embedded.users[0].id", equalTo(2))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -122,7 +146,7 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Full authentication is required to access this resource"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -141,7 +165,7 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
             given()
                     .header(newUserToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -150,7 +174,7 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
             given()
                     .header(newSystemToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -159,7 +183,7 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -177,7 +201,7 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Full authentication is required to access this resource"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows
@@ -196,7 +220,7 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
             given()
                     .header(newUserToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -205,7 +229,7 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
             given()
                     .header(newSystemToken())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -214,7 +238,7 @@ class UserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(403)
                     .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
         @SneakyThrows

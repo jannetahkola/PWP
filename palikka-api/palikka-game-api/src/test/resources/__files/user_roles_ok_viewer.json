@@ -1,0 +1,21 @@
+{
+  "_embedded": {
+    "roles": [
+      {
+        "id": 3,
+        "name": "ROLE_VIEWER",
+        "description": "Access to view limited data",
+        "_links": {
+          "self": {
+            "href": "{{request.baseUrl}}/users-api/roles/3"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "{{request.baseUrl}}/users-api/users/3/roles"
+    }
+  }
+}

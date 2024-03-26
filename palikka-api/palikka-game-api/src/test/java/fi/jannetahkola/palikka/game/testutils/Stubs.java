@@ -19,6 +19,7 @@ public class Stubs {
 
     public static void stubForAdminUser(WireMockExtension wireMockServer) {
         stubForUsers(wireMockServer);
+        stubForUserRoles(wireMockServer, USER_ID_ADMIN);
         wireMockServer.stubFor(
                 get(urlMatching("/users-api/users/" + USER_ID_ADMIN))
                         .willReturn(
@@ -30,6 +31,7 @@ public class Stubs {
 
     public static void stubForNormalUser(WireMockExtension wireMockServer) {
         stubForUsers(wireMockServer);
+        stubForUserRoles(wireMockServer, USER_ID_USER);
         wireMockServer.stubFor(
                 get(urlMatching("/users-api/users/" + USER_ID_USER))
                         .willReturn(
@@ -41,6 +43,7 @@ public class Stubs {
 
     public static void stubForViewerUser(WireMockExtension wireMockServer) {
         stubForUsers(wireMockServer);
+        stubForUserRoles(wireMockServer, USER_ID_VIEWER);
         wireMockServer.stubFor(
                 get(urlMatching("/users-api/users/" + USER_ID_VIEWER))
                         .willReturn(
@@ -68,6 +71,29 @@ public class Stubs {
                                 aResponse()
                                         .withStatus(200)
                                         .withBodyFile("users_ok.json")
+                                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE)));
+    }
+
+    public static void stubForUserRoles(WireMockExtension wireMockServer, int userId) {
+        String file = null;
+        if (userId == USER_ID_ADMIN) {
+            file = "user_roles_ok_admin.json";
+        }
+        if (userId == USER_ID_USER) {
+            file = "user_roles_ok_user.json";
+        }
+        if (userId == USER_ID_VIEWER) {
+            file = "user_roles_ok_viewer.json";
+        }
+        if (file == null) {
+            throw new IllegalArgumentException("Unknown user id " + userId);
+        }
+        wireMockServer.stubFor(
+                get(urlMatching(String.format("/users-api/users/%d/roles", userId)))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withBodyFile(file)
                                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE)));
     }
 }

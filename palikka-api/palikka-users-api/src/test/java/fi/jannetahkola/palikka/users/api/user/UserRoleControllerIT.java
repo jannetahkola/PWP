@@ -131,6 +131,9 @@ class UserRoleControllerIT extends IntegrationTest {
                     .body("_embedded.roles", hasSize(1))
                     .body("_embedded.roles[0].id", equalTo(1))
                     .body("_embedded.roles[0].name", equalTo("ROLE_ADMIN"))
+                    .body("_embedded.roles[0].privileges", not(empty()))
+                    .body("_embedded.roles[0].privileges[0].category", not(emptyOrNullString()))
+                    .body("_embedded.roles[0].privileges[0].name", not(emptyOrNullString()))
                     .body("_embedded.roles[0]._links.self.href", endsWith("/users-api/roles/1"))
                     .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));
         }
@@ -152,10 +155,13 @@ class UserRoleControllerIT extends IntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
                     .patch("/users/" + USER_ID_USER + "/roles")
-                    .then().assertThat()
+                    .then().log().all().assertThat()
                     .statusCode(202)
                     .body("_embedded.roles", hasSize(1))
                     .body("_embedded.roles[0].id", equalTo(1))
+                    .body("_embedded.roles[0].privileges", not(empty()))
+                    .body("_embedded.roles[0].privileges[0].category", not(emptyOrNullString()))
+                    .body("_embedded.roles[0].privileges[0].name", not(emptyOrNullString()))
                     .body("_embedded.roles[0]._links.self.href", endsWith("/users-api/roles/1"))
                     .body("_links.self.href", endsWith("/users/" + USER_ID_USER + "/roles"))
                     .header(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE);

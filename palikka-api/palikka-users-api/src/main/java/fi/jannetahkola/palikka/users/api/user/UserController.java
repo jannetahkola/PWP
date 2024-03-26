@@ -35,6 +35,7 @@ import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.List;
 
 @Tag(name = "Users")
 @Slf4j
@@ -48,10 +49,18 @@ public class UserController {
 
     @Operation(summary = "Get all users")
     @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<CollectionModel<UserModel>> getUsers() {
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
+    public ResponseEntity<CollectionModel<UserModel>> getUsers(Authentication authentication) {
+        List<UserEntity> users;
+        if (AuthorizationUtil.hasAuthority(authentication, "ROLE_ADMIN")) {
+            users = userRepository.findAll();
+        } else {
+            users = userRepository
+                    .findById(Integer.valueOf(authentication.getName())).stream()
+                    .toList();
+        }
         return ResponseEntity
-                .ok(userModelAssembler.toCollectionModel(userRepository.findAll()));
+                .ok(userModelAssembler.toCollectionModel(users));
     }
 
     @Operation(summary = "Get a user")
@@ -77,8 +86,8 @@ public class UserController {
                     MediaTypes.HAL_FORMS_JSON_VALUE})
     @PreAuthorize(
             "hasAnyRole('ROLE_SYSTEM', 'ROLE_ADMIN') " +
-                    "or (hasRole('ROLE_USER') and #userId == authentication.principal) " +
-                    "or (hasRole('ROLE_VIEWER') and #userId == authentication.principal)"
+                    "or (hasAnyRole('ROLE_USER', 'ROLE_VIEWER') " +
+                    "and #userId == authentication.principal.id)"
     )
     public ResponseEntity<UserModel> getUser(@PathVariable("id") Integer userId) {
         UserModel userModel = userRepository.findById(userId)
@@ -89,7 +98,7 @@ public class UserController {
                 .body(userModel);
     }
 
-    @Operation(summary = "Create a user")
+    @Operation(summary = "Create a user", description = "No associations are created here")
     @ApiResponse(
             responseCode = "201",
             description = "Created",

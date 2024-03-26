@@ -18,6 +18,7 @@ spring:
     init:
       # specify a different file than the default 'data.sql' to prevent seeding during tests
       data-locations:
+        - classpath:seed_privileges.sql
         - classpath:seed_roles.sql
         - classpath:seed.sql
   jpa:

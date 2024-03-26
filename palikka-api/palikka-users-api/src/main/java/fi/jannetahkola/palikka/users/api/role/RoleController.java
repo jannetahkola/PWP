@@ -41,11 +41,11 @@ public class RoleController {
 
     @Operation(summary = "Get all roles", description = "Results may be filtered depending on the user's authorities")
     @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
     public ResponseEntity<CollectionModel<RoleModel>> getRoles(Authentication authentication) {
         List<RoleEntity> roles = roleRepository.findAll();
         if (!AuthorizationUtil.hasAuthority(authentication, "ROLE_ADMIN")) {
-            roles = roleRepository.findAll().stream()
+            roles = roles.stream()
                     .filter(role -> AuthorizationUtil.hasAuthority(authentication, role.getName()))
                     .toList();
         }
@@ -69,7 +69,7 @@ public class RoleController {
                     schema = @Schema(implementation = ProblemDetail.class),
                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
     @GetMapping(value = "/{id}", produces = MediaTypes.HAL_JSON_VALUE)
-    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
     public ResponseEntity<RoleModel> getRole(@PathVariable("id") Integer roleId, Authentication authentication) {
         RoleModel roleModel = roleRepository.findById(roleId)
                 .map(roleModelAssembler::toModel)
