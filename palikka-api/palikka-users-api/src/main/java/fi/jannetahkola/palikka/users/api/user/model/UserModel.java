@@ -16,6 +16,7 @@ import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
+@Schema(description = "An end user of the system")
 @Data
 @Builder
 @EqualsAndHashCode(callSuper = true)
@@ -55,7 +56,7 @@ public class UserModel extends RepresentationModel<UserModel> {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
     OffsetDateTime lastUpdatedAt;
 
-    @Schema(description = "Roles that the user has")
+    @Schema(description = "Roles associated with the user")
     @Builder.Default
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     Set<String> roles = new HashSet<>();

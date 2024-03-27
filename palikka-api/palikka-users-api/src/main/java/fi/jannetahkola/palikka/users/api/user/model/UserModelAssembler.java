@@ -12,8 +12,7 @@ import org.springframework.stereotype.Component;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @Component
 public class UserModelAssembler implements RepresentationModelAssembler<UserEntity, UserModel> {
@@ -35,7 +34,9 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
                                 .collect(Collectors.toSet()))
                 .build();
 
-        userModel.add(linkTo(methodOn(UserController.class).getUser(userModel.getId())).withSelfRel());
+        userModel.add(
+                linkTo(methodOn(UserController.class).getUser(userModel.getId())).withSelfRel()
+                        .andAffordance(afford(methodOn(UserController.class).putUser(userModel.getId(), null, null))));
         userModel.add(linkTo(methodOn(UserRoleController.class).getUserRoles(userModel.getId())).withRel("roles"));
 
         return userModel;
@@ -49,8 +50,9 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
                 .collect(Collectors.collectingAndThen(
                                 Collectors.toList(),
                                 users -> CollectionModel.of(users,
-                                        linkTo(methodOn(UserController.class).getUsers())
-                                                .withSelfRel(),
+                                        linkTo(methodOn(UserController.class).getUsers(null))
+                                                .withSelfRel()
+                                                .andAffordance(afford(methodOn(UserController.class).postUser(null))),
                                         linkTo(methodOn(UserController.class).getUser(null))
                                                 .withRel("user")
                                 )

@@ -34,8 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @Tag(name = "User roles")
 @Slf4j
@@ -60,7 +59,9 @@ public class UserRoleController {
             content = @Content(
                     schema = @Schema(implementation = ProblemDetail.class),
                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
-    @GetMapping(value = "/{user-id}/roles", produces = MediaTypes.HAL_JSON_VALUE)
+    @GetMapping(
+            value = "/{user-id}/roles",
+            produces = {MediaTypes.HAL_JSON_VALUE, MediaTypes.HAL_FORMS_JSON_VALUE})
     @PreAuthorize(
             "hasAnyRole('ROLE_ADMIN', 'ROLE_SYSTEM') " +
                     "or (hasAnyRole('ROLE_USER', 'ROLE_VIEWER') " +
@@ -73,7 +74,9 @@ public class UserRoleController {
                 .ok()
                 .body(CollectionModel.of(
                         roleEntities.stream().map(roleModelAssembler::toModel).toList(),
-                        linkTo(methodOn(UserRoleController.class).getUserRoles(userId)).withSelfRel()));
+                        linkTo(methodOn(UserRoleController.class).getUserRoles(userId)).withSelfRel()
+                                // todo template is bad, fix somehow
+                                .andAffordance(afford(methodOn(UserRoleController.class).patchUserRoles(userId, null)))));
     }
 
     @Operation(

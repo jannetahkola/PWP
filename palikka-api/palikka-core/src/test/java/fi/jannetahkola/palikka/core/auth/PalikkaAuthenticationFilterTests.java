@@ -155,7 +155,7 @@ class PalikkaAuthenticationFilterTests {
                                         Set.of(
                                                 Privilege.builder()
                                                         .id(1)
-                                                        .category("COMMAND")
+                                                        .domain("COMMAND")
                                                         .name("weather")
                                                         .build()))
                                 .build())

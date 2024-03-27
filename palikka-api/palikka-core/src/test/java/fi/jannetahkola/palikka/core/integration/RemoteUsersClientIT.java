@@ -114,10 +114,11 @@ class RemoteUsersClientIT {
         assertThat(role.getName()).isNotNull();
         assertThat(role.getPrivileges()).isNotEmpty();
 
-        Privilege privilege = role.getPrivileges().orElseThrow().stream().findAny().orElseThrow();
-        assertThat(privilege.getId()).isNotNull();
-        assertThat(privilege.getCategory()).isNotNull();
-        assertThat(privilege.getName()).isNotNull();
+        role.getPrivileges().orElseThrow().forEach(privilege -> {
+            assertThat(privilege.getId()).isNotNull();
+            assertThat(privilege.getDomain()).isNotNull();
+            assertThat(privilege.getName()).isNotNull();
+        });
     }
 
     @Test

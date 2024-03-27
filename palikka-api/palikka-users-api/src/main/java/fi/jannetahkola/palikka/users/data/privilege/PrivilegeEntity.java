@@ -19,17 +19,19 @@ public class PrivilegeEntity {
     private Integer id;
 
     @Column(nullable = false)
-    private String category;
+    private String domain;
 
     @Column(nullable = false)
     private String name;
+
+    private String domainDescription;
 
     @Setter(AccessLevel.NONE)
     @ManyToMany(mappedBy = "privileges")
     private Set<RoleEntity> roles = new HashSet<>();
 
     public String getAsAuthority() {
-        return this.getCategory() + "_" + this.getName();
+        return this.getDomain() + "_" + this.getName();
     }
 
     public void addRole(RoleEntity role) {

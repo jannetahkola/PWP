@@ -33,8 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @Tag(name = "Role privileges")
 @RestController
@@ -48,7 +47,9 @@ public class RolePrivilegeController {
     private final PrivilegeModelAssembler privilegeModelAssembler;
 
     @Operation(summary = "Get all privileges associated with a role")
-    @GetMapping(value = "/{id}/privileges", produces = MediaTypes.HAL_JSON_VALUE)
+    @GetMapping(
+            value = "/{id}/privileges",
+            produces = {MediaTypes.HAL_JSON_VALUE, MediaTypes.HAL_FORMS_JSON_VALUE})
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER', 'ROLE_SYSTEM')")
     public ResponseEntity<CollectionModel<PrivilegeModel>> getRolePrivileges(@PathVariable("id") Integer roleId,
                                                                              Authentication authentication) {
@@ -65,6 +66,8 @@ public class RolePrivilegeController {
                 .body(CollectionModel.of(
                         roleEntity.getPrivileges().stream().map(privilegeModelAssembler::toModel).toList(),
                         linkTo(methodOn(RolePrivilegeController.class).getRolePrivileges(roleId, null)).withSelfRel()
+                                // todo template is bad, fix somehow
+                                .andAffordance(afford(methodOn(RolePrivilegeController.class).patchRolePrivileges(roleId, null)))
         ));
     }
 

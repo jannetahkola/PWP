@@ -8,407 +8,407 @@
         "privileges": [
           {
             "id": 77,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "w"
           },
           {
             "id": 37,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "op"
           },
           {
             "id": 69,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "teleport"
           },
           {
             "id": 16,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "effect"
           },
           {
             "id": 10,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "data"
           },
           {
             "id": 35,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "me"
           },
           {
             "id": 33,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "locate"
           },
           {
             "id": 71,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "tellraw"
           },
           {
             "id": 66,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "tag"
           },
           {
             "id": 2,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "attribute"
           },
           {
             "id": 57,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "setblock"
           },
           {
             "id": 54,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "schedule"
           },
           {
             "id": 36,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "msg"
           },
           {
             "id": 73,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "title"
           },
           {
             "id": 8,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "clone"
           },
           {
             "id": 62,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "spreadplayers"
           },
           {
             "id": 29,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "jfr"
           },
           {
             "id": 40,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "particle"
           },
           {
             "id": 26,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "give"
           },
           {
             "id": 58,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "setidletimeout"
           },
           {
             "id": 28,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "item"
           },
           {
             "id": 52,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "save-on"
           },
           {
             "id": 44,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "publish"
           },
           {
             "id": 55,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "scoreboard"
           },
           {
             "id": 81,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "xp"
           },
           {
             "id": 39,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "pardon-ip"
           },
           {
             "id": 78,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "weather"
           },
           {
             "id": 9,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "damage"
           },
           {
             "id": 3,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "ban"
           },
           {
             "id": 76,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "trigger"
           },
           {
             "id": 47,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "reload"
           },
           {
             "id": 32,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "list"
           },
           {
             "id": 49,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "ride"
           },
           {
             "id": 23,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "function"
           },
           {
             "id": 68,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "teammsg"
           },
           {
             "id": 63,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "stop"
           },
           {
             "id": 38,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "pardon"
           },
           {
             "id": 13,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "defaultgamemode"
           },
           {
             "id": 30,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "kick"
           },
           {
             "id": 79,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "whitelist"
           },
           {
             "id": 5,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "banlist"
           },
           {
             "id": 51,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "save-off"
           },
           {
             "id": 42,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "place"
           },
           {
             "id": 25,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "gamerule"
           },
           {
             "id": 27,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "help"
           },
           {
             "id": 56,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "seed"
           },
           {
             "id": 31,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "kill"
           },
           {
             "id": 41,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "perf"
           },
           {
             "id": 50,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "save-all"
           },
           {
             "id": 75,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "tp"
           },
           {
             "id": 64,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "stopsound"
           },
           {
             "id": 70,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "tell"
           },
           {
             "id": 11,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "datapack"
           },
           {
             "id": 46,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "recipe"
           },
           {
             "id": 24,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "gamemode"
           },
           {
             "id": 59,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "setworldspawn"
           },
           {
             "id": 1,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "advancement"
           },
           {
             "id": 4,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "ban-ip"
           },
           {
             "id": 72,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "time"
           },
           {
             "id": 43,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "playsound"
           },
           {
             "id": 18,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "execute"
           },
           {
             "id": 7,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "clear"
           },
           {
             "id": 22,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "forceload"
           },
           {
             "id": 45,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "random"
           },
           {
             "id": 15,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "difficulty"
           },
           {
             "id": 65,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "summon"
           },
           {
             "id": 53,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "say"
           },
           {
             "id": 12,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "debug"
           },
           {
             "id": 67,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "team"
           },
           {
             "id": 20,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "fill"
           },
           {
             "id": 74,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "tm"
           },
           {
             "id": 6,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "bossbar"
           },
           {
             "id": 61,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "spectate"
           },
           {
             "id": 17,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "enchant"
           },
           {
             "id": 14,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "deop"
           },
           {
             "id": 48,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "return"
           },
           {
             "id": 21,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "fillbiome"
           },
           {
             "id": 80,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "worldborder"
           },
           {
             "id": 34,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "loot"
           },
           {
             "id": 60,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "spawnpoint"
           },
           {
             "id": 19,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "experience"
           }
         ],

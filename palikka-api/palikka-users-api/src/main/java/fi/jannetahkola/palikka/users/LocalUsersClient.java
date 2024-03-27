@@ -39,7 +39,7 @@ public class LocalUsersClient implements UsersClient {
                                     .stream()
                                     .map(privilege -> Privilege.builder()
                                             .id(privilege.getId())
-                                            .category(privilege.getCategory())
+                                            .domain(privilege.getDomain())
                                             .name(privilege.getName()).build())
                                     .collect(Collectors.toSet());
                             return Role.builder()

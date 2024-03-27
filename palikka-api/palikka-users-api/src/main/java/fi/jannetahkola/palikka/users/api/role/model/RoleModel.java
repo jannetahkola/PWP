@@ -16,7 +16,7 @@ import org.springframework.hateoas.server.core.Relation;
 import java.util.HashSet;
 import java.util.Set;
 
-@Schema(description = "User role")
+@Schema(description = "Authorizes associated users to access different APIs")
 @Value
 @Builder
 @EqualsAndHashCode(callSuper = true)
@@ -34,7 +34,7 @@ public class RoleModel extends RepresentationModel<RoleModel> {
     @Schema(description = "Description of the role", example = "Access to limited functionality")
     String description;
 
-    @Schema(description = "Privileges that the role has")
+    @Schema(description = "Privileges associated with the role")
     @Builder.Default
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     Set<PrivilegeModel> privileges = new HashSet<>();

@@ -158,6 +158,18 @@ class RolePrivilegeControllerIT extends IntegrationTest {
         }
 
         @Test
+        void givenGetRolePrivilegesRequest_whenAcceptHalFormsHeaderGiven_thenResponseContainsTemplate() {
+            given()
+                    .header(newAdminToken())
+                    .accept(MediaTypes.HAL_FORMS_JSON_VALUE)
+                    .get("/roles/1/privileges")
+                    .then().log().all().assertThat()
+                    .statusCode(200)
+                    .body("_templates.default.method", equalTo("PATCH"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_FORMS_JSON_VALUE));
+        }
+
+        @Test
         void givenPatchRolePrivilegesRequest_thenAcceptedResponse(@Autowired PrivilegeRepository privilegeRepository) {
             Integer existingPrivilegeId = privilegeRepository.findByName("weather").orElseThrow().getId();
             Integer newPrivilegeId = privilegeRepository.findByName("op").orElseThrow().getId();

@@ -53,7 +53,7 @@ public class AuthenticationUtil {
             role.getPrivileges().ifPresent(privileges ->
                     privileges.forEach(privilege ->
                             authorities.add(new SimpleGrantedAuthority(
-                                    privilege.getCategory() + "_" + privilege.getName()))));
+                                    privilege.getDomain() + "_" + privilege.getName()))));
         });
 
         // Store original token for validating session expiry after WS session is established

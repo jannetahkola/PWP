@@ -18,7 +18,7 @@ public class Privilege {
     private Integer id;
 
     @NotBlank
-    private String category;
+    private String domain;
 
     @NotBlank
     private String name;

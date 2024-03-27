@@ -81,7 +81,7 @@ public class OpenApiConfig {
                 // Add 403 response if not marked as open with SecurityRequirements
                 operation
                         .getResponses()
-                        .addApiResponse("403", newApiResponse("Forbidden", problemDetailSchema));
+                        .addApiResponse("403", apiResponseOf("Forbidden", problemDetailSchema));
                 if (!usesAuthorizationHeader.test(handlerMethod)) {
                     operation
                             .addParametersItem(
@@ -106,25 +106,24 @@ public class OpenApiConfig {
                                         .schema(new Schema<>().type("string"))
                                         .example(org.springframework.http.MediaType.APPLICATION_JSON_VALUE))
                         .getResponses()
-                        .addApiResponse("415", newApiResponse("Unsupported Media Type", problemDetailSchema));
+                        .addApiResponse("415", apiResponseOf("Unsupported Media Type", problemDetailSchema));
             }
             // These can happen anywhere
             operation.getResponses()
-                    .addApiResponse("405", newApiResponse("Method Not Allowed", problemDetailSchema))
-                    .addApiResponse("500", newApiResponse("Internal Server Error", problemDetailSchema));
+                    .addApiResponse("405", apiResponseOf("Method Not Allowed", problemDetailSchema))
+                    .addApiResponse("406", apiResponseOf("Not Acceptable", problemDetailSchema))
+                    .addApiResponse("500", apiResponseOf("Internal Server Error", problemDetailSchema));
             return operation;
         };
     }
 
-    private <T> ApiResponse newApiResponse(String message, Schema<T> schema) {
-        MediaType mediaType = new MediaType();
-        mediaType.setSchema(schema);
+    private <T> ApiResponse apiResponseOf(String description, Schema<T> schema) {
         return new ApiResponse()
-                .description(message)
+                .description(description)
                 .content(
                         new Content()
                                 .addMediaType(
                                         org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                                        mediaType));
+                                        new MediaType().schema(schema)));
     }
 }

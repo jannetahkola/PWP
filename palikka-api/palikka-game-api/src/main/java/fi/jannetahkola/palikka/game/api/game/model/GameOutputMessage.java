@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class GameOutputMessage {
+    // todo needs to support /?
     @NotBlank
     @Pattern(regexp = "^((/[a-z])|([a-z])).*$") // Must start with /+letter or just a letter
     private String data;

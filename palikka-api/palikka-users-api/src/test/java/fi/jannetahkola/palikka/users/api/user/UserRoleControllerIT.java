@@ -136,6 +136,18 @@ class UserRoleControllerIT extends IntegrationTest {
         }
 
         @Test
+        void givenGetRolesRequest_whenAcceptHalFormsHeaderGiven_thenResponseContainsTemplate() {
+            given()
+                    .header(newAdminToken())
+                    .accept(MediaTypes.HAL_FORMS_JSON_VALUE)
+                    .get("/users/" + USER_ID_ADMIN + "/roles")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .body("_templates.default.method", equalTo("PATCH"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_FORMS_JSON_VALUE));
+        }
+
+        @Test
         void givenGetUserRolesRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
@@ -146,7 +158,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .body("_embedded.roles[0].id", equalTo(1))
                     .body("_embedded.roles[0].name", equalTo("ROLE_ADMIN"))
                     .body("_embedded.roles[0].privileges", not(empty()))
-                    .body("_embedded.roles[0].privileges[0].category", not(emptyOrNullString()))
+                    .body("_embedded.roles[0].privileges[0].domain", not(emptyOrNullString()))
                     .body("_embedded.roles[0].privileges[0].name", not(emptyOrNullString()))
                     .body("_embedded.roles[0]._links.self.href", endsWith("/users-api/roles/1"))
                     .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"));
@@ -174,7 +186,7 @@ class UserRoleControllerIT extends IntegrationTest {
                     .body("_embedded.roles", hasSize(1))
                     .body("_embedded.roles[0].id", equalTo(1))
                     .body("_embedded.roles[0].privileges", not(empty()))
-                    .body("_embedded.roles[0].privileges[0].category", not(emptyOrNullString()))
+                    .body("_embedded.roles[0].privileges[0].domain", not(emptyOrNullString()))
                     .body("_embedded.roles[0].privileges[0].name", not(emptyOrNullString()))
                     .body("_embedded.roles[0]._links.self.href", endsWith("/users-api/roles/1"))
                     .body("_links.self.href", endsWith("/users/" + USER_ID_USER + "/roles"))

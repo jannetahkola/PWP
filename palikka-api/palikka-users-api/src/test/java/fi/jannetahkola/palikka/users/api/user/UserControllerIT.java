@@ -287,6 +287,28 @@ class UserControllerIT extends IntegrationTest {
         }
 
         @Test
+        void givenGetUsersRequest_whenAcceptHalFormsHeaderGiven_thenResponseContainsTemplate() {
+            given()
+                    .accept(MediaTypes.HAL_FORMS_JSON_VALUE)
+                    .header(newAdminToken())
+                    .get("/users")
+                    .then().assertThat()
+                    .body("_templates.default.method", equalTo("POST"))
+                    .statusCode(200);
+        }
+
+        @Test
+        void givenGetUserRequest_whenAcceptHalFormsHeaderGiven_thenResponseContainsTemplate() {
+            given()
+                    .accept(MediaTypes.HAL_FORMS_JSON_VALUE)
+                    .header(newAdminToken())
+                    .get("/users/" + USER_ID_ADMIN)
+                    .then().assertThat()
+                    .body("_templates.default.method", equalTo("PUT"))
+                    .statusCode(200);
+        }
+
+        @Test
         void givenGetUserRequest_thenOkResponse() {
             given()
                     .header(newAdminToken())
@@ -303,17 +325,6 @@ class UserControllerIT extends IntegrationTest {
                     .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN))
                     .body("_links.roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"))
                     .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
-        }
-
-        @Test
-        void testForms() {
-            // todo add proper support for hal+forms
-            given()
-                    .accept(MediaTypes.HAL_FORMS_JSON_VALUE)
-                    .header(newAdminToken())
-                    .get("/users/" + USER_ID_ADMIN)
-                    .then().log().all().assertThat()
-                    .statusCode(200);
         }
 
         @Test

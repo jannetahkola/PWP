@@ -48,7 +48,7 @@ public class UserController {
     private final UserModelAssembler userModelAssembler;
 
     @Operation(summary = "Get all users")
-    @GetMapping(produces = MediaTypes.HAL_JSON_VALUE)
+    @GetMapping(produces = {MediaTypes.HAL_JSON_VALUE, MediaTypes.HAL_FORMS_JSON_VALUE})
     @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
     public ResponseEntity<CollectionModel<UserModel>> getUsers(Authentication authentication) {
         List<UserEntity> users;
@@ -80,10 +80,7 @@ public class UserController {
                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
     @GetMapping(
             value = "/{id}",
-            produces = {
-                    MediaTypes.HAL_JSON_VALUE,
-                    // todo add proper support for this
-                    MediaTypes.HAL_FORMS_JSON_VALUE})
+            produces = {MediaTypes.HAL_JSON_VALUE, MediaTypes.HAL_FORMS_JSON_VALUE})
     @PreAuthorize(
             "hasAnyRole('ROLE_SYSTEM', 'ROLE_ADMIN') " +
                     "or (hasAnyRole('ROLE_USER', 'ROLE_VIEWER') " +

@@ -11,7 +11,7 @@ import lombok.Value;
 import org.springframework.hateoas.RepresentationModel;
 import org.springframework.hateoas.server.core.Relation;
 
-@Schema(description = "Role privilege")
+@Schema(description = "Authorizes users with associated roles to perform various actions within APIs")
 @Value
 @Builder
 @EqualsAndHashCode(callSuper = true)
@@ -22,11 +22,20 @@ public class PrivilegeModel extends RepresentationModel<PrivilegeModel> {
     @NotNull
     Integer id;
 
-    @Schema(description = "Category of the privilege", example = "COMMAND")
+    @Schema(
+            description = "Domain of the privilege. References an action inside an API this privilege is applied within",
+            example = "COMMAND")
     @NotBlank
-    String category;
+    String domain;
 
-    @Schema(description = "Name of the privilege", example = "weather")
+    @Schema(
+            description = "Name of the privilege. Provides more fine grained access control within a domain",
+            example = "weather")
     @NotBlank
     String name;
+
+    @Schema(
+            description = "An optional text to describe the privilege in its domain",
+            example = "Adds IP address to banlist.")
+    String domainDescription;
 }

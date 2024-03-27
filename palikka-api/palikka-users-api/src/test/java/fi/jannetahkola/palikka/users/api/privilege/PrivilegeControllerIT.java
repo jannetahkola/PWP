@@ -73,8 +73,44 @@ class PrivilegeControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(200)
                     .body("_embedded.privileges", hasSize(4))
-                    .body("_links.self.href", endsWith("/users-api/privileges"))
+                    .body("_links.self.href", endsWith("/users-api/privileges{?search}"))
                     .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
+        }
+
+        @Test
+        void givenGetPrivilegesRequest_whenSearchQueryProvided_thenFilteredBySearchQuery_andOkResponse() {
+            given()
+                    .header(newAdminToken())
+                    .param("search", "ban")
+                    .get("/privileges")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .body("_embedded.privileges", hasSize(3))
+                    .body("_links.self.href", endsWith("/users-api/privileges{?search}"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
+        }
+
+        @ParameterizedTest
+        @MethodSource("invalidSearchQueries")
+        void givenGetPrivilegesRequest_whenInvalidSearchQueryProvided_thenBadRequestResponse(String searchQuery) {
+            given()
+                    .header(newAdminToken())
+                    .param("search", searchQuery)
+                    .get("/privileges")
+                    .then().assertThat()
+                    .statusCode(400)
+                    .body("detail", containsString("Search query must match"))
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+        }
+
+        static Stream<Arguments> invalidSearchQueries() {
+            return Stream.of(
+                    Arguments.of(Named.of("too short", "")),
+                    Arguments.of(Named.of("too long", "1234567")),
+                    Arguments.of(Named.of("invalid characters", "test_")),
+                    Arguments.of(Named.of("invalid characters", "test@")),
+                    Arguments.of(Named.of("invalid characters", "test "))
+            );
         }
     }
 }

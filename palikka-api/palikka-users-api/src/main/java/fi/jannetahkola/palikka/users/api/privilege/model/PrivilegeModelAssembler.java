@@ -20,8 +20,9 @@ public class PrivilegeModelAssembler implements RepresentationModelAssembler<Pri
     public PrivilegeModel toModel(PrivilegeEntity entity) {
         return PrivilegeModel.builder()
                 .id(entity.getId())
-                .category(entity.getCategory())
+                .domain(entity.getDomain())
                 .name(entity.getName())
+                .domainDescription(entity.getDomainDescription())
                 .build();
     }
 
@@ -33,7 +34,7 @@ public class PrivilegeModelAssembler implements RepresentationModelAssembler<Pri
                 .collect(Collectors.collectingAndThen(
                         Collectors.toList(),
                         roles -> CollectionModel.of(roles,
-                                linkTo(methodOn(PrivilegeController.class).getPrivileges(null)).withSelfRel())
+                                linkTo(methodOn(PrivilegeController.class).getPrivileges(null,null)).withSelfRel())
                         )
                 );
     }
