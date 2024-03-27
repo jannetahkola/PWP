@@ -2,7 +2,7 @@ package fi.jannetahkola.palikka.game.api.status;
 
 import fi.jannetahkola.palikka.game.api.status.model.GameStatusResponse;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
-import fi.jannetahkola.palikka.game.testutils.WireMockTest;
+import fi.jannetahkola.palikka.game.testutils.IntegrationTest;
 import lombok.SneakyThrows;
 import org.apache.http.HttpHeaders;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
-class GameStatusControllerIT extends WireMockTest {
+class GameStatusControllerIT extends IntegrationTest {
     @Autowired
     MockMvc mockMvc;
 

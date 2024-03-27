@@ -182,13 +182,13 @@ class ProducerJwtServiceTests {
         claimsBuilder.issueTime(Date.from(Instant.now().plusSeconds(30)));
         claimsBuilder.expirationTime(Date.from(Instant.now()));
 
-        Optional<String> tokenMaybe = jwtService.sign(claimsBuilder, PalikkaJwtType.USER);
+        Optional<SignedJWT> tokenMaybe = jwtService.sign(claimsBuilder, PalikkaJwtType.USER);
         assertThat(tokenMaybe).isPresent();
 
-        String token = tokenMaybe.get();
-        System.out.println(token);
+        SignedJWT signedJwt = tokenMaybe.get();
+        String token = signedJwt.serialize();
 
-        Optional<JWTClaimsSet> parsedTokenMaybe = jwtService.parse(token);
+        Optional<VerifiedJwt> parsedTokenMaybe = jwtService.parse(token);
         assertThat(parsedTokenMaybe).isPresent();
 
         SignedJWT jwt = SignedJWT.parse(token);

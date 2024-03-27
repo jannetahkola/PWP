@@ -7,7 +7,7 @@ import fi.jannetahkola.palikka.game.api.game.model.GameOutputMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameUserReplyMessage;
 import fi.jannetahkola.palikka.game.testutils.TestStompSessionHandlerAdapter;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
-import fi.jannetahkola.palikka.game.testutils.WireMockGameProcessTest;
+import fi.jannetahkola.palikka.game.testutils.GameProcessIntegrationTest;
 import fi.jannetahkola.palikka.game.websocket.SessionStore;
 import io.restassured.RestAssured;
 import lombok.NonNull;
@@ -62,7 +62,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 // New context for each test so less hassle resetting everything
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ActiveProfiles("test")
-class GameControllerIT extends WireMockGameProcessTest {
+class GameControllerIT extends GameProcessIntegrationTest {
 
     @Autowired
     ObjectMapper objectMapper;

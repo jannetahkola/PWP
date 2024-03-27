@@ -3,7 +3,7 @@ package fi.jannetahkola.palikka.game.api.file;
 import fi.jannetahkola.palikka.game.service.GameFileProcessor;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
-import fi.jannetahkola.palikka.game.testutils.WireMockTest;
+import fi.jannetahkola.palikka.game.testutils.IntegrationTest;
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import lombok.Setter;
@@ -46,7 +46,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Import(GameFileControllerIT.GameFileControllerTestConfiguration.class)
-class GameFileControllerIT extends WireMockTest {
+class GameFileControllerIT extends IntegrationTest {
     @Autowired
     TestTokenUtils tokens;
 

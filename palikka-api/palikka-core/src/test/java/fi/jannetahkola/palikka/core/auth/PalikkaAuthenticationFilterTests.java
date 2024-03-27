@@ -1,12 +1,19 @@
 package fi.jannetahkola.palikka.core.auth;
 
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jwt.JWTClaimsSet;
+import fi.jannetahkola.palikka.core.auth.authenticator.JwtAuthenticationProvider;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
+import fi.jannetahkola.palikka.core.auth.data.RevokedTokenRepository;
+import fi.jannetahkola.palikka.core.auth.jwt.PalikkaJwtType;
+import fi.jannetahkola.palikka.core.auth.jwt.VerifiedJwt;
 import fi.jannetahkola.palikka.core.integration.users.Privilege;
 import fi.jannetahkola.palikka.core.integration.users.Role;
 import fi.jannetahkola.palikka.core.integration.users.User;
 import fi.jannetahkola.palikka.core.integration.users.RemoteUsersClient;
 import lombok.SneakyThrows;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -29,8 +36,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+        properties = {
+                "logging.level.fi.jannetahkola.palikka.core=debug"
+        })
 class PalikkaAuthenticationFilterTests {
+    private static final VerifiedJwt USER_JWT = VerifiedJwt.builder()
+            .claims(new JWTClaimsSet.Builder().subject(String.valueOf(1)).build())
+            .header(new JWSHeader.Builder(JWSAlgorithm.RS512).build())
+            .type(PalikkaJwtType.USER)
+            .token("")
+            .build();
+
+    private static final VerifiedJwt SYSTEM_JWT = VerifiedJwt.builder()
+            .claims(new JWTClaimsSet.Builder().subject("sys").build())
+            .header(new JWSHeader.Builder(JWSAlgorithm.RS512).build())
+            .type(PalikkaJwtType.SYSTEM)
+            .token("")
+            .build();
 
     @Mock
     JwtService jwtService;
@@ -38,11 +62,21 @@ class PalikkaAuthenticationFilterTests {
     @Mock
     RemoteUsersClient usersClient;
 
+    @Mock
+    RevokedTokenRepository revokedTokenRepository;
+
+    PalikkaAuthenticationFilter filter;
+
+    @BeforeEach
+    void beforeEach() {
+        when(jwtService.consumesTokenOfType(any())).thenReturn(true);
+        JwtAuthenticationProvider jwtAuthenticationProvider = new JwtAuthenticationProvider(jwtService, usersClient, revokedTokenRepository);
+        filter = new PalikkaAuthenticationFilter(jwtAuthenticationProvider);
+    }
+
     @SneakyThrows
     @Test
     void testNoAuthorizationHeaderInRequest() {
-        var filter = new PalikkaAuthenticationFilter(jwtService, usersClient);
-
         MockHttpServletRequest req = new MockHttpServletRequest();
         MockHttpServletResponse res = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
@@ -54,8 +88,6 @@ class PalikkaAuthenticationFilterTests {
     @SneakyThrows
     @Test
     void testNoTokenValueInRequest() {
-        var filter = new PalikkaAuthenticationFilter(jwtService, usersClient);
-
         MockHttpServletRequest req = new MockHttpServletRequest();
         MockHttpServletResponse res = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
@@ -68,8 +100,6 @@ class PalikkaAuthenticationFilterTests {
     @SneakyThrows
     @Test
     void testInvalidTokenValueInRequest() {
-        var filter = new PalikkaAuthenticationFilter(jwtService, usersClient);
-
         when(jwtService.parse(any())).thenReturn(Optional.empty());
 
         MockHttpServletRequest req = new MockHttpServletRequest();
@@ -86,9 +116,7 @@ class PalikkaAuthenticationFilterTests {
     @SneakyThrows
     @Test
     void testValidTokenButUnknownSubjectInRequest() {
-        var filter = new PalikkaAuthenticationFilter(jwtService, usersClient);
-
-        when(jwtService.parse(any())).thenReturn(Optional.of(new JWTClaimsSet.Builder().subject("1").build()));
+        when(jwtService.parse(any())).thenReturn(Optional.of(USER_JWT));
         when(usersClient.getUser(any())).thenReturn(null);
 
         try (MockedStatic<SecurityContextHolder> securityContextMock = Mockito.mockStatic(SecurityContextHolder.class)) {
@@ -110,9 +138,7 @@ class PalikkaAuthenticationFilterTests {
     @SneakyThrows
     @Test
     void testValidTokenButInactiveUser() {
-        var filter = new PalikkaAuthenticationFilter(jwtService, usersClient);
-
-        when(jwtService.parse(any())).thenReturn(Optional.of(new JWTClaimsSet.Builder().subject("1").build()));
+        when(jwtService.parse(any())).thenReturn(Optional.of(USER_JWT));
         when(usersClient.getUser(any())).thenReturn(User.builder().id(1).username("user").roles(Set.of("USERS_ALL")).active(false).build());
 
         try (MockedStatic<SecurityContextHolder> securityContextMock = Mockito.mockStatic(SecurityContextHolder.class)) {
@@ -133,10 +159,33 @@ class PalikkaAuthenticationFilterTests {
 
     @SneakyThrows
     @Test
-    void testValidTokenWithValidUser() {
-        var filter = new PalikkaAuthenticationFilter(jwtService, usersClient);
+    void testRevokedToken() {
+        when(jwtService.parse(any())).thenReturn(Optional.of(USER_JWT));
+        when(revokedTokenRepository.existsById(any())).thenReturn(true);
 
-        when(jwtService.parse(any())).thenReturn(Optional.of(new JWTClaimsSet.Builder().subject("1").build()));
+        try (MockedStatic<SecurityContextHolder> securityContextMock = Mockito.mockStatic(SecurityContextHolder.class)) {
+            securityContextMock.when(SecurityContextHolder::getContext).thenReturn(new SecurityContextImpl());
+
+            MockHttpServletRequest req = new MockHttpServletRequest();
+            MockHttpServletResponse res = new MockHttpServletResponse();
+            MockFilterChain chain = new MockFilterChain();
+
+            req.addHeader(HttpHeaders.AUTHORIZATION, "Bearer valid-token");
+            filter.doFilterInternal(req, res, chain);
+
+            verify(jwtService, times(1)).parse(any());
+            verify(usersClient, times(0)).getUser(any());
+            securityContextMock.verify(SecurityContextHolder::getContext, times(0));
+
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            assertThat(authentication).isNull();
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void testValidTokenWithValidUser() {
+        when(jwtService.parse(any())).thenReturn(Optional.of(USER_JWT));
         when(usersClient.getUser(any())).thenReturn(
                 User.builder()
                         .id(1)
@@ -185,9 +234,7 @@ class PalikkaAuthenticationFilterTests {
     @SneakyThrows
     @Test
     void testValidTokenWithSystemUser() {
-        var filter = new PalikkaAuthenticationFilter(jwtService, usersClient);
-
-        when(jwtService.parse(any())).thenReturn(Optional.of(new JWTClaimsSet.Builder().build()));
+        when(jwtService.parse(any())).thenReturn(Optional.of(SYSTEM_JWT));
 
         try (MockedStatic<SecurityContextHolder> securityContextMock = Mockito.mockStatic(SecurityContextHolder.class)) {
             securityContextMock.when(SecurityContextHolder::getContext).thenReturn(new SecurityContextImpl());

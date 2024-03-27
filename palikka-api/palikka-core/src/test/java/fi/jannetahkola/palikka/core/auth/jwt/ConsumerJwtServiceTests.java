@@ -1,6 +1,7 @@
 package fi.jannetahkola.palikka.core.auth.jwt;
 
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import fi.jannetahkola.palikka.core.config.JwtConfig;
 import fi.jannetahkola.palikka.core.config.properties.JwtProperties;
 import org.junit.jupiter.api.Test;
@@ -43,11 +44,11 @@ class ConsumerJwtServiceTests {
         JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder();
         claimsBuilder.subject(String.valueOf(1));
 
-        Optional<String> userTokenMaybe = jwtService.sign(claimsBuilder, PalikkaJwtType.USER);
+        Optional<SignedJWT> userTokenMaybe = jwtService.sign(claimsBuilder, PalikkaJwtType.USER);
         assertThat(userTokenMaybe).isNotPresent();
         assertThat(capturedOutput.getAll()).contains("Token signing failed - service not configured with token producer support");
 
-        Optional<String> systemTokenMaybe = jwtService.sign(claimsBuilder, PalikkaJwtType.SYSTEM);
+        Optional<SignedJWT> systemTokenMaybe = jwtService.sign(claimsBuilder, PalikkaJwtType.SYSTEM);
         assertThat(systemTokenMaybe).isNotPresent();
         assertThat(capturedOutput.getAll()).contains("Token signing failed - service not configured with token producer support");
     }
@@ -78,10 +79,10 @@ class ConsumerJwtServiceTests {
         JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder();
         claimsBuilder.subject(String.valueOf(1));
 
-        Optional<String> token = signingJwtService.sign(claimsBuilder, PalikkaJwtType.USER);
+        Optional<SignedJWT> token = signingJwtService.sign(claimsBuilder, PalikkaJwtType.USER);
         assertThat(token).isPresent();
 
-        Optional<JWTClaimsSet> parsedToken = jwtService.parse(token.get());
+        Optional<VerifiedJwt> parsedToken = jwtService.parse(token.get().serialize());
         assertThat(parsedToken).isNotNull();
     }
 }

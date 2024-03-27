@@ -12,6 +12,7 @@ import com.nimbusds.jwt.proc.DefaultJWTClaimsVerifier;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import fi.jannetahkola.palikka.core.config.properties.JwtProperties;
 import fi.jannetahkola.palikka.core.util.KeyUtil;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
@@ -23,6 +24,7 @@ import java.util.*;
 
 @Slf4j
 public class JwtService {
+    @Getter
     private final JwtProperties properties;
     private final Map<PalikkaJwtType, ConfigurableJWTProcessor<SecurityContext>> jwtProcessors = new EnumMap<>(PalikkaJwtType.class);
     private final Map<PalikkaJwtType, JWSSigner> jwsSigners = new EnumMap<>(PalikkaJwtType.class);
@@ -33,8 +35,8 @@ public class JwtService {
         initSystemTokenSupport();
     }
 
-    public JwtProperties getProperties() {
-        return this.properties;
+    public boolean consumesTokenOfType(PalikkaJwtType jwtType) {
+        return jwtProcessors.containsKey(jwtType);
     }
 
     public boolean isExpired(String token) {
@@ -46,27 +48,28 @@ public class JwtService {
         return true;
     }
 
-    public Optional<JWTClaimsSet> getClaims(String token) {
+    public Optional<VerifiedJwt> parse(String token) {
         if (!StringUtils.hasText(token)) return Optional.empty();
         try {
-            return Optional.of(SignedJWT.parse(token).getJWTClaimsSet());
-        } catch (ParseException e) {
-            log.error("Token parsing failed", e);
-            return Optional.empty();
-        }
-    }
-
-    public Optional<JWTClaimsSet> parse(String token) {
-        if (!StringUtils.hasText(token)) return Optional.empty();
-        try {
+            JWSHeader header = SignedJWT.parse(token).getHeader();
             String ptyp = (String) Objects.requireNonNull(
-                    SignedJWT.parse(token).getHeader().getCustomParam("ptyp"), "Missing palikka token type");
+                    header.getCustomParam("ptyp"), "Missing palikka token type");
             PalikkaJwtType palikkaJwtType = PalikkaJwtType.valueOf(ptyp);
+
             if (!jwtProcessors.containsKey(palikkaJwtType)) {
                 log.info("Token verification failed - support for token type '{}' not initialized", palikkaJwtType);
                 return Optional.empty();
             }
-            return Optional.of(jwtProcessors.get(PalikkaJwtType.valueOf(ptyp)).process(token, null));
+
+            JWTClaimsSet claims = jwtProcessors.get(PalikkaJwtType.valueOf(ptyp)).process(token, null);
+
+            return Optional.of(
+                    VerifiedJwt.builder()
+                            .claims(claims)
+                            .header(header)
+                            .type(palikkaJwtType)
+                            .token(token)
+                            .build());
         } catch (BadJOSEException | ParseException e) {
             log.info("Token verification failed - bad token. Token='{}'", token, e);
         } catch (JOSEException e) {
@@ -77,11 +80,11 @@ public class JwtService {
         return Optional.empty();
     }
 
-    public Optional<String> sign(JWTClaimsSet.Builder claims, PalikkaJwtType jwtType) {
+    public Optional<SignedJWT> sign(JWTClaimsSet.Builder claims, PalikkaJwtType jwtType) {
         return sign(claims, jwtType, null);
     }
 
-    public Optional<String> sign(JWTClaimsSet.Builder claims,
+    public Optional<SignedJWT> sign(JWTClaimsSet.Builder claims,
                                  PalikkaJwtType jwtType,
                                  Date expiryDate) {
         if (!jwsSigners.containsKey(jwtType)) {
@@ -121,7 +124,7 @@ public class JwtService {
 
             SignedJWT signedJWT = new SignedJWT(header.build(), claims.build());
             signedJWT.sign(jwsSigners.get(jwtType));
-            return Optional.of(signedJWT.serialize());
+            return Optional.of(signedJWT);
         } catch (JOSEException e) {
             log.error("Token signing failed", e);
         }

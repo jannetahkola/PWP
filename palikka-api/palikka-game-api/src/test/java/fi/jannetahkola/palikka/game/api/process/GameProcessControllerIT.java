@@ -1,7 +1,7 @@
 package fi.jannetahkola.palikka.game.api.process;
 
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
-import fi.jannetahkola.palikka.game.testutils.WireMockGameProcessTest;
+import fi.jannetahkola.palikka.game.testutils.GameProcessIntegrationTest;
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import io.restassured.response.Response;
@@ -42,7 +42,7 @@ import static org.hamcrest.Matchers.equalTo;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ActiveProfiles("test")
-class GameProcessControllerIT extends WireMockGameProcessTest {
+class GameProcessControllerIT extends GameProcessIntegrationTest {
     @Autowired
     TestTokenUtils tokens;
 

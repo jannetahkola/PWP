@@ -34,6 +34,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.ParseException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.function.Predicate;
@@ -80,14 +81,19 @@ public class AuthenticationController {
                     JWTClaimsSet.Builder initialClaims =
                             new JWTClaimsSet.Builder().subject(String.valueOf(user.getId()));
                     return jwtService.sign(initialClaims, PalikkaJwtType.USER)
-                            .flatMap(signedToken -> jwtService.getClaims(signedToken)
-                                    .map(parsedClaims -> {
-                                        log.debug("Successfully logged in user id={}", parsedClaims.getSubject());
-                                        return new LoginResponse(
-                                                signedToken,
-                                                parsedClaims.getExpirationTime()
-                                                        .toInstant().atOffset(ZoneOffset.UTC));
-                                    }))
+                            .map(signedToken -> {
+                                try {
+                                    JWTClaimsSet claims = signedToken.getJWTClaimsSet();
+                                    log.debug("Successfully logged in user id={}", claims.getSubject());
+                                    return new LoginResponse(
+                                            signedToken.serialize(),
+                                            claims.getExpirationTime()
+                                                    .toInstant().atOffset(ZoneOffset.UTC));
+                                } catch (ParseException e) {
+                                    log.error("", e);
+                                }
+                                return null;
+                            })
                             .orElse(null);
                 })
                 .orElseThrow(() -> new UsersLoginFailedException("Login failed"));
@@ -103,12 +109,7 @@ public class AuthenticationController {
             consumes = MediaType.APPLICATION_JSON_VALUE)
     @SuppressWarnings("squid:S1452") // No model type, links only
     public ResponseEntity<RepresentationModel<?>> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
-        jwtService.parse(authorizationHeader.split("Bearer ")[1]) // Auth filter has validated the format already
-                .ifPresent(claims -> {
-                    log.debug("Logging out user id '{}'", claims.getSubject());
-                    // todo
-                    log.debug("Logged out user id '{}'", claims.getSubject());
-                });
+        // todo
         return ResponseEntity.ok(new RepresentationModel<>().add(
                 linkTo(methodOn(AuthenticationController.class).logout(null)).withSelfRel()
         ));

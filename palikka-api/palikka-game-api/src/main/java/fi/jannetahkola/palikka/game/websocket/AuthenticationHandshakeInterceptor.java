@@ -2,9 +2,7 @@ package fi.jannetahkola.palikka.game.websocket;
 
 import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationDetails;
 import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilter;
-import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
-import fi.jannetahkola.palikka.core.integration.users.UsersClient;
-import fi.jannetahkola.palikka.core.util.AuthenticationUtil;
+import fi.jannetahkola.palikka.core.auth.authenticator.JwtAuthenticationProvider;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +26,7 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class AuthenticationHandshakeInterceptor implements HandshakeInterceptor {
-    private final JwtService jwtService;
-    private final UsersClient usersClient;
+    private final JwtAuthenticationProvider jwtAuthenticationProvider;
 
     @PostConstruct
     void postConstruct() {
@@ -56,7 +53,7 @@ public class AuthenticationHandshakeInterceptor implements HandshakeInterceptor 
             log.debug("Using token from request query");
             String token = requestQuery.split("token=")[1];
 
-            AuthenticationUtil.authenticateToken(token, jwtService, usersClient);
+            jwtAuthenticationProvider.authenticate(token);
             Authentication newAuthentication = SecurityContextHolder.getContext().getAuthentication();
 
             if (newAuthentication != null

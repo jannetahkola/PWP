@@ -1,11 +1,11 @@
 package fi.jannetahkola.palikka.game.config;
 
 import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilterConfigurer;
+import fi.jannetahkola.palikka.core.auth.authenticator.JwtAuthenticationProvider;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.config.meta.EnableAuthenticationSupport;
 import fi.jannetahkola.palikka.core.config.meta.EnableRemoteUsersIntegration;
 import fi.jannetahkola.palikka.core.config.meta.EnableRequestAndResponseLoggingSupport;
-import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import fi.jannetahkola.palikka.game.config.properties.GameProperties;
 import fi.jannetahkola.palikka.game.service.factory.ProcessFactory;
 import fi.jannetahkola.palikka.game.service.factory.SocketFactory;
@@ -63,8 +63,8 @@ public class PalikkaGameApiAppConfig {
     }
 
     @Bean
-    AuthenticationHandshakeInterceptor authenticationHandshakeInterceptor(JwtService jwtService, UsersClient usersClient) {
-        return new AuthenticationHandshakeInterceptor(jwtService, usersClient);
+    AuthenticationHandshakeInterceptor authenticationHandshakeInterceptor(JwtAuthenticationProvider jwtAuthenticationProvider) {
+        return new AuthenticationHandshakeInterceptor(jwtAuthenticationProvider);
     }
 
     @Bean

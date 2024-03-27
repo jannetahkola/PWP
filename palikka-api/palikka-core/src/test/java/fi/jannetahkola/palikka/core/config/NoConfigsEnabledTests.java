@@ -6,6 +6,7 @@ import fi.jannetahkola.palikka.core.api.exception.DelegatedAuthenticationEntryPo
 import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilterConfigurer;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.config.meta.EnableRequestAndResponseLoggingSupport;
+import fi.jannetahkola.palikka.core.auth.data.RevokedTokenRepository;
 import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -40,5 +41,9 @@ class NoConfigsEnabledTests {
         // logging
         assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
                 .isThrownBy(() -> context.getBean(LoggingFilter.class));
+
+        // redis - connection factory is still autoconfigured because starter dependency is in the classpath
+        assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
+                .isThrownBy(() -> context.getBean(RevokedTokenRepository.class));
     }
 }

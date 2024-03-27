@@ -49,7 +49,7 @@ public class RemoteUsersClient implements UsersClient {
             URI baseUri = properties.getBaseUri().resolve("/users-api/users");
             HttpHeaders httpHeaders = new HttpHeaders();
             jwtService.sign(new JWTClaimsSet.Builder(), PalikkaJwtType.SYSTEM)
-                    .ifPresent(httpHeaders::setBearerAuth);
+                    .ifPresent(signedJWT -> httpHeaders.setBearerAuth(signedJWT.serialize()));
             log.debug(">> GET user - Bearer auth present={}", httpHeaders.containsKey(HttpHeaders.AUTHORIZATION));
 
             var modelType = new TypeReferences.EntityModelType<User>() {};
@@ -85,7 +85,7 @@ public class RemoteUsersClient implements UsersClient {
             URI baseUri = properties.getBaseUri().resolve("/users-api/users");
             HttpHeaders httpHeaders = new HttpHeaders();
             jwtService.sign(new JWTClaimsSet.Builder(), PalikkaJwtType.SYSTEM)
-                    .ifPresent(httpHeaders::setBearerAuth);
+                    .ifPresent(signedJWT -> httpHeaders.setBearerAuth(signedJWT.serialize()));
             log.debug(">> GET user roles - Bearer auth present={}", httpHeaders.containsKey(HttpHeaders.AUTHORIZATION));
 
             var modelType = new TypeReferences.CollectionModelType<Role>() {};

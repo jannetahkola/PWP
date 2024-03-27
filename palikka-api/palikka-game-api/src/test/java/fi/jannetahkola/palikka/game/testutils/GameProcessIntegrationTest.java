@@ -2,8 +2,8 @@ package fi.jannetahkola.palikka.game.testutils;
 
 import fi.jannetahkola.palikka.game.process.GameProcess;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
-import fi.jannetahkola.palikka.game.service.validator.PathValidator;
 import fi.jannetahkola.palikka.game.service.factory.ProcessFactory;
+import fi.jannetahkola.palikka.game.service.validator.PathValidator;
 import lombok.SneakyThrows;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-public abstract class WireMockGameProcessTest extends WireMockTest {
+public abstract class GameProcessIntegrationTest extends IntegrationTest {
     protected static final String SERVER_START_LOG_QUIET = "Starting net.minecraft.server.Main";
     protected static final String SERVER_START_LOG = "[19:56:37] [Server thread/INFO]: Done (13.324s)! For help, type \"help\"";
     protected CountDownLatch processStartLatch;

@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.game.testutils;
 
+import com.nimbusds.jose.JWSObject;
 import com.nimbusds.jwt.JWTClaimsSet;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.auth.jwt.PalikkaJwtType;
@@ -19,14 +20,14 @@ public class TestTokenUtils {
         return jwtService.sign(
                 new JWTClaimsSet.Builder(),
                 PalikkaJwtType.SYSTEM
-        ).orElseThrow();
+        ).map(JWSObject::serialize).orElseThrow();
     }
 
     public String generateToken(Integer userId) {
         return jwtService.sign(
                 new JWTClaimsSet.Builder().subject(String.valueOf(userId)),
                 PalikkaJwtType.USER
-        ).orElseThrow();
+        ).map(JWSObject::serialize).orElseThrow();
     }
 
     public String generateExpiredToken(Integer userId) {
@@ -34,7 +35,7 @@ public class TestTokenUtils {
                 new JWTClaimsSet.Builder().subject(String.valueOf(userId)),
                 PalikkaJwtType.USER,
                 Date.from(Instant.now().minusSeconds(60))
-        ).orElseThrow();
+        ).map(JWSObject::serialize).orElseThrow();
     }
 
     public String generateTokenExpiringIn(Integer userId, Duration duration) {
@@ -42,6 +43,6 @@ public class TestTokenUtils {
                 new JWTClaimsSet.Builder().subject(String.valueOf(userId)),
                 PalikkaJwtType.USER,
                 Date.from(Instant.now().plusSeconds(duration.toSeconds()))
-        ).orElseThrow();
+        ).map(JWSObject::serialize).orElseThrow();
     }
 }

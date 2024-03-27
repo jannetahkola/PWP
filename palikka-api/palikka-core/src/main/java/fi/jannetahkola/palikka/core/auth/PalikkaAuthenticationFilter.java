@@ -1,8 +1,6 @@
 package fi.jannetahkola.palikka.core.auth;
 
-import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
-import fi.jannetahkola.palikka.core.integration.users.UsersClient;
-import fi.jannetahkola.palikka.core.util.AuthenticationUtil;
+import fi.jannetahkola.palikka.core.auth.authenticator.JwtAuthenticationProvider;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,8 +17,7 @@ import java.io.IOException;
 @Slf4j
 @RequiredArgsConstructor
 public class PalikkaAuthenticationFilter extends OncePerRequestFilter {
-    private final JwtService jwtService;
-    private final UsersClient usersClient;
+    private final JwtAuthenticationProvider jwtAuthenticationProvider;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -52,7 +49,7 @@ public class PalikkaAuthenticationFilter extends OncePerRequestFilter {
             log.debug("Authenticating request with header={}", token);
         }
 
-        AuthenticationUtil.authenticateToken(token, jwtService, usersClient);
+        jwtAuthenticationProvider.authenticate(token);
 
         filterChain.doFilter(request, response);
     }

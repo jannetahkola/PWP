@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.users.testutils;
 
+import com.nimbusds.jose.JWSObject;
 import com.nimbusds.jwt.JWTClaimsSet;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.auth.jwt.PalikkaJwtType;
@@ -15,13 +16,13 @@ public class TestTokenUtils {
         return jwtService.sign(
                 new JWTClaimsSet.Builder().subject(String.valueOf(userId)),
                 PalikkaJwtType.USER
-        ).orElseThrow();
+        ).map(JWSObject::serialize).orElseThrow();
     }
 
     public String generateSystemToken() {
         return jwtService.sign(
                 new JWTClaimsSet.Builder(),
                 PalikkaJwtType.SYSTEM
-        ).orElseThrow();
+        ).map(JWSObject::serialize).orElseThrow();
     }
 }
