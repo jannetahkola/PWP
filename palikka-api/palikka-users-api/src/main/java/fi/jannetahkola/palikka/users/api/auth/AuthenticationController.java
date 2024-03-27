@@ -6,8 +6,6 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.nimbusds.jwt.JWTClaimsSet;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.auth.jwt.PalikkaJwtType;
-import fi.jannetahkola.palikka.users.data.auth.TokenEntity;
-import fi.jannetahkola.palikka.users.data.auth.TokenRepository;
 import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
 import fi.jannetahkola.palikka.users.exception.UsersLoginFailedException;
@@ -36,7 +34,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.*;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.function.Predicate;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
@@ -51,7 +50,6 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 public class AuthenticationController {
     private final UserRepository userRepository;
     private final JwtService jwtService;
-    private final TokenRepository tokenRepository;
 
     @SecurityRequirements
     @Operation(
@@ -83,10 +81,13 @@ public class AuthenticationController {
                             new JWTClaimsSet.Builder().subject(String.valueOf(user.getId()));
                     return jwtService.sign(initialClaims, PalikkaJwtType.USER)
                             .flatMap(signedToken -> jwtService.getClaims(signedToken)
-                                    .map(parsedClaims -> new LoginResponse(
-                                            signedToken,
-                                            parsedClaims.getExpirationTime()
-                                                    .toInstant().atOffset(ZoneOffset.UTC))))
+                                    .map(parsedClaims -> {
+                                        log.debug("Successfully logged in user id={}", parsedClaims.getSubject());
+                                        return new LoginResponse(
+                                                signedToken,
+                                                parsedClaims.getExpirationTime()
+                                                        .toInstant().atOffset(ZoneOffset.UTC));
+                                    }))
                             .orElse(null);
                 })
                 .orElseThrow(() -> new UsersLoginFailedException("Login failed"));
@@ -105,10 +106,7 @@ public class AuthenticationController {
         jwtService.parse(authorizationHeader.split("Bearer ")[1]) // Auth filter has validated the format already
                 .ifPresent(claims -> {
                     log.debug("Logging out user id '{}'", claims.getSubject());
-                    TokenEntity tokenEntity = new TokenEntity();
-                    tokenEntity.setTokenId(claims.getJWTID());
-                    tokenEntity.setAddedOn(LocalDateTime.ofInstant(Instant.now(), ZoneId.of("UTC")));
-                    tokenRepository.save(tokenEntity);
+                    // todo
                     log.debug("Logged out user id '{}'", claims.getSubject());
                 });
         return ResponseEntity.ok(new RepresentationModel<>().add(
@@ -160,7 +158,7 @@ public class AuthenticationController {
     public static class LoginRequest {
         @Schema(description = "Unique username of the user")
         @NotBlank
-        @Pattern(regexp = "^[a-zA-Z\\d-]{6,20}$")
+        @Pattern(regexp = "^[a-zA-Z\\d-]{5,20}$")
         String username;
 
         @Schema(description = "Password of the user")

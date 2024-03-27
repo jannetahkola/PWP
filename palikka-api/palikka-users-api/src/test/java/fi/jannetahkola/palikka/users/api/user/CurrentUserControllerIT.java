@@ -1,7 +1,6 @@
 package fi.jannetahkola.palikka.users.api.user;
 
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
-import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,7 +17,6 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.Matchers.endsWith;
 
-@SqlForUsers
 class CurrentUserControllerIT extends IntegrationTest {
     @Nested
     class ResourceSecurityIT {
@@ -87,7 +85,7 @@ class CurrentUserControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(200)
                     .body("id", equalTo(1))
-                    .body("username", equalTo("mock-user"))
+                    .body("username", equalTo("admin"))
                     .body("password", nullValue())
                     .body("active", equalTo(true))
                     .body("roles", hasSize(1))

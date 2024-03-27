@@ -3,7 +3,6 @@ package fi.jannetahkola.palikka.users.api.user;
 import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
-import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import fi.jannetahkola.palikka.users.util.CryptoUtils;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
@@ -24,7 +23,6 @@ import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 
-@SqlForUsers
 class UserControllerIT extends IntegrationTest {
     @Nested
     class ResourceSecurityIT {
@@ -135,7 +133,7 @@ class UserControllerIT extends IntegrationTest {
         @Test
         void givenGetPostUserRequest_whenNoToken_thenForbiddenResponse() {
             String json = new JSONObject()
-                    .put("username", "mock-user-3")
+                    .put("username", "viewer")
                     .put("password", "mock-pass")
                     .put("active", true)
                     .toString();
@@ -153,7 +151,7 @@ class UserControllerIT extends IntegrationTest {
         @Test
         void givenGetPostUserRequest_whenNoAllowedRole_thenForbiddenResponse() {
             String json = new JSONObject()
-                    .put("username", "mock-user-3")
+                    .put("username", "viewer")
                     .put("password", "mock-pass")
                     .put("active", true)
                     .toString();
@@ -316,7 +314,7 @@ class UserControllerIT extends IntegrationTest {
                     .then().log().all().assertThat()
                     .statusCode(200)
                     .body("id", equalTo(1))
-                    .body("username", equalTo("mock-user"))
+                    .body("username", equalTo("admin"))
                     .body("password", nullValue())
                     .body("active", equalTo(true))
                     .body("root", equalTo(true))
@@ -411,7 +409,7 @@ class UserControllerIT extends IntegrationTest {
         @Test
         void givenPostUserRequest_whenUsernameTaken_thenConflictResponse() {
             String json = new JSONObject()
-                    .put("username", "mock-user")
+                    .put("username", "admin")
                     .put("password", "mock-pass")
                     .put("active", true)
                     .toString();
@@ -423,7 +421,7 @@ class UserControllerIT extends IntegrationTest {
                     .post("/users")
                     .then().assertThat()
                     .statusCode(409)
-                    .body("detail", equalTo("User with username 'mock-user' already exists"))
+                    .body("detail", equalTo("User with username 'admin' already exists"))
                     .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
@@ -465,7 +463,7 @@ class UserControllerIT extends IntegrationTest {
         @Test
         void givenPutUserRequest_whenUserNotFound_thenNotFoundResponse() {
             String json = new JSONObject()
-                    .put("username", "mock-user-3")
+                    .put("username", "viewer")
                     .put("active", false)
                     .toString();
             given()
@@ -483,7 +481,7 @@ class UserControllerIT extends IntegrationTest {
         @Test
         void givenPutUserRequest_whenTargetUserIsRoot_thenBadRequestResponse() {
             String json = new JSONObject()
-                    .put("username", "mock-user-3")
+                    .put("username", "viewer")
                     .toString();
             given()
                     .header(newAdminToken())
@@ -535,15 +533,15 @@ class UserControllerIT extends IntegrationTest {
 
             // Check password stays the same
             UserEntity updatedUser = userRepository.findById(USER_ID_USER).orElseThrow();
-            assertThat(updatedUser.getSalt()).isEqualTo("mock-salt");
-            assertThat(updatedUser.getPassword()).isEqualTo("mock-pass");
+            assertThat(updatedUser.getSalt()).isEqualTo("pa2agTlplJ9FsYEmElH4iA==");
+            assertThat(updatedUser.getPassword()).isEqualTo("AMpMjzUFd7nR6Pc4l3BTmeOMQmJuLDQEHr7qp82QLt0=");
         }
 
         @SneakyThrows
         @Test
         void givenPutUserRequest_whenUsernameTaken_thenConflictResponse() {
             String json = new JSONObject()
-                    .put("username", "mock-user")
+                    .put("username", "admin")
                     .put("active", false)
                     .toString();
             given()
@@ -553,7 +551,7 @@ class UserControllerIT extends IntegrationTest {
                     .put("/users/" + USER_ID_USER)
                     .then().assertThat()
                     .statusCode(409)
-                    .body("detail", equalTo("User with username 'mock-user' already exists"))
+                    .body("detail", equalTo("User with username 'admin' already exists"))
                     .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 

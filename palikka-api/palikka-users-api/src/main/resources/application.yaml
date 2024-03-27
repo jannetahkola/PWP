@@ -13,26 +13,14 @@ spring:
   hateoas:
     use-hal-as-default-json-media-type: true
   datasource:
-    url: jdbc:h2:mem:palikka_users_db;TIME ZONE=UTC
-  sql:
-    init:
-      # specify a different file than the default 'data.sql' to prevent seeding during tests
-      data-locations:
-        - classpath:seed_privileges.sql
-        - classpath:seed_roles.sql
-        - classpath:seed.sql
+    url: jdbc:postgresql://postgres:5432/palikka_users
+    username: user
+    password: password
   jpa:
-    # let hibernate create the schema before seed data is inserted
-    # see https://www.baeldung.com/spring-boot-h2-database#2-hibernate-and-datasql
-    defer-datasource-initialization: true
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
-        jdbc:
-          # not applied with H2, URL def is used instead. Here for reference
-          # see http://www.h2database.com/html/commands.html#set_time_zone
-          time_zone: UTC
         format_sql: true
         show_sql: true
 

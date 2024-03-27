@@ -2,7 +2,6 @@ package fi.jannetahkola.palikka.users.api.user;
 
 import fi.jannetahkola.palikka.users.api.user.model.UserRolePatchModel;
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
-import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import lombok.SneakyThrows;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,7 +20,6 @@ import java.util.stream.Stream;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
-@SqlForUsers
 class UserRoleControllerIT extends IntegrationTest {
 
     @Nested
@@ -191,6 +189,21 @@ class UserRoleControllerIT extends IntegrationTest {
                     .body("_embedded.roles[0]._links.self.href", endsWith("/users-api/roles/1"))
                     .body("_links.self.href", endsWith("/users/" + USER_ID_USER + "/roles"))
                     .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
+
+            // Add a previous role back to check that link table was cleaned up
+            patch = UserRolePatchModel.builder()
+                    .patch(
+                            UserRolePatchModel.UserRolePatch.builder()
+                                    .action(UserRolePatchModel.Action.ADD)
+                                    .roleId(1).build())
+                    .build();
+            given()
+                    .header(newAdminToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(patch)
+                    .patch("/users/" + USER_ID_USER + "/roles")
+                    .then().assertThat()
+                    .statusCode(202);
         }
 
         @Test

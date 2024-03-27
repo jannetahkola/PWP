@@ -5,7 +5,6 @@ import fi.jannetahkola.palikka.core.integration.users.Role;
 import fi.jannetahkola.palikka.users.api.role.model.RolePrivilegePatchModel;
 import fi.jannetahkola.palikka.users.data.privilege.PrivilegeRepository;
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
-import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import io.restassured.RestAssured;
 import lombok.SneakyThrows;
 import org.json.JSONArray;
@@ -33,7 +32,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.hateoas.client.Hop.rel;
 
-@SqlForUsers
 class RolePrivilegeControllerIT extends IntegrationTest {
     @Nested
     class ResourceSecurityIT {
@@ -208,6 +206,21 @@ class RolePrivilegeControllerIT extends IntegrationTest {
             Set<Privilege> privileges = roleCollectionModel.getContent().getPrivileges().orElseThrow();
             assertThat(privileges.stream().anyMatch(privilege -> privilege.getId().equals(newPrivilegeId))).isTrue();
             assertThat(privileges.stream().noneMatch(privilege -> privilege.getId().equals(existingPrivilegeId))).isTrue();
+
+            // Add a previous privilege back to check that link table was cleaned up
+            patch = RolePrivilegePatchModel.builder()
+                    .patch(
+                            RolePrivilegePatchModel.RolePrivilegePatch.builder()
+                                    .action(RolePrivilegePatchModel.Action.ADD)
+                                    .privilegeId(existingPrivilegeId).build())
+                    .build();
+            given()
+                    .header(newAdminToken())
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(patch)
+                    .patch("/roles/2/privileges")
+                    .then().assertThat()
+                    .statusCode(202);
         }
 
         @Test

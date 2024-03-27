@@ -29,7 +29,7 @@ public class UserModel extends RepresentationModel<UserModel> {
 
     @Schema(description = "Unique username of the user. Required when creating or updating a user")
     @NotBlank(groups = {PostGroup.class, PutGroup.class})
-    @Pattern(regexp = "^[a-zA-Z\\d-]{6,20}$", groups = {PostGroup.class, PutGroup.class})
+    @Pattern(regexp = "^[a-zA-Z\\d-]{5,20}$", groups = {PostGroup.class, PutGroup.class})
     String username;
 
     @Schema(description = "Password of the user. Required when creating a user")

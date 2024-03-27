@@ -49,7 +49,6 @@ public class PalikkaUsersApiAppConfig {
                         // This is the last resort if controller advice fails e.g. resolving the method
                         // handler parameter. Not customized currently so returns JSON.
                         .requestMatchers("/error").permitAll()
-                        // todo do not expose unless ran locally
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptionHandling -> exceptionHandling

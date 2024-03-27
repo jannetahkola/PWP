@@ -34,7 +34,7 @@ public class UserEntity {
     @Column(nullable = false)
     private Boolean root = false;
 
-    @Column(columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP", nullable = false)
+    @Column(columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP()", nullable = false)
     private OffsetDateTime createdAt;
 
     @Column(columnDefinition = "TIMESTAMP")

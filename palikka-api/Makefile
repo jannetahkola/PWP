@@ -17,3 +17,13 @@ docker-run:
 
 docker-kill:
 	docker-compose down --remove-orphans
+
+reset-data:
+	docker volume rm palikka-api_postgres
+	make init-data
+
+init-data:
+	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/reset.sql
+	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/seed_privileges.sql
+	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/seed_roles.sql
+	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/seed_users.sql

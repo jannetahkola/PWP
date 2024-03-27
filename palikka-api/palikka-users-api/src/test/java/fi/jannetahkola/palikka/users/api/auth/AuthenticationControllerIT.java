@@ -1,7 +1,6 @@
 package fi.jannetahkola.palikka.users.api.auth;
 
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
-import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
@@ -12,13 +11,12 @@ import org.springframework.http.MediaType;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
-@SqlForUsers
 class AuthenticationControllerIT extends IntegrationTest {
     @SneakyThrows
     @Test
     void givenLoginRequest_whenCredentialsValid_thenOkResponse() {
         String json = new JSONObject()
-                .put("username", "mock-user")
+                .put("username", "admin")
                 .put("password", "password")
                 .toString();
         given()

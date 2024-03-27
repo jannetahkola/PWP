@@ -1,15 +1,22 @@
 spring:
+  datasource:
+    # set H2 in PostgreSQL compatibility mode
+    # see http://www.h2database.com/html/features.html
+    url: jdbc:h2:mem:palikka_users;TIME ZONE=UTC;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
   main:
     allow-bean-definition-overriding: true
   jpa:
+    # let hibernate create the schema before seed data is inserted
+    # see https://www.baeldung.com/spring-boot-h2-database#2-hibernate-and-datasql
+    defer-datasource-initialization: true
     hibernate:
       ddl-auto: create-drop
   sql:
     init:
-      # override main config
       data-locations:
-        - classpath:seed_privileges.sql
-        - classpath:seed_roles.sql
+        - classpath:data/seed_privileges.sql
+        - classpath:data/seed_roles.sql
+        - classpath:data/seed_users.sql
 
 springdoc:
   swagger-ui:
@@ -30,9 +37,9 @@ palikka:
       signing:
         # override to load from classpath instead of filesystem
         # todo fix to work with file: or without
-        path: keystore-dev.p12
+        path: keystore/keystore-dev.p12
       verification:
-        path: truststore-dev.p12
+        path: keystore/truststore-dev.p12
     token:
       user:
         signing:

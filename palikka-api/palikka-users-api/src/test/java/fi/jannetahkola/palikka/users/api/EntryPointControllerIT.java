@@ -1,7 +1,6 @@
 package fi.jannetahkola.palikka.users.api;
 
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
-import fi.jannetahkola.palikka.users.testutils.SqlForUsers;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,7 +13,6 @@ import java.util.stream.Stream;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.endsWith;
 
-@SqlForUsers
 class EntryPointControllerIT extends IntegrationTest {
     @Nested
     class ResourceSecurityIT {

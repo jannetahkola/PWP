@@ -1,3 +1,6 @@
+-- PRIVILEGES
+-- INSERT statements should not contain IDs for auto-generation to work as expected
+
 insert into palikka_privilege (domain, name, domain_description)
 values ('COMMAND', 'advancement', 'Gives, removes, or checks player advancements.'),
        ('COMMAND', 'attribute', 'Queries, adds, removes or sets an entity attribute.'),
