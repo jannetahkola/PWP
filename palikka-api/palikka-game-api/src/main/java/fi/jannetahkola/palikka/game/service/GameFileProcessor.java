@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.game.service;
 
+import fi.jannetahkola.palikka.game.exception.GameFileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -49,7 +50,7 @@ public class GameFileProcessor {
     public List<String> readFile(String pathToDir, String fileName) throws IOException {
         File targetFile = Paths.get(pathToDir, fileName).toFile();
         if (!targetFile.exists()) {
-            throw new IOException(String.format("File '%s' not found", targetFile));
+            throw new GameFileNotFoundException(String.format("File '%s' not found", targetFile));
         }
         List<String> configLines = new ArrayList<>();
         try (var br = new BufferedReader(new InputStreamReader(new FileInputStream(targetFile)))) {
@@ -58,8 +59,7 @@ public class GameFileProcessor {
                 configLines.add(line);
             }
         } catch (IOException e) {
-            throw new IOException(
-                    String.format("Failed to read file '%s'", targetFile), e);
+            throw new IOException(String.format("Failed to read file '%s'", targetFile), e);
         }
         return configLines;
     }

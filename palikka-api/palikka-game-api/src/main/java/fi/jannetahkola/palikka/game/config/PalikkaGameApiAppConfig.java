@@ -52,6 +52,9 @@ public class PalikkaGameApiAppConfig {
                 .authorizeHttpRequests(requests -> requests
                         // Goes through authentication filter to WebSocket security configs
                         .requestMatchers("/ws").permitAll()
+                        // This is the last resort if controller advice fails e.g. resolving the method
+                        // handler parameter. Not customized currently so returns JSON.
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)

@@ -1,14 +1,17 @@
 package fi.jannetahkola.palikka.game.api.file;
 
+import fi.jannetahkola.palikka.game.exception.GameFileNotFoundException;
 import fi.jannetahkola.palikka.game.service.GameFileProcessor;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
-import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import fi.jannetahkola.palikka.game.testutils.IntegrationTest;
+import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import org.hamcrest.Matchers;
 import org.json.JSONObject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -41,7 +44,8 @@ import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForAdminUser;
 import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForNormalUser;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -126,12 +130,25 @@ class GameFileControllerIT extends IntegrationTest {
 
         Header authorizationHeader;
 
+        @SneakyThrows
         @BeforeEach
         void beforeEach() {
             stubForAdminUser(wireMockServer);
             authorizationHeader = new Header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(1));
-            ((MockGameFileProcessor) gameFileProcessor).setCountDownLatch(null);
+
+            MockGameFileProcessor gameFileProcessorMock = (MockGameFileProcessor) gameFileProcessor;
+            when(gameFileProcessorMock.readFile(any(), any())).thenCallRealMethod();
+            doCallRealMethod().when(gameFileProcessorMock).downloadFile(any(), any());
+            doCallRealMethod().when(gameFileProcessorMock).acceptEula(any());
+            doCallRealMethod().when(gameFileProcessorMock).setCountDownLatch(any());
+            gameFileProcessorMock.setCountDownLatch(null);
+
             when(gameProcessService.isDown()).thenReturn(true);
+        }
+
+        @AfterEach
+        void afterEach() {
+            Mockito.reset((MockGameFileProcessor) gameFileProcessor);
         }
 
         @SneakyThrows
@@ -156,7 +173,7 @@ class GameFileControllerIT extends IntegrationTest {
                     .post("/game/files/download")
                     .then().assertThat()
                     .statusCode(204)
-                    .header(HttpHeaders.LOCATION, endsWith("/game/files/download"));
+                    .header(HttpHeaders.LOCATION, Matchers.endsWith("/game/files/download"));
 
             given()
                     .header(authorizationHeader)
@@ -279,13 +296,25 @@ class GameFileControllerIT extends IntegrationTest {
 
         @Test
         void givenGetConfigRequest_thenOkResponse() {
-            // todo test error cases
             given()
                     .header(authorizationHeader)
                     .get("/game/files/config")
                     .then().assertThat()
                     .statusCode(200)
                     .body("config", hasSize(0));
+        }
+
+        @Test
+        void givenGetConfigRequest_whenFileNotFound_thenNotFoundResponse() {
+            doAnswer(invocationOnMock -> {
+                throw new GameFileNotFoundException("");
+            }).when((MockGameFileProcessor) gameFileProcessor).readFile(any(), any());
+            given()
+                    .header(authorizationHeader)
+                    .get("/game/files/config")
+                    .then().assertThat()
+                    .statusCode(404)
+                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
     }
 
@@ -294,7 +323,8 @@ class GameFileControllerIT extends IntegrationTest {
         @Bean
         @Primary
         GameFileProcessor gameFileProcessor() {
-            return new MockGameFileProcessor();
+            // Mock the mock implementation, so we can both mock the methods and have the countdown latch.
+            return Mockito.mock(MockGameFileProcessor.class);
         }
 
         @Bean

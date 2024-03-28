@@ -24,6 +24,14 @@ public class GameApiExceptionHandler extends DefaultApiExceptionHandler {
     }
 
     @ExceptionHandler
+    public ResponseEntity<Object> gameFileNotFoundException(GameFileNotFoundException e, WebRequest request) {
+        log.debug("Game file not found exception occurred", e);
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail body = this.createProblemDetail(e, status, e.getMessage(), null, null, request);
+        return this.handleExceptionInternal(e, body, new HttpHeaders(), status, request);
+    }
+
+    @ExceptionHandler
     public ResponseEntity<Object> gameFileException(GameFileException e, WebRequest request) {
         log.info("Game file exception occurred", e);
         HttpStatus status = HttpStatus.BAD_REQUEST;
