@@ -20,6 +20,7 @@ docker-kill:
 
 reset-data:
 	docker volume rm palikka-api_postgres
+	docker volume rm palikka-api_redis
 	make init-data
 
 init-data:

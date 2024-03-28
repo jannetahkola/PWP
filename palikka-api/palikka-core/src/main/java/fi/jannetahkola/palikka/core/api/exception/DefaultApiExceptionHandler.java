@@ -71,7 +71,7 @@ public class DefaultApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler
     public ResponseEntity<Object> accessDeniedException(AccessDeniedException e, WebRequest request) {
-        log.info("Access denied exception occurred", e);
+        log.debug("Access denied exception occurred", e);
         HttpStatus status = HttpStatus.FORBIDDEN;
         ProblemDetail body = this.createProblemDetail(e, status, e.getMessage(), null, null, request);
         return this.handleExceptionInternal(e, body, new HttpHeaders(), status, request);
@@ -79,7 +79,7 @@ public class DefaultApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler
     public ResponseEntity<Object> authenticationException(AuthenticationException e, WebRequest request) {
-        log.info("Authentication exception occurred", e);
+        log.debug("Authentication exception occurred", e);
         HttpStatus status = HttpStatus.FORBIDDEN;
         ProblemDetail body = this.createProblemDetail(e, status, e.getMessage(), null, null, request);
         return this.handleExceptionInternal(e, body, new HttpHeaders(), status, request);
@@ -94,7 +94,7 @@ public class DefaultApiExceptionHandler extends ResponseEntityExceptionHandler {
                                                                   @Nonnull HttpHeaders headers,
                                                                   @Nonnull HttpStatusCode status,
                                                                   @Nonnull WebRequest request) {
-        log.info("Method argument not valid exception occurred", ex);
+        log.debug("Method argument not valid exception occurred", ex);
         // Provide a better detail message than just "Invalid request content."
         List<FieldError> fieldErrors = ex.getBindingResult().getFieldErrors();
         String detailMessage = fieldErrors.stream()
@@ -111,7 +111,7 @@ public class DefaultApiExceptionHandler extends ResponseEntityExceptionHandler {
                                                                   @Nonnull HttpHeaders headers,
                                                                   @Nonnull HttpStatusCode status,
                                                                   @Nonnull WebRequest request) {
-        log.info("HTTP message not readable exception occurred", ex);
+        log.debug("HTTP message not readable exception occurred", ex);
         Throwable cause = ExceptionUtil.getOriginalCause(ex.getCause());
         if (cause == null || cause.getMessage() == null) {
             cause = new Throwable("HTTP message not readable");
@@ -134,7 +134,7 @@ public class DefaultApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler
     public ResponseEntity<Object> notFoundException(NotFoundException e, WebRequest request) {
-        log.info("Not found exception occurred", e);
+        log.debug("Not found exception occurred", e);
         HttpStatus status = HttpStatus.NOT_FOUND;
         ProblemDetail body = this.createProblemDetail(e, status, e.getMessage(), null, null, request);
         return this.handleExceptionInternal(e, body, new HttpHeaders(), status, request);
@@ -142,7 +142,7 @@ public class DefaultApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler
     public ResponseEntity<Object> conflictException(ConflictException e, WebRequest request) {
-        log.info("Conflict exception occurred", e);
+        log.debug("Conflict exception occurred", e);
         HttpStatus status = HttpStatus.CONFLICT;
         ProblemDetail body = this.createProblemDetail(e, status, e.getMessage(), null, null, request);
         return this.handleExceptionInternal(e, body, new HttpHeaders(), status, request);

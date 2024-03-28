@@ -42,6 +42,9 @@ palikka:
       auto-clean:
         enabled: true
         fixed-delay: 60000
+  redis:
+    host: redis
+    port: 6379
 
 # todo delete these - debugging only
 logging:

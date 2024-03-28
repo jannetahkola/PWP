@@ -48,6 +48,16 @@ public class JwtService {
         return true;
     }
 
+    public Optional<JWTClaimsSet> getClaims(String token) {
+        if (!StringUtils.hasText(token)) return Optional.empty();
+        try {
+            return Optional.of(SignedJWT.parse(token).getJWTClaimsSet());
+        } catch (ParseException e) {
+            log.error("Token parsing failed", e);
+            return Optional.empty();
+        }
+    }
+
     public Optional<VerifiedJwt> parse(String token) {
         if (!StringUtils.hasText(token)) return Optional.empty();
         try {

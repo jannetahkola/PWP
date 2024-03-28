@@ -4,8 +4,8 @@ import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilterConfigurer;
 import fi.jannetahkola.palikka.core.auth.authenticator.JwtAuthenticationProvider;
 import fi.jannetahkola.palikka.core.auth.data.RevokedTokenRepository;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
+import fi.jannetahkola.palikka.core.config.properties.RedisProperties;
 import fi.jannetahkola.palikka.core.integration.users.UsersClient;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -29,8 +29,11 @@ public class AuthenticationConfig {
     }
 
     @Bean
-    LettuceConnectionFactory lettuceConnectionFactory() {
-        return new LettuceConnectionFactory();
+    LettuceConnectionFactory lettuceConnectionFactory(RedisProperties redisProperties) {
+        LettuceConnectionFactory lettuceConnectionFactory = new LettuceConnectionFactory();
+        lettuceConnectionFactory.setHostName(redisProperties.getHost());
+        lettuceConnectionFactory.setPort(redisProperties.getPort());
+        return lettuceConnectionFactory;
     }
 
     @Bean

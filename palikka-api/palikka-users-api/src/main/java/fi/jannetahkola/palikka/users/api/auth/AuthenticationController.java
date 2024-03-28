@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import com.nimbusds.jwt.JWTClaimsSet;
+import fi.jannetahkola.palikka.core.auth.data.RevokedTokenEntity;
+import fi.jannetahkola.palikka.core.auth.data.RevokedTokenRepository;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.auth.jwt.PalikkaJwtType;
 import fi.jannetahkola.palikka.users.data.user.UserEntity;
@@ -31,6 +33,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,6 +54,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 public class AuthenticationController {
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final RevokedTokenRepository revokedTokenRepository;
 
     @SecurityRequirements
     @Operation(
@@ -107,9 +111,29 @@ public class AuthenticationController {
             value = "/logout",
             produces = MediaTypes.HAL_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("not hasRole('ROLE_SYSTEM')")
     @SuppressWarnings("squid:S1452") // No model type, links only
     public ResponseEntity<RepresentationModel<?>> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
-        // todo
+        String token = authorizationHeader.split("Bearer ")[1];
+        // Only get claims instead of verifying since we are already authenticated
+        jwtService.getClaims(token).ifPresentOrElse(claims -> {
+            String jwtId = claims.getJWTID();
+            if (!revokedTokenRepository.existsById(jwtId)) {
+                RevokedTokenEntity revokedTokenEntity = new RevokedTokenEntity();
+                revokedTokenEntity.setTokenId(jwtId);
+                revokedTokenEntity.setTtlSeconds(
+                        jwtService.getProperties()
+                                .getToken()
+                                .getUser()
+                                .getSigning()
+                                .getValidityTime()
+                                .getSeconds());
+                revokedTokenRepository.save(revokedTokenEntity);
+                log.debug("Successfully revoked token={}", token);
+            } else {
+                log.debug("Failed to revoke token - already revoked, token={}", token);
+            }
+        }, () -> log.debug("Failed to revoke token - invalid token"));
         return ResponseEntity.ok(new RepresentationModel<>().add(
                 linkTo(methodOn(AuthenticationController.class).logout(null)).withSelfRel()
         ));

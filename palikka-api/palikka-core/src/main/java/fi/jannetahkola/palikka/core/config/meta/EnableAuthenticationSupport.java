@@ -13,7 +13,7 @@ import java.lang.annotation.*;
 /**
  * Enables {@link JwtService} and {@link PalikkaAuthenticationFilterConfigurer} for both producing and consuming JWTs,
  * depending on the configurations. Also enables Redis-based {@link RevokedTokenRepository}, which needs to be configured
- * via "spring.data.redis".
+ * via "palikka.redis".
  * <br><br>
  * This annotation also requires a bean for an implementation of {@link UsersClient}. Core provides
  * {@link EnableRemoteUsersIntegration} but you can also implement your own. Core's test JAR provides

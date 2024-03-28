@@ -17,9 +17,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.MOCK,
         properties = {
-                "spring.data.redis.host=localhost",
-                "spring.data.redis.port=6379",
-
                 "palikka.jwt.keystore.signing.path=keystore-dev.p12",
                 "palikka.jwt.keystore.signing.pass=password",
                 "palikka.jwt.keystore.signing.type=pkcs12",

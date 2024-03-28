@@ -1,8 +1,8 @@
 package fi.jannetahkola.palikka.core;
 
+import fi.jannetahkola.palikka.core.config.properties.RedisProperties;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import redis.embedded.RedisServer;
 

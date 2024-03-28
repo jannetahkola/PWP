@@ -44,3 +44,6 @@ palikka:
       user:
         signing:
           validity-time: 10s # override to be shorter
+  redis:
+    host: localhost
+    port: 6379

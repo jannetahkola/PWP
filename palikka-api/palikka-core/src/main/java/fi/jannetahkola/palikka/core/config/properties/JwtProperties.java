@@ -83,6 +83,7 @@ public class JwtProperties {
 
         /**
          * Required when {@link TokenProperties#getSigning()} is configured.
+         * todo these props are confusing
          */
         Duration validityTime;
     }
