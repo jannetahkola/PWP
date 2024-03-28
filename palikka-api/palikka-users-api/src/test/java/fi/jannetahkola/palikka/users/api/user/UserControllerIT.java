@@ -87,22 +87,11 @@ class UserControllerIT extends IntegrationTest {
                     .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
 
-        @Test
-        void givenGetUsersRequest_whenSystemToken_thenForbiddenResponse() {
-            given()
-                    .header(newSystemToken())
-                    .get("/users")
-                    .then().assertThat()
-                    .statusCode(403)
-                    .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
-        }
-
         @ParameterizedTest
         @MethodSource("usersWithRolesAllowedToGetUsers")
         void givenGetUsersRequest_whenAllowedRole_thenOkResponse(Integer user) {
             given()
-                    .header(newToken(user))
+                    .header(user == -1 ? newSystemToken() : newToken(user))
                     .get("/users")
                     .then().assertThat()
                     .statusCode(200)
@@ -113,7 +102,8 @@ class UserControllerIT extends IntegrationTest {
             return Stream.of(
                     Arguments.of(Named.of("ADMIN", 1)),
                     Arguments.of(Named.of("USER", 2)),
-                    Arguments.of(Named.of("VIEWER", 3))
+                    Arguments.of(Named.of("VIEWER", 3)),
+                    Arguments.of(Named.of("SYSTEM", -1))
             );
         }
 
