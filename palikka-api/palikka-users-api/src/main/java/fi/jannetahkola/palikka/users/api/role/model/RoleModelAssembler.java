@@ -2,6 +2,7 @@ package fi.jannetahkola.palikka.users.api.role.model;
 
 import fi.jannetahkola.palikka.users.api.privilege.model.PrivilegeModelAssembler;
 import fi.jannetahkola.palikka.users.api.role.RoleController;
+import fi.jannetahkola.palikka.users.data.privilege.PrivilegeEntity;
 import fi.jannetahkola.palikka.users.data.role.RoleEntity;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -28,9 +30,12 @@ public class RoleModelAssembler implements RepresentationModelAssembler<RoleEnti
                 .name(entity.getName())
                 .description(entity.getDescription())
                 .privileges(
+                        // Sort by domain, name
                         entity.getPrivileges().stream()
+                                .sorted(Comparator.comparing(PrivilegeEntity::getDomain))
+                                .sorted(Comparator.comparing(PrivilegeEntity::getName))
                                 .map(privilegeModelAssembler::toModel)
-                                .collect(Collectors.toSet()))
+                                .toList())
                 .build();
 
         roleModel.add(linkTo(methodOn(RoleController.class).getRole(roleModel.getId(), null)).withSelfRel());

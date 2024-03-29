@@ -13,13 +13,13 @@ import lombok.Value;
 import org.springframework.hateoas.RepresentationModel;
 import org.springframework.hateoas.server.core.Relation;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Schema(description = "Authorizes associated users to access different APIs")
 @Value
 @Builder
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, exclude = "privileges")
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Relation(itemRelation = "role", collectionRelation = "roles")
 public class RoleModel extends RepresentationModel<RoleModel> {
@@ -37,5 +37,5 @@ public class RoleModel extends RepresentationModel<RoleModel> {
     @Schema(description = "Privileges associated with the role")
     @Builder.Default
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    Set<PrivilegeModel> privileges = new HashSet<>();
+    List<PrivilegeModel> privileges = new ArrayList<>();
 }

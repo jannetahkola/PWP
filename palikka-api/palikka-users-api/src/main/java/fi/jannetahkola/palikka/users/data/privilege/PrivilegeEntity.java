@@ -10,7 +10,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "palikka_privilege")
+@Table(
+        name = "palikka_privilege",
+        uniqueConstraints = @UniqueConstraint(
+                name = "idx_unique_domain_name",
+                columnNames = {"domain", "name"}))
 @Getter
 @Setter
 public class PrivilegeEntity {

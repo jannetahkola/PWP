@@ -8,18 +8,20 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import lombok.*;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import org.springframework.hateoas.RepresentationModel;
 import org.springframework.hateoas.server.core.Relation;
 
 import java.time.OffsetDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Schema(description = "An end user of the system")
 @Data
 @Builder
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, exclude = "roles")
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 @Relation(itemRelation = "user", collectionRelation = "users")
 public class UserModel extends RepresentationModel<UserModel> {
@@ -29,7 +31,7 @@ public class UserModel extends RepresentationModel<UserModel> {
 
     @Schema(description = "Unique username of the user. Required when creating or updating a user")
     @NotBlank(groups = {PostGroup.class, PutGroup.class})
-    @Pattern(regexp = "^[a-zA-Z\\d-]{5,20}$", groups = {PostGroup.class, PutGroup.class})
+    @Pattern(regexp = "^[a-zA-Z\\d-]{3,20}$", groups = {PostGroup.class, PutGroup.class})
     String username;
 
     @Schema(description = "Password of the user. Required when creating a user")
@@ -59,7 +61,7 @@ public class UserModel extends RepresentationModel<UserModel> {
     @Schema(description = "Roles associated with the user")
     @Builder.Default
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    Set<String> roles = new HashSet<>();
+    List<String> roles = new ArrayList<>();
 
     public interface PostGroup {}
 

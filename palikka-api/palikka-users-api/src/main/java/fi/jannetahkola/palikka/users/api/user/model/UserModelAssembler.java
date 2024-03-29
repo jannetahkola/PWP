@@ -9,6 +9,7 @@ import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -30,8 +31,9 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
                 .lastUpdatedAt(entity.getLastUpdatedAt())
                 .roles(
                         entity.getRoles().stream()
+                                .sorted(Comparator.comparing(RoleEntity::getName))
                                 .map(RoleEntity::getName)
-                                .collect(Collectors.toSet()))
+                                .toList())
                 .build();
 
         userModel.add(

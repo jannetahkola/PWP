@@ -28,16 +28,16 @@ public class UserEntity {
     @Column(nullable = false)
     private String salt;
 
-    @Column(nullable = false)
-    private Boolean active = true;
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private Boolean active;
 
-    @Column(nullable = false)
-    private Boolean root = false;
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean root;
 
-    @Column(columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP()", nullable = false)
+    @Column(nullable = false, columnDefinition = "timestamp with time zone default current_timestamp")
     private OffsetDateTime createdAt;
 
-    @Column(columnDefinition = "TIMESTAMP")
+    @Column(columnDefinition = "timestamp")
     private OffsetDateTime lastUpdatedAt;
 
     @Setter(AccessLevel.NONE)

@@ -183,7 +183,7 @@ public class AuthenticationController {
     public static class LoginRequest {
         @Schema(description = "Unique username of the user")
         @NotBlank
-        @Pattern(regexp = "^[a-zA-Z\\d-]{5,20}$")
+        @Pattern(regexp = "^[a-zA-Z\\d-]{3,20}$")
         String username;
 
         @Schema(description = "Password of the user")

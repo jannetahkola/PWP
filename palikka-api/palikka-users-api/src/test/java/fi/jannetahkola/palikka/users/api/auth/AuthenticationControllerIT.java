@@ -6,19 +6,25 @@ import fi.jannetahkola.palikka.core.config.properties.JwtProperties;
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
 import io.restassured.http.Header;
 import lombok.SneakyThrows;
-import org.assertj.core.api.Assertions;
 import org.json.JSONObject;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+
+import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 
 class AuthenticationControllerIT extends IntegrationTest {
+
     @Autowired
     RevokedTokenRepository revokedTokenRepository;
 
@@ -55,6 +61,20 @@ class AuthenticationControllerIT extends IntegrationTest {
                 .then().assertThat()
                 .statusCode(400)
                 .body("detail", equalTo("Login failed"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidLoginParameters")
+    void givenLoginRequest_whenParametersInvalid_thenBadRequestResponse(JSONObject json,
+                                                                        String expectedDetailMessageSubstring) {
+        given()
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .body(json.toString())
+                .post("/auth/login")
+                .then().assertThat()
+                .statusCode(400)
+                .body("detail", containsString(expectedDetailMessageSubstring))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
     }
 
@@ -103,5 +123,108 @@ class AuthenticationControllerIT extends IntegrationTest {
                 .statusCode(403)
                 .body("detail", equalTo("Access Denied"))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+    }
+
+    @SneakyThrows
+    private static Stream<Arguments> invalidLoginParameters() {
+        return Stream.of(
+                Arguments.of(
+                        Named.of(
+                                "Missing username",
+                                new JSONObject()
+                                        .put("password", "password")
+                                        .put("active", true)),
+                        "username: must not be blank"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Blank username",
+                                new JSONObject()
+                                        .put("username", "")
+                                        .put("password", "password")
+                                        .put("active", true)),
+                        "username: must not be blank"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Invalid username - too short",
+                                new JSONObject()
+                                        .put("username", "us")
+                                        .put("password", "password")
+                                        .put("active", true)),
+                        "username: must match"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Invalid username - too long",
+                                new JSONObject()
+                                        .put("username", "usernameusernameusername")
+                                        .put("password", "password")
+                                        .put("active", true)),
+                        "username: must match"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Invalid username - contains invalid characters",
+                                new JSONObject()
+                                        .put("username", "user$")
+                                        .put("password", "password")
+                                        .put("active", true)),
+                        "username: must match"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Invalid username - contains spaces",
+                                new JSONObject()
+                                        .put("username", "user ")
+                                        .put("password", "password")
+                                        .put("active", true)),
+                        "username: must match"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Missing password",
+                                new JSONObject()
+                                        .put("username", "username")
+                                        .put("active", true)),
+                        "password: must not be blank"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Blank password",
+                                new JSONObject()
+                                        .put("username", "username")
+                                        .put("password", "")
+                                        .put("active", true)),
+                        "password: must not be blank"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Invalid password - too short",
+                                new JSONObject()
+                                        .put("username", "username")
+                                        .put("password", "pass")
+                                        .put("active", true)),
+                        "password: must match"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Invalid password - too long",
+                                new JSONObject()
+                                        .put("username", "username")
+                                        .put("password", "passwordpasswordpassword")
+                                        .put("active", true)),
+                        "password: must match"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Invalid password - contains spaces",
+                                new JSONObject()
+                                        .put("username", "username")
+                                        .put("password", "password ")
+                                        .put("active", true)),
+                        "password: must match"
+                )
+        );
     }
 }

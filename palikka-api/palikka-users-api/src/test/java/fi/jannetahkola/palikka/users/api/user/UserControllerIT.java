@@ -276,6 +276,7 @@ class UserControllerIT extends IntegrationTest {
 
         @Test
         void givenGetUsersRequest_whenAcceptHalFormsHeaderGiven_thenResponseContainsTemplate() {
+            // todo check template contents
             given()
                     .accept(MediaTypes.HAL_FORMS_JSON_VALUE)
                     .header(newAdminToken())
@@ -593,7 +594,16 @@ class UserControllerIT extends IntegrationTest {
                             Named.of(
                                     "Invalid username - too short",
                                     new JSONObject()
-                                            .put("username", "user")
+                                            .put("username", "us")
+                                            .put("password", "password")
+                                            .put("active", true)),
+                            "username: must match"
+                    ),
+                    Arguments.of(
+                            Named.of(
+                                    "Invalid username - too long",
+                                    new JSONObject()
+                                            .put("username", "usernameusernameusername")
                                             .put("password", "password")
                                             .put("active", true)),
                             "username: must match"
@@ -602,8 +612,8 @@ class UserControllerIT extends IntegrationTest {
                             Named.of(
                                     "Invalid username - contains invalid characters",
                                     new JSONObject()
-                                            .put("username", "user")
-                                            .put("password", "password$")
+                                            .put("username", "user$")
+                                            .put("password", "password")
                                             .put("active", true)),
                             "username: must match"
                     ),
@@ -611,8 +621,8 @@ class UserControllerIT extends IntegrationTest {
                             Named.of(
                                     "Invalid username - contains spaces",
                                     new JSONObject()
-                                            .put("username", "user")
-                                            .put("password", "password ")
+                                            .put("username", "user ")
+                                            .put("password", "password")
                                             .put("active", true)),
                             "username: must match"
                     ),
@@ -639,6 +649,15 @@ class UserControllerIT extends IntegrationTest {
                                     new JSONObject()
                                             .put("username", "username")
                                             .put("password", "pass")
+                                            .put("active", true)),
+                            "password: must match"
+                    ),
+                    Arguments.of(
+                            Named.of(
+                                    "Invalid password - too long",
+                                    new JSONObject()
+                                            .put("username", "username")
+                                            .put("password", "passwordpasswordpassword")
                                             .put("active", true)),
                             "password: must match"
                     ),
