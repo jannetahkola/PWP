@@ -1,9 +1,6 @@
 package fi.jannetahkola.palikka.game.api.file;
 
-import fi.jannetahkola.palikka.game.api.file.model.GameConfigResponse;
-import fi.jannetahkola.palikka.game.api.file.model.GameExecutableResponse;
-import fi.jannetahkola.palikka.game.api.file.model.GameFileDownloadRequest;
-import fi.jannetahkola.palikka.game.api.file.model.GameFileDownloadResponse;
+import fi.jannetahkola.palikka.game.api.file.model.*;
 import fi.jannetahkola.palikka.game.config.properties.GameProperties;
 import fi.jannetahkola.palikka.game.exception.GameFileException;
 import fi.jannetahkola.palikka.game.service.GameFileService;
@@ -12,10 +9,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.net.URI;
@@ -30,16 +29,14 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RequestMapping("/game/files")
 @Validated
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ROLE_ADMIN')")
 public class GameFileController {
     private final GameProperties gameProperties;
     private final GameFileService gameFileService;
     private final GameProcessService gameProcessService;
 
-    // todo test if file overriding works
-    // todo prefix with with 'server' or 'executable'
-    @PostMapping("/download")
-    public ResponseEntity<Void> startDownload(@Valid @RequestBody GameFileDownloadRequest request) {
+    @PostMapping("/executable/download")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Void> downloadExecutable(@Valid @RequestBody GameFileDownloadRequest request) {
         URL downloadUrl;
         try {
             downloadUrl = URI.create(request.getDownloadUrl()).toURL();
@@ -55,15 +52,16 @@ public class GameFileController {
                 downloadUrl, gameProperties.getFile().getPathToJarFile().toFile());
 
         String linkToGetDownloadStatus = linkTo(methodOn(GameFileController.class)
-                .getDownloadStatus()).withRel("status").toUri().toString();
+                .getExecutableDownloadStatus()).withRel("status").toUri().toString();
         return ResponseEntity
                 .noContent()
                 .header(HttpHeaders.LOCATION, linkToGetDownloadStatus)
                 .build();
     }
 
-    @GetMapping("/download")
-    public ResponseEntity<GameFileDownloadResponse> getDownloadStatus() {
+    @GetMapping("executable/download")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<GameFileDownloadResponse> getExecutableDownloadStatus() {
         GameFileDownloadResponse response =
                 GameFileDownloadResponse.builder()
                         .status(gameFileService.getDownloadStatus())
@@ -73,6 +71,7 @@ public class GameFileController {
     }
 
     @GetMapping("/executable/meta")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'VIEWER')")
     public ResponseEntity<GameExecutableResponse> getExecutableMetadata() {
         File executableFile = gameProperties.getFile().getPathToJarFile().toFile();
         GameExecutableResponse response = GameExecutableResponse.builder()
@@ -81,19 +80,45 @@ public class GameFileController {
                 .configuredPath(executableFile.toString())
                 .fileSizeMB(
                         executableFile.exists()
-                                ? "" + executableFile.length() * ( 1024 * 1024 )
-                                : "0"
+                                ? executableFile.length() / ( 1024 * 1024 )
+                                : 0
                 )
                 .build();
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/config")
+    @GetMapping(
+            value = "/config",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'VIEWER')")
     public ResponseEntity<GameConfigResponse> getConfig() {
         List<String> configLines = gameFileService.getConfig(gameProperties.getFile().getPath());
         GameConfigResponse response = GameConfigResponse.builder().config(configLines).build();
         return ResponseEntity.ok(response);
     }
 
-    // todo update config endpoint
+    @PutMapping(
+            value = "/config",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<GameConfigResponse> putConfig(@Valid @RequestBody GameConfigUpdateRequest request) {
+        final long startTime = System.currentTimeMillis();
+        log.info("Updating config");
+        List<String> configLines = gameFileService.writeConfig(gameProperties.getFile().getPath(), request.getConfig());
+        log.info("Config update successful ({} ms)", System.currentTimeMillis() - startTime);
+        GameConfigResponse response = GameConfigResponse.builder().config(configLines).build();
+        return ResponseEntity.accepted().body(response);
+    }
+
+    @PutMapping(value = "/icon", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<?> uploadIcon(@RequestPart("file") MultipartFile multipartFile) {
+        // todo default max size is 1MB, test
+        final long startTime = System.currentTimeMillis();
+        log.info("Uploading icon");
+        gameFileService.storeFile(gameProperties.getFile().getPath(), multipartFile);
+        log.info("Icon upload successful ({} ms)", System.currentTimeMillis() - startTime);
+        return ResponseEntity.accepted().build();
+    }
 }

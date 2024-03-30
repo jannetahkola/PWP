@@ -41,6 +41,7 @@ services:
     volumes:
       - ./conf/keystore-dev.p12:/app/keystore-dev.p12
       - ./conf/truststore-dev.p12:/app/truststore-dev.p12
+      - game:/app/game
 #    networks:
 #      - palikkanet
 
@@ -62,6 +63,8 @@ services:
 #    external: true
 
 volumes:
+  game:
+    driver: local
   postgres:
   redis:
     driver: local

@@ -13,44 +13,47 @@ public class Stubs {
         // util
     }
 
+    public static final int USER_ID_ANONYMOUS = -1;
+    public static final int USER_ID_SYSTEM = 0;
     public static final int USER_ID_ADMIN = 1;
     public static final int USER_ID_USER = 2;
     public static final int USER_ID_VIEWER = 3;
 
-    public static void stubForAdminUser(WireMockExtension wireMockServer) {
+    public static void stubForUser(Integer userId, WireMockExtension wireMockServer) {
+        String file = null;
+        if (userId == USER_ID_ADMIN) {
+            file = "user_ok_admin.json";
+        }
+        if (userId == USER_ID_USER) {
+            file = "user_ok_user.json";
+        }
+        if (userId == USER_ID_VIEWER) {
+            file = "user_ok_viewer.json";
+        }
+        if (file == null) {
+            throw new IllegalArgumentException("Unknown user id " + userId);
+        }
         stubForUsers(wireMockServer);
-        stubForUserRoles(wireMockServer, USER_ID_ADMIN);
+        stubForUserRoles(wireMockServer, userId);
         wireMockServer.stubFor(
-                get(urlMatching("/users-api/users/" + USER_ID_ADMIN))
+                get(urlMatching("/users-api/users/" + userId))
                         .willReturn(
                                 aResponse()
                                         .withStatus(200)
-                                        .withBodyFile("user_ok_admin.json")
+                                        .withBodyFile(file)
                                         .withHeader(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE)));
+    }
+
+    public static void stubForAdminUser(WireMockExtension wireMockServer) {
+        stubForUser(USER_ID_ADMIN, wireMockServer);
     }
 
     public static void stubForNormalUser(WireMockExtension wireMockServer) {
-        stubForUsers(wireMockServer);
-        stubForUserRoles(wireMockServer, USER_ID_USER);
-        wireMockServer.stubFor(
-                get(urlMatching("/users-api/users/" + USER_ID_USER))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withBodyFile("user_ok_user.json")
-                                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE)));
+        stubForUser(USER_ID_USER, wireMockServer);
     }
 
     public static void stubForViewerUser(WireMockExtension wireMockServer) {
-        stubForUsers(wireMockServer);
-        stubForUserRoles(wireMockServer, USER_ID_VIEWER);
-        wireMockServer.stubFor(
-                get(urlMatching("/users-api/users/" + USER_ID_VIEWER))
-                        .willReturn(
-                                aResponse()
-                                        .withStatus(200)
-                                        .withBodyFile("user_ok_viewer.json")
-                                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE)));
+        stubForUser(USER_ID_VIEWER, wireMockServer);
     }
 
     public static void stubForUserNotFound(WireMockExtension wireMockServer, int userId) {

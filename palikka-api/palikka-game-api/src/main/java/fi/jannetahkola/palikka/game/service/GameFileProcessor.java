@@ -3,13 +3,17 @@ package fi.jannetahkola.palikka.game.service;
 import fi.jannetahkola.palikka.game.exception.GameFileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,5 +66,28 @@ public class GameFileProcessor {
             throw new IOException(String.format("Failed to read file '%s'", targetFile), e);
         }
         return configLines;
+    }
+
+    public void writeFile(String pathToDir, String filename, String fileContent) throws IOException {
+        File targetFile = Paths.get(pathToDir, filename).toFile();
+        if (!targetFile.exists() && !targetFile.createNewFile()) {
+                throw new IOException(String.format(
+                        "File '%s' does not exist and file creation failed", targetFile));
+        }
+        try (FileWriter fileWriter = new FileWriter(targetFile)) {
+            fileWriter.write(fileContent);
+            log.info("File '{}' written successfully", filename);
+        } catch (IOException e) {
+            throw new IOException(String.format("Failed to write file '%s'", targetFile), e);
+        }
+    }
+
+    public void saveFile(String pathToDir, MultipartFile file) throws IOException {
+        Path targetPath = Paths.get(pathToDir, "server-icon.png");
+        try (var is = file.getInputStream()) {
+            Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new IOException(String.format("Failed to write file '%s'", targetPath), e);
+        }
     }
 }

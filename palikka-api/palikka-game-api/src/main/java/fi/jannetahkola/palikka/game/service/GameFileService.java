@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +57,32 @@ public class GameFileService {
             return gameFileProcessor.readFile(pathToDir, "server.properties");
         } catch (IOException e) {
             // Use message from the original exception since we are throwing them ourselves
+            throw new GameFileException(e.getMessage(), e);
+        }
+    }
+
+    public List<String> writeConfig(String pathToDir, String fileContent) {
+        try {
+            gameFileProcessor.writeFile(pathToDir, "server.properties", fileContent);
+            return getConfig(pathToDir);
+        } catch (IOException e) {
+            throw new GameFileException(e.getMessage(), e);
+        }
+    }
+
+    public void storeFile(String pathToDir, MultipartFile file) {
+        if (file.isEmpty() || file.getOriginalFilename() == null || file.getContentType() == null) {
+            throw new GameFileException("Provided file is missing or invalid");
+        }
+        String fileName = file.getOriginalFilename();
+        log.info("Icon filename={}", fileName);
+        String fileExtension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase(Locale.ROOT);
+        if (!fileExtension.equals("png") || !file.getContentType().equals("image/png")) {
+            throw new GameFileException("Provided file is not a PNG");
+        }
+        try {
+            gameFileProcessor.saveFile(pathToDir, file);
+        } catch (IOException e) {
             throw new GameFileException(e.getMessage(), e);
         }
     }

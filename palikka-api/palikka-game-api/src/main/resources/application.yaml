@@ -34,7 +34,7 @@ palikka:
   game:
     file:
       name: server.jar
-      path: /app # todo directory structure needs to exist currently, change?
+      path: /app/game # todo directory structure needs to exist currently, change?
       start-command: java -jar server.jar # todo omit name?
     status:
       host: localhost

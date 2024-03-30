@@ -1,20 +1,21 @@
 package fi.jannetahkola.palikka.game.api.file;
 
+import fi.jannetahkola.palikka.game.api.file.model.GameConfigUpdateRequest;
 import fi.jannetahkola.palikka.game.exception.GameFileNotFoundException;
 import fi.jannetahkola.palikka.game.service.GameFileProcessor;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
 import fi.jannetahkola.palikka.game.testutils.IntegrationTest;
 import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import io.restassured.RestAssured;
+import io.restassured.builder.MultiPartSpecBuilder;
 import io.restassured.http.Header;
+import io.restassured.specification.MultiPartSpecification;
+import io.restassured.specification.RequestSpecification;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.hamcrest.Matchers;
 import org.json.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -31,6 +32,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,12 +42,12 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Stream;
 
-import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForAdminUser;
-import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForNormalUser;
+import static fi.jannetahkola.palikka.game.testutils.Stubs.*;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -68,55 +70,109 @@ class GameFileControllerIT extends IntegrationTest {
 
     @Nested
     class ResourceSecurityIT {
-        @Test
-        void givenGetDownloadStatusRequest_whenNoTokenOrRole_thenForbiddenResponse() {
-            stubForNormalUser(wireMockServer);
-
-            given()
-                    .get("/game/files/download")
-                    .then().assertThat()
-                    .statusCode(403);
-            given()
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(2))
-                    .get("/game/files/download")
+        @ParameterizedTest
+        @MethodSource("usersNotAllowedToCallModifyingGameFileEndpoints")
+        void givenGetExecutableDownloadStatusRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
+            RequestSpecification requestSpec = given();
+            setupRequestAuthentication(requestSpec, user, tokens);
+            requestSpec
+                    .get("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(403);
         }
 
         @SneakyThrows
-        @Test
-        void givenStartDownloadRequest_whenNoTokenOrRole_thenForbiddenResponse() {
-            stubForNormalUser(wireMockServer);
-
+        @ParameterizedTest
+        @MethodSource("usersNotAllowedToCallModifyingGameFileEndpoints")
+        void givenStartExecutableDownloadRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
+            RequestSpecification requestSpec = given();
+            setupRequestAuthentication(requestSpec, user, tokens);
             JSONObject json = new JSONObject().put("download_url", "https://test.com");
-            given()
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+            requestSpec
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game/files/download")
-                    .then().assertThat()
-                    .statusCode(403);
-            given()
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(2))
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(json.toString())
-                    .post("/game/files/download")
+                    .post("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(403);
         }
 
-        @Test
-        void givenGetConfigRequest_whenNoTokenOrRole_thenForbiddenResponse() {
-            stubForNormalUser(wireMockServer);
+        @ParameterizedTest
+        @MethodSource("usersNotAllowedToCallNonModifyingGameFileEndpoints")
+        void givenGetExecutableMetadataRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
+            RequestSpecification requestSpec = given();
+            setupRequestAuthentication(requestSpec, user, tokens);
+            requestSpec
+                    .get("/game/files/executable/meta")
+                    .then().assertThat()
+                    .statusCode(403);
+        }
 
-            given()
+        @ParameterizedTest
+        @MethodSource("usersNotAllowedToCallNonModifyingGameFileEndpoints")
+        void givenGetConfigRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
+            RequestSpecification requestSpec = given();
+            setupRequestAuthentication(requestSpec, user, tokens);
+            requestSpec
                     .get("/game/files/config")
                     .then().assertThat()
                     .statusCode(403);
-            given()
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(2))
-                    .get("/game/files/config")
+        }
+
+        @ParameterizedTest
+        @MethodSource("usersNotAllowedToCallModifyingGameFileEndpoints")
+        void givenPutConfigRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
+            RequestSpecification requestSpec = given();
+            setupRequestAuthentication(requestSpec, user, tokens);
+            GameConfigUpdateRequest request = new GameConfigUpdateRequest();
+            request.setConfig("config");
+            requestSpec
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .body(request)
+                    .put("/game/files/config")
                     .then().assertThat()
                     .statusCode(403);
+        }
+
+        @ParameterizedTest
+        @MethodSource("usersNotAllowedToCallModifyingGameFileEndpoints")
+        void givenPutIconRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
+            RequestSpecification requestSpec = given();
+            setupRequestAuthentication(requestSpec, user, tokens);
+            MultiPartSpecification file = new MultiPartSpecBuilder("File content".getBytes())
+                    .fileName("file.txt")
+                    .controlName("file")
+                    .mimeType("text/plain")
+                    .build();
+            requestSpec
+                    .multiPart(file)
+                    .put("/game/files/icon")
+                    .then().assertThat()
+                    .statusCode(403);
+        }
+
+        static void setupRequestAuthentication(RequestSpecification requestSpecification, Integer user, TestTokenUtils tokens) {
+            if (user > USER_ID_SYSTEM) {
+                stubForUser(user, wireMockServer);
+                requestSpecification.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(user));
+            } else if (user == USER_ID_SYSTEM) {
+                requestSpecification.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateSystemToken());
+            }
+        }
+
+        static Stream<Arguments> usersNotAllowedToCallNonModifyingGameFileEndpoints() {
+            return Stream.of(
+                    Arguments.of(Named.of("SYSTEM", USER_ID_SYSTEM)),
+                    Arguments.of(Named.of("ANONYMOUS", USER_ID_ANONYMOUS))
+            );
+        }
+
+        static Stream<Arguments> usersNotAllowedToCallModifyingGameFileEndpoints() {
+            return Stream.of(
+                    Arguments.of(Named.of("USER", USER_ID_USER)),
+                    Arguments.of(Named.of("VIEWER", USER_ID_VIEWER)),
+                    Arguments.of(Named.of("SYSTEM", USER_ID_SYSTEM)),
+                    Arguments.of(Named.of("ANONYMOUS", USER_ID_ANONYMOUS))
+            );
         }
     }
 
@@ -153,10 +209,10 @@ class GameFileControllerIT extends IntegrationTest {
 
         @SneakyThrows
         @Test
-        void givenGetDownloadStatusRequest_thenOkResponse() {
+        void givenGetExecutableDownloadStatusRequest_thenOkResponse() {
             given()
                     .header(authorizationHeader)
-                    .get("/game/files/download")
+                    .get("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("idle"));
@@ -164,20 +220,20 @@ class GameFileControllerIT extends IntegrationTest {
 
         @SneakyThrows
         @Test
-        void givenStartDownloadRequest_whenSuccess_thenOkResponseWithCorrectStatusAndHeader() {
+        void givenStartExecutableDownloadRequest_whenSuccess_thenOkResponseWithCorrectStatusAndHeader() {
             JSONObject json = new JSONObject().put("download_url", "https://test.com");
             given()
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game/files/download")
+                    .post("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(204)
-                    .header(HttpHeaders.LOCATION, Matchers.endsWith("/game/files/download"));
+                    .header(HttpHeaders.LOCATION, Matchers.endsWith("/game/files/executable/download"));
 
             given()
                     .header(authorizationHeader)
-                    .get("/game/files/download")
+                    .get("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("success"));
@@ -185,7 +241,7 @@ class GameFileControllerIT extends IntegrationTest {
             // Check that status is reset after
             given()
                     .header(authorizationHeader)
-                    .get("/game/files/download")
+                    .get("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("idle"));
@@ -193,18 +249,18 @@ class GameFileControllerIT extends IntegrationTest {
 
         @SneakyThrows
         @Test
-        void givenStartDownloadRequest_whenFail_thenOkResponseWithCorrectStatus() {
+        void givenStartExecutableDownloadRequest_whenFail_thenOkResponseWithCorrectStatus() {
             JSONObject json = new JSONObject().put("download_url", "https://test.com/fail");
             given()
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game/files/download")
+                    .post("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(204);
             given()
                     .header(authorizationHeader)
-                    .get("/game/files/download")
+                    .get("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("failed"));
@@ -212,7 +268,7 @@ class GameFileControllerIT extends IntegrationTest {
             // Check that status is reset after
             given()
                     .header(authorizationHeader)
-                    .get("/game/files/download")
+                    .get("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("idle"));
@@ -220,7 +276,7 @@ class GameFileControllerIT extends IntegrationTest {
 
         @SneakyThrows
         @Test
-        void givenStartDownloadRequest_thenStatusSwitchedCorrectly_andOkResponse() {
+        void givenStartExecutableDownloadRequest_thenStatusSwitchedCorrectly_andOkResponse() {
             CountDownLatch countDownLatch = new CountDownLatch(1);
             ((MockGameFileProcessor) gameFileProcessor).setCountDownLatch(countDownLatch);
 
@@ -229,12 +285,12 @@ class GameFileControllerIT extends IntegrationTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game/files/download")
+                    .post("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(204);
             given()
                     .header(authorizationHeader)
-                    .get("/game/files/download")
+                    .get("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("working"));
@@ -243,7 +299,7 @@ class GameFileControllerIT extends IntegrationTest {
 
             given()
                     .header(authorizationHeader)
-                    .get("/game/files/download")
+                    .get("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(200)
                     .body("status", equalTo("success"));
@@ -251,7 +307,7 @@ class GameFileControllerIT extends IntegrationTest {
 
         @SneakyThrows
         @Test
-        void givenStartDownloadRequest_whenGameProcessIsNotDown_thenBadRequestResponse() {
+        void givenStartExecutableDownloadRequest_whenGameProcessIsNotDown_thenBadRequestResponse() {
             when(gameProcessService.isDown()).thenReturn(false);
 
             JSONObject json = new JSONObject().put("download_url", "https://test.com");
@@ -259,7 +315,7 @@ class GameFileControllerIT extends IntegrationTest {
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game/files/download")
+                    .post("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(400)
                     .body("detail", is("Game files cannot be modified when game status is not DOWN"))
@@ -269,17 +325,112 @@ class GameFileControllerIT extends IntegrationTest {
         @SneakyThrows
         @ParameterizedTest
         @MethodSource("invalidDownloadUrlArgs")
-        void givenStartDownloadRequest_withInvalidParameters_thenBadRequestResponse(String downloadUrl) {
+        void givenStartExecutableDownloadRequest_withInvalidParameters_thenBadRequestResponse(String downloadUrl) {
             JSONObject json = new JSONObject().put("download_url", downloadUrl);
             given()
                     .header(authorizationHeader)
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json.toString())
-                    .post("/game/files/download")
+                    .post("/game/files/executable/download")
                     .then().assertThat()
                     .statusCode(400)
                     .body("detail", is("Invalid download URL"))
                     .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+        }
+
+        @Test
+        void givenGetExecutableMetadataRequest_thenOkResponse() {
+            given()
+                    .header(authorizationHeader)
+                    .get("/game/files/executable/meta")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .body("exists", equalTo(false));
+        }
+
+        @SneakyThrows
+        @Test
+        void givenGetConfigRequest_whenNotFound_thenNotFoundResponse() {
+            when(gameFileProcessor.readFile(any(), any())).thenThrow(new GameFileNotFoundException(""));
+            given()
+                    .header(authorizationHeader)
+                    .get("/game/files/config")
+                    .then().assertThat()
+                    .statusCode(404);
+        }
+
+        @SneakyThrows
+        @Test
+        void givenGetConfigRequest_whenFound_thenOkResponse() {
+            when(gameFileProcessor.readFile(any(), any())).thenReturn(List.of("config"));
+            given()
+                    .header(authorizationHeader)
+                    .get("/game/files/config")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .body("config", hasSize(1));
+        }
+
+        @SneakyThrows
+        @Test
+        void givenPutConfigRequest_thenAcceptedResponse() {
+            when(gameFileProcessor.readFile(any(), any())).thenReturn(List.of("updated-config"));
+            GameConfigUpdateRequest request = new GameConfigUpdateRequest();
+            request.setConfig("updated-config");
+            given()
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .header(authorizationHeader)
+                    .body(request)
+                    .put("/game/files/config")
+                    .then().assertThat()
+                    .statusCode(202)
+                    .body("config", hasSize(1));
+        }
+
+        @SneakyThrows
+        @Test
+        void givenPutIconRequest_whenFileIsNotPNG_thenBadRequestResponse() {
+            MultiPartSpecification file = new MultiPartSpecBuilder("File content".getBytes())
+                    .fileName("file.txt")
+                    .controlName("file")
+                    .mimeType("text/plain")
+                    .build();
+            given()
+                    .header(authorizationHeader)
+                    .multiPart(file)
+                    .put("/game/files/icon")
+                    .then().assertThat()
+                    .statusCode(400)
+                    .body("detail", equalTo("Provided file is not a PNG"));
+        }
+
+        @SneakyThrows
+        @Test
+        void givenPutIconRequest_whenFileIsEmpty_thenBadRequestResponse() {
+            MultiPartSpecification file = new MultiPartSpecBuilder("".getBytes()).build();
+            given()
+                    .header(authorizationHeader)
+                    .multiPart(file)
+                    .put("/game/files/icon")
+                    .then().assertThat()
+                    .statusCode(400)
+                    .body("detail", equalTo("Provided file is missing or invalid"));
+        }
+
+        @SneakyThrows
+        @Test
+        void givenPutIconRequest_thenAcceptedResponse() {
+            MultiPartSpecification file = new MultiPartSpecBuilder("File content".getBytes())
+                    .fileName("file.png")
+                    .controlName("file")
+                    .mimeType("image/png")
+                    .build();
+            given()
+                    .header(authorizationHeader)
+                    .multiPart(file)
+                    .put("/game/files/icon")
+                    .then().assertThat()
+                    .statusCode(202);
         }
 
         // todo synchronization tests
@@ -292,29 +443,6 @@ class GameFileControllerIT extends IntegrationTest {
 //                    Arguments.of(""),
 //                    Arguments.of(" ")
             );
-        }
-
-        @Test
-        void givenGetConfigRequest_thenOkResponse() {
-            given()
-                    .header(authorizationHeader)
-                    .get("/game/files/config")
-                    .then().assertThat()
-                    .statusCode(200)
-                    .body("config", hasSize(0));
-        }
-
-        @Test
-        void givenGetConfigRequest_whenFileNotFound_thenNotFoundResponse() {
-            doAnswer(invocationOnMock -> {
-                throw new GameFileNotFoundException("");
-            }).when((MockGameFileProcessor) gameFileProcessor).readFile(any(), any());
-            given()
-                    .header(authorizationHeader)
-                    .get("/game/files/config")
-                    .then().assertThat()
-                    .statusCode(404)
-                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
         }
     }
 
@@ -363,6 +491,16 @@ class GameFileControllerIT extends IntegrationTest {
         @Override
         public List<String> readFile(String pathToDir, String fileName) {
             return Collections.emptyList();
+        }
+
+        @Override
+        public void writeFile(String pathToDir, String filename, String fileContent) {
+            // noop
+        }
+
+        @Override
+        public void saveFile(String pathToDir, MultipartFile file) {
+            // noop
         }
     }
 }

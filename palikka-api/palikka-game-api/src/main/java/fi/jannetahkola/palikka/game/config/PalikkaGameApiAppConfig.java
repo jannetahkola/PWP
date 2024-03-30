@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.game.config;
 
+import fi.jannetahkola.palikka.core.api.exception.DelegatedAuthenticationEntryPoint;
 import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilterConfigurer;
 import fi.jannetahkola.palikka.core.auth.authenticator.JwtAuthenticationProvider;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
@@ -29,15 +30,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.socket.server.HandshakeHandler;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.Executor;
 
 @Configuration
 @EnableAsync
 @EnableWebSecurity
 @EnableMethodSecurity
-@EnableAuthenticationSupport
 @EnableRemoteUsersIntegration
+@EnableAuthenticationSupport
 @EnableRequestAndResponseLoggingSupport
 @EnableConfigurationProperties(GameProperties.class)
 public class PalikkaGameApiAppConfig {
@@ -45,7 +45,8 @@ public class PalikkaGameApiAppConfig {
     @SneakyThrows
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                            PalikkaAuthenticationFilterConfigurer authenticationFilterConfigurer) {
+                                            PalikkaAuthenticationFilterConfigurer authenticationFilterConfigurer,
+                                            DelegatedAuthenticationEntryPoint delegatedAuthenticationEntryPoint) {
         http
                 .sessionManagement(sessions -> sessions
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -56,6 +57,8 @@ public class PalikkaGameApiAppConfig {
                         // handler parameter. Not customized currently so returns JSON.
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint(delegatedAuthenticationEntryPoint))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
@@ -121,7 +124,7 @@ public class PalikkaGameApiAppConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
         corsConfiguration.setAllowedOriginPatterns(Collections.singletonList("*"));
-        corsConfiguration.setAllowedMethods(List.of("GET", "POST"));
+        corsConfiguration.setAllowedMethods(Collections.singletonList("*"));
         corsConfiguration.setAllowedHeaders(Collections.singletonList("*"));
         corsConfiguration.setAllowCredentials(true);
 

@@ -17,5 +17,5 @@ public class GameExecutableResponse {
     @JsonProperty("is_file") // "is" gets removed otherwise
     boolean isFile;
 
-    String fileSizeMB;
+    long fileSizeMB;
 }
