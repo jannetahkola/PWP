@@ -129,6 +129,7 @@ public class UserController {
 
         String salt = CryptoUtils.generateSalt();
         String hash = CryptoUtils.hash(userToPost.getPassword(), salt);
+        userToPost.setPassword(null);
 
         UserEntity userEntity = new UserEntity();
         userEntity.setUsername(userToPost.getUsername());
@@ -216,6 +217,7 @@ public class UserController {
             log.info("Updating password for user id '{}'", userEntity.getId());
             String salt = CryptoUtils.generateSalt();
             String hash = CryptoUtils.hash(userToPut.getPassword(), salt);
+            userToPut.setPassword(null);
             userEntity.setSalt(salt);
             userEntity.setPassword(hash);
         }

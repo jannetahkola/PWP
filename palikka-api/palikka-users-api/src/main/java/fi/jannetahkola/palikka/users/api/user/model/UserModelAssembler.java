@@ -24,7 +24,6 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
         UserModel userModel = UserModel.builder()
                 .id(entity.getId())
                 .username(entity.getUsername())
-                .password(entity.getPassword())
                 .active(entity.getActive())
                 .root(entity.getRoot())
                 .createdAt(entity.getCreatedAt())

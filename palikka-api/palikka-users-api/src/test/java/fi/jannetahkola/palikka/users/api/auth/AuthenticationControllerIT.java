@@ -187,7 +187,7 @@ class AuthenticationControllerIT extends IntegrationTest {
                                 new JSONObject()
                                         .put("username", "username")
                                         .put("active", true)),
-                        "password: must not be blank"
+                        "password: must not be null"
                 ),
                 Arguments.of(
                         Named.of(
@@ -196,7 +196,7 @@ class AuthenticationControllerIT extends IntegrationTest {
                                         .put("username", "username")
                                         .put("password", "")
                                         .put("active", true)),
-                        "password: must not be blank"
+                        "password: must be between"
                 ),
                 Arguments.of(
                         Named.of(
@@ -205,16 +205,16 @@ class AuthenticationControllerIT extends IntegrationTest {
                                         .put("username", "username")
                                         .put("password", "pass")
                                         .put("active", true)),
-                        "password: must match"
+                        "password: must be between"
                 ),
                 Arguments.of(
                         Named.of(
                                 "Invalid password - too long",
                                 new JSONObject()
                                         .put("username", "username")
-                                        .put("password", "passwordpasswordpassword")
+                                        .put("password", "passwordpasswordpasswordpassword")
                                         .put("active", true)),
-                        "password: must match"
+                        "password: must be between"
                 ),
                 Arguments.of(
                         Named.of(
@@ -223,7 +223,7 @@ class AuthenticationControllerIT extends IntegrationTest {
                                         .put("username", "username")
                                         .put("password", "password ")
                                         .put("active", true)),
-                        "password: must match"
+                        "password: must not contain whitespaces"
                 )
         );
     }

@@ -378,7 +378,7 @@ class UserControllerIT extends IntegrationTest {
             UserEntity createdUser = userRepository.findById(expectedUserId).orElseThrow();
             String salt = createdUser.getSalt();
             String expectedPassword = createdUser.getPassword();
-            assertThat(CryptoUtils.validatePassword("mock-pass", salt, expectedPassword)).isTrue();
+            assertThat(CryptoUtils.validatePassword("mock-pass".toCharArray(), salt, expectedPassword)).isTrue();
         }
 
         @ParameterizedTest
@@ -447,7 +447,7 @@ class UserControllerIT extends IntegrationTest {
             UserEntity updatedUser = userRepository.findById(USER_ID_USER).orElseThrow();
             String salt = updatedUser.getSalt();
             String expectedPassword = updatedUser.getPassword();
-            assertThat(CryptoUtils.validatePassword("new-pass", salt, expectedPassword)).isTrue();
+            assertThat(CryptoUtils.validatePassword("new-pass".toCharArray(), salt, expectedPassword)).isTrue();
         }
 
         @SneakyThrows
@@ -632,7 +632,7 @@ class UserControllerIT extends IntegrationTest {
                                     new JSONObject()
                                             .put("username", "username")
                                             .put("active", true)),
-                            "password: must not be blank"
+                            "password: must not be null"
                     ),
                     Arguments.of(
                             Named.of(
@@ -641,7 +641,7 @@ class UserControllerIT extends IntegrationTest {
                                             .put("username", "username")
                                             .put("password", "")
                                             .put("active", true)),
-                            "password: must not be blank"
+                            "password: must be between"
                     ),
                     Arguments.of(
                             Named.of(
@@ -650,16 +650,16 @@ class UserControllerIT extends IntegrationTest {
                                             .put("username", "username")
                                             .put("password", "pass")
                                             .put("active", true)),
-                            "password: must match"
+                            "password: must be between"
                     ),
                     Arguments.of(
                             Named.of(
                                     "Invalid password - too long",
                                     new JSONObject()
                                             .put("username", "username")
-                                            .put("password", "passwordpasswordpassword")
+                                            .put("password", "passwordpasswordpasswordpassword")
                                             .put("active", true)),
-                            "password: must match"
+                            "password: must be between"
                     ),
                     Arguments.of(
                             Named.of(
@@ -668,7 +668,7 @@ class UserControllerIT extends IntegrationTest {
                                             .put("username", "username")
                                             .put("password", "password ")
                                             .put("active", true)),
-                            "password: must match"
+                            "password: must not contain whitespaces"
                     ),
                     Arguments.of(
                             Named.of(

@@ -12,6 +12,7 @@ import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
 import fi.jannetahkola.palikka.users.exception.UsersLoginFailedException;
 import fi.jannetahkola.palikka.users.util.CryptoUtils;
+import fi.jannetahkola.palikka.users.validation.Password;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -141,7 +142,9 @@ public class AuthenticationController {
 
     private static Predicate<UserEntity> passwordMatches(LoginRequest loginRequest) {
         return user -> {
-            if (!CryptoUtils.validatePassword(loginRequest.getPassword(), user.getSalt(), user.getPassword())) {
+            boolean valid = CryptoUtils.validatePassword(loginRequest.getPassword(), user.getSalt(), user.getPassword());
+            loginRequest.setPassword(null);
+            if (!valid) {
                 log.debug("Invalid password provided, username={}", loginRequest.getUsername());
                 return false;
             }
@@ -187,8 +190,7 @@ public class AuthenticationController {
         String username;
 
         @Schema(description = "Password of the user")
-        @NotBlank
-        @Pattern(regexp = "^[^\\s]{6,20}$")
-        String password;
+        @Password
+        char[] password;
     }
 }

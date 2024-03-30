@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import fi.jannetahkola.palikka.users.validation.Password;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -35,10 +36,9 @@ public class UserModel extends RepresentationModel<UserModel> {
     String username;
 
     @Schema(description = "Password of the user. Required when creating a user")
-    @NotBlank(groups = PostGroup.class)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Pattern(regexp = "^[^\\s]{6,20}$", groups = {PostGroup.class, PutGroup.class})
-    String password;
+    @Password(groups = {PostGroup.class, PutGroup.class})
+    char[] password;
 
     @Schema(description = "Whether the user is active, i.e. they can log in. Required when creating a user")
     @NotNull(groups = {PostGroup.class})
