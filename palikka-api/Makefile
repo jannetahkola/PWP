@@ -3,7 +3,7 @@ test=1
 build:
 	chmod +x ./mvnw
 ifeq ($(test),1)
-	./mvnw clean verify
+	./mvnw clean package
 else
 	./mvnw clean package -DskipTests
 endif
@@ -18,9 +18,12 @@ docker-run:
 docker-kill:
 	docker-compose down --remove-orphans
 
-reset-data:
-	docker volume rm palikka-api_postgres
-	docker volume rm palikka-api_redis
+docker-logs:
+	docker-compose logs -f
+
+docker-reset:
+	- docker-compose down --remove-orphans
+	- docker volume rm $(shell docker volume ls -q)
 
 init-data:
 	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/reset.sql
