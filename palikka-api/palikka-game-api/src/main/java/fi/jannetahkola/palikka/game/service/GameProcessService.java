@@ -24,10 +24,11 @@ import java.util.function.Consumer;
 @Service
 @RequiredArgsConstructor
 public class GameProcessService {
-    // These are static so old listeners are kept, and we don't have to resubscribe the WS controller again.
-    private static final List<Consumer<String>> GAME_PROCESS_INPUT_LISTENERS = new ArrayList<>();
-    private static final List<Consumer<String>> GAME_PROCESS_LIFECYCLE_LISTENERS = new ArrayList<>();
     private static final GameProcessLogger GAME_PROCESS_LOGGER = new GameProcessLogger();
+
+    // Re-subscription needed if this bean is created again
+    private final List<Consumer<String>> gameProcessInputListeners = new ArrayList<>();
+    private final List<Consumer<String>> gameProcessLifecycleListeners = new ArrayList<>();
 
     private final AtomicReference<GameProcessStatus> gameProcessStatus = new AtomicReference<>(GameProcessStatus.DOWN);
     private final BlockingQueue<String> outputQueue = new LinkedBlockingQueue<>();
@@ -179,11 +180,11 @@ public class GameProcessService {
     }
 
     public void registerInputListener(Consumer<String> listener) {
-        GAME_PROCESS_INPUT_LISTENERS.add(listener);
+        gameProcessInputListeners.add(listener);
     }
 
     public void registerLifecycleListener(Consumer<String> listener) {
-        GAME_PROCESS_LIFECYCLE_LISTENERS.add(listener);
+        gameProcessLifecycleListeners.add(listener);
     }
 
     public enum GameProcessStatus {
@@ -216,14 +217,14 @@ public class GameProcessService {
     private void setStatusAndPublish(GameProcessStatus newStatus) {
         GameProcessStatus currentStatus = gameProcessStatus.updateAndGet(oldStatus -> newStatus);
         log.info("Set game process status={}", currentStatus);
-        GAME_PROCESS_LIFECYCLE_LISTENERS.forEach(listener ->
+        gameProcessLifecycleListeners.forEach(listener ->
                 CompletableFuture.runAsync(() -> listener.accept(currentStatus.getValue())));
     }
 
     private void storeInputAndPublish(String input) {
         GAME_PROCESS_LOGGER.log(input);
         inputList.add(input);
-        GAME_PROCESS_INPUT_LISTENERS.forEach(listener ->
+        gameProcessInputListeners.forEach(listener ->
                 // Publish to listeners asynchronously to be safe
                 // todo may mess up the ordering, use another thread maybe
                 CompletableFuture.runAsync(() -> listener.accept(input)));
