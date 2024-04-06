@@ -26,7 +26,7 @@ docker-reset:
 	- docker volume rm $(shell docker volume ls -q)
 
 init-data:
-	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/reset.sql
-	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/seed_privileges.sql
-	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/seed_roles.sql
-	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/seed_users.sql
+	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/users/truncate_data.sql
+	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/users/seed_privileges.sql
+	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/users/seed_roles.sql
+	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/users/seed_users.sql
