@@ -203,7 +203,7 @@ class RolePrivilegeControllerIT extends IntegrationTest {
                     .toObject(new TypeReferences.EntityModelType<>() {});
             assertThat(roleCollectionModel).isNotNull();
             assertThat(roleCollectionModel.getContent()).isNotNull();
-            Set<Privilege> privileges = roleCollectionModel.getContent().getPrivileges().orElseThrow();
+            Set<Privilege> privileges = roleCollectionModel.getContent().getPrivileges();
             assertThat(privileges.stream().anyMatch(privilege -> privilege.getId().equals(newPrivilegeId))).isTrue();
             assertThat(privileges.stream().noneMatch(privilege -> privilege.getId().equals(existingPrivilegeId))).isTrue();
 

@@ -63,10 +63,9 @@ public class UserJwtAuthenticator implements JwtAuthenticator {
         List<GrantedAuthority> authorities = new ArrayList<>();
         userRoles.forEach(role -> {
             authorities.add(new SimpleGrantedAuthority(role.getName()));
-            role.getPrivileges().ifPresent(privileges ->
-                    privileges.forEach(privilege ->
-                            authorities.add(new SimpleGrantedAuthority(
-                                    privilege.getDomain() + "_" + privilege.getName()))));
+            role.getPrivileges().forEach(privilege ->
+                    authorities.add(new SimpleGrantedAuthority(
+                            privilege.getDomain() + "_" + privilege.getName())));
         });
 
         PalikkaPrincipal principal = new PalikkaPrincipal(userId, user.getUsername());

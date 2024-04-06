@@ -1,12 +1,19 @@
 package fi.jannetahkola.palikka.game.util;
 
+import fi.jannetahkola.palikka.core.integration.users.Role;
+import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import fi.jannetahkola.palikka.game.api.game.model.GameOutputMessage;
 import jakarta.annotation.Nonnull;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import java.util.Collection;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @UtilityClass
@@ -41,7 +48,7 @@ public class GameCommandUtil {
     }
 
     /**
-     * Authorizes the current authentication token for the given command by the token's authorities. To be
+     * Authorizes the current authentication token for the given command by the user's authorities. To be
      * authorized, the token must have a COMMAND_ prefixed authority matching the command, and the
      * command must be normalized.
      * <br>
@@ -55,12 +62,22 @@ public class GameCommandUtil {
      * GameCommandUtil.authorizeCommand(authentication, "weather") // -> false
      * }</pre>
      *
+     * @param usersClient User integration client implementations
      * @param authentication Current authentication
      * @param normalizedCommand The normalized command to authorize
      * @return True if authorized, false otherwise
      */
-    public boolean authorizeCommand(Authentication authentication, String normalizedCommand) {
-        return authentication.getAuthorities().stream()
+    public boolean authorizeCommand(UsersClient usersClient,
+                                    Authentication authentication,
+                                    String normalizedCommand) {
+        Collection<Role> userRoles = usersClient.getUserRoles(Integer.valueOf(authentication.getName()));
+        Set<GrantedAuthority> userPrivileges = userRoles.stream()
+                .map(role -> role.getPrivileges().stream()
+                        .map(privilege -> new SimpleGrantedAuthority(privilege.getDomain() + "_" + privilege.getName()))
+                        .collect(Collectors.toSet()))
+                .flatMap(Set::stream)
+                .collect(Collectors.toSet());
+        return userPrivileges.stream()
                 .filter(grantedAuthority -> grantedAuthority.getAuthority().startsWith(COMMAND_AUTHORITY_PREFIX))
                 .anyMatch(grantedAuthority -> {
                     // Use substring() since we know the index from the prefix, and it's faster than split()

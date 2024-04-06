@@ -9,7 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.Optional;
+import java.util.HashSet;
 import java.util.Set;
 
 @Data
@@ -25,9 +25,5 @@ public class Role {
     private String name;
 
     @Valid
-    private Set<Privilege> privileges;
-
-    public Optional<Set<Privilege>> getPrivileges() {
-        return privileges != null ? Optional.of(privileges) : Optional.empty();
-    }
+    private Set<Privilege> privileges = new HashSet<>();
 }

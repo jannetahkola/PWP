@@ -76,7 +76,7 @@ class RemoteUsersClientIT {
     }
 
     @Test
-    void givenGetUserRequest_thenNotFoundResponse(CapturedOutput capturedOutput) {
+    void givenGetUserRequest_whenUserNotFound_thenNullObjectReturned(CapturedOutput capturedOutput) {
         stubForUsersOkResponse();
         stubForUserNotFoundResponse();
 
@@ -85,7 +85,7 @@ class RemoteUsersClientIT {
     }
 
     @Test
-    void givenGetUserRequest_whenInvalidResponseBody_thenError(CapturedOutput capturedOutput) {
+    void givenGetUserRequest_whenInvalidResponseBody_thenNullObjectReturned(CapturedOutput capturedOutput) {
         stubForUsersOkResponse();
         wireMockServer.stubFor(
                 get(urlMatching("/users-api/users/1"))
@@ -114,7 +114,7 @@ class RemoteUsersClientIT {
         assertThat(role.getName()).isNotNull();
         assertThat(role.getPrivileges()).isNotEmpty();
 
-        role.getPrivileges().orElseThrow().forEach(privilege -> {
+        role.getPrivileges().forEach(privilege -> {
             assertThat(privilege.getId()).isNotNull();
             assertThat(privilege.getDomain()).isNotNull();
             assertThat(privilege.getName()).isNotNull();
@@ -122,7 +122,7 @@ class RemoteUsersClientIT {
     }
 
     @Test
-    void givenGetUserRolesRequest_whenUserNotFound_thenSomething(CapturedOutput capturedOutput) {
+    void givenGetUserRolesRequest_whenUserNotFound_thenEmptyCollectionReturned(CapturedOutput capturedOutput) {
         stubForUsersOkResponse();
         stubForUserNotFoundResponse();
         stubForUserRolesOkResponse();
@@ -131,6 +131,24 @@ class RemoteUsersClientIT {
         assertThat(userRoles).isEmpty();
         assertThat(capturedOutput.getAll()).contains(
                 "java.lang.IllegalStateException: Expected to find link with rel 'roles' in response");
+    }
+
+    @Test
+    void givenGetUserRolesRequest_whenResponseInvalid_thenEmptyCollectionReturned(CapturedOutput capturedOutput) {
+        stubForUsersOkResponse();
+        stubForUserOkResponse();
+        wireMockServer.stubFor(
+                get(urlMatching("/users-api/users/1/roles"))
+                        .willReturn(
+                                aResponse()
+                                        .withStatus(200)
+                                        .withBodyFile("user_roles_ok_invalid.json")
+                                        .withHeader(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE)));
+
+        Collection<Role> userRoles = usersClient.getUserRoles(1);
+        assertThat(userRoles).isEmpty();
+        assertThat(capturedOutput.getAll()).contains(
+                "response has constraint violations");
     }
 
     static void stubForUsersOkResponse() {

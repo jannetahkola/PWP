@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.game.api.game;
 
+import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import fi.jannetahkola.palikka.game.api.game.model.GameLifecycleMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameLogMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameOutputMessage;
@@ -49,6 +50,7 @@ public class GameController {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final GameProcessService gameProcessService;
+    private final UsersClient usersClient;
 
     static {
         try (var validatorFactory = Validation.buildDefaultValidatorFactory()) {
@@ -123,7 +125,7 @@ public class GameController {
 
         String normalizedCommand = GameCommandUtil.normalizeCommand(msg.getData());
 
-        if (!GameCommandUtil.authorizeCommand(authentication, normalizedCommand)) {
+        if (!GameCommandUtil.authorizeCommand(usersClient, authentication, normalizedCommand)) {
             log.debug("Access denied to command={}", msg.getData());
             GameUserReplyMessage reply = GameUserReplyMessage.builder()
                     .typ(GameUserReplyMessage.Type.ERROR)

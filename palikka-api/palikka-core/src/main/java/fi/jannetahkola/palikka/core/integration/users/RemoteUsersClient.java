@@ -19,6 +19,7 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.springframework.hateoas.client.Hop.rel;
 
@@ -100,14 +101,24 @@ public class RemoteUsersClient implements UsersClient {
             if (roleCollectionModel == null) return Collections.emptyList();
 
             Collection<Role> roleCollection = roleCollectionModel.getContent();
-            Set<ConstraintViolation<Collection<Role>>> violations = VALIDATOR.validate(roleCollection);
 
-            if (violations.isEmpty()) {
+            // todo figure out why validation doesn't work here for nested collections
+            Set<ConstraintViolation<Collection<Role>>> roleViolations = VALIDATOR.validate(roleCollection);
+            Set<ConstraintViolation<Privilege>> privilegeViolations = roleCollection.stream()
+                    .map(role -> role.getPrivileges().stream()
+                            .map(privilege -> VALIDATOR.validate(privilege))
+                            .flatMap(Collection::stream)
+                            .collect(Collectors.toSet()))
+                    .flatMap(Set::stream)
+                    .collect(Collectors.toSet());
+
+            if (roleViolations.isEmpty() && privilegeViolations.isEmpty()) {
                 log.debug("<< GET user roles - ok");
                 return roleCollection;
             }
 
-            log.warn("<< GET user roles - response has constraint violations={}", violations);
+            log.warn("<< GET user roles - response has constraint violations, " +
+                    "roles={}, privileges={}", roleViolations, privilegeViolations);
         } catch (Exception e) {
             log.error("<< GET user roles - request failed on exception", e);
         }
