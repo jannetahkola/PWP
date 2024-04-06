@@ -29,7 +29,7 @@ class UserControllerIT extends IntegrationTest {
         @Test
         void givenGetUserRequest_whenSystemToken_thenOkResponse() {
             given()
-                    .header(newSystemToken())
+                    .header(newSystemBearerTokenHeader())
                     .get("/users/" + USER_ID_ADMIN)
                     .then().assertThat()
                     .statusCode(200);
@@ -91,7 +91,7 @@ class UserControllerIT extends IntegrationTest {
         @MethodSource("usersWithRolesAllowedToGetUsers")
         void givenGetUsersRequest_whenAllowedRole_thenOkResponse(Integer user) {
             given()
-                    .header(user == -1 ? newSystemToken() : newToken(user))
+                    .header(user == -1 ? newSystemBearerTokenHeader() : newBearerTokenHeader(user))
                     .get("/users")
                     .then().assertThat()
                     .statusCode(200)
@@ -101,22 +101,25 @@ class UserControllerIT extends IntegrationTest {
         static Stream<Arguments> usersWithRolesAllowedToGetUsers() {
             return Stream.of(
                     Arguments.of(Named.of("ADMIN", 1)),
-                    Arguments.of(Named.of("USER", 2)),
-                    Arguments.of(Named.of("VIEWER", 3)),
                     Arguments.of(Named.of("SYSTEM", -1))
             );
         }
 
-        @Test
-        void givenGetUsersRequest_whenLimited_thenResultsFiltered_andOkResponse() {
+        @ParameterizedTest
+        @MethodSource("usersWithRolesNotAllowedToGetUsers")
+        void givenGetUsersRequest_whenNoAllowedRole_thenForbiddenResponse(Integer user) {
             given()
-                    .header(newUserToken())
+                    .header(newBearerTokenHeader(user))
                     .get("/users")
                     .then().assertThat()
-                    .statusCode(200)
-                    .body("_embedded.users", hasSize(1))
-                    .body("_embedded.users[0].id", equalTo(2))
-                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
+                    .statusCode(403);
+        }
+
+        static Stream<Arguments> usersWithRolesNotAllowedToGetUsers() {
+            return Stream.of(
+                    Arguments.of(Named.of("USER", 2)),
+                    Arguments.of(Named.of("VIEWER", 3))
+            );
         }
 
         @SneakyThrows
@@ -164,7 +167,7 @@ class UserControllerIT extends IntegrationTest {
                     .body("detail", equalTo("Access Denied"))
                     .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
             given()
-                    .header(newSystemToken())
+                    .header(newSystemBearerTokenHeader())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
                     .post("/users")
@@ -219,7 +222,7 @@ class UserControllerIT extends IntegrationTest {
                     .body("detail", equalTo("Access Denied"))
                     .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
             given()
-                    .header(newSystemToken())
+                    .header(newSystemBearerTokenHeader())
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(json)
                     .put("/users/" + USER_ID_ADMIN)

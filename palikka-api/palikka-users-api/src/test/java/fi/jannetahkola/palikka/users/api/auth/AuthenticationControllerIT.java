@@ -116,7 +116,7 @@ class AuthenticationControllerIT extends IntegrationTest {
     @Test
     void givenLogoutRequest_withSystemToken_thenForbiddenResponse() {
         given()
-                .header(newSystemToken())
+                .header(newSystemBearerTokenHeader())
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
                 .post("/auth/logout")
                 .then().assertThat()

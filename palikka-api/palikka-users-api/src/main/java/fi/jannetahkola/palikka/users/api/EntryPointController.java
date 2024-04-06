@@ -30,7 +30,7 @@ public class EntryPointController {
                 .body(new RepresentationModel<>().add(
                         linkTo(methodOn(EntryPointController.class).getLinks())
                                 .withSelfRel(),
-                        linkTo(methodOn(UserController.class).getUsers(null))
+                        linkTo(methodOn(UserController.class).getUsers())
                                 .withRel("users"),
                         linkTo(methodOn(CurrentUserController.class).getCurrentUser(null))
                                 .withRel("current_user")

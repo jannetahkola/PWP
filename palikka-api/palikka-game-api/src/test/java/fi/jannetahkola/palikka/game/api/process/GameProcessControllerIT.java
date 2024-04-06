@@ -1,6 +1,5 @@
 package fi.jannetahkola.palikka.game.api.process;
 
-import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import fi.jannetahkola.palikka.game.testutils.GameProcessIntegrationTest;
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
@@ -43,9 +41,6 @@ import static org.hamcrest.Matchers.equalTo;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ActiveProfiles("test")
 class GameProcessControllerIT extends GameProcessIntegrationTest {
-    @Autowired
-    TestTokenUtils tokens;
-
     Header authorizationHeader;
 
     @BeforeEach
@@ -65,7 +60,7 @@ class GameProcessControllerIT extends GameProcessIntegrationTest {
         @BeforeEach
         void beforeEach() {
             stubForNormalUser(wireMockServer);
-            authorizationHeader = new Header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(2));
+            authorizationHeader = new Header(HttpHeaders.AUTHORIZATION, "Bearer " + testTokenGenerator.generateToken(2));
         }
 
         @Test
@@ -107,7 +102,7 @@ class GameProcessControllerIT extends GameProcessIntegrationTest {
         @BeforeEach
         void beforeEach() {
             stubForAdminUser(wireMockServer);
-            authorizationHeader = new Header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(1));
+            authorizationHeader = new Header(HttpHeaders.AUTHORIZATION, testTokenGenerator.generateBearerToken(1));
         }
 
         @Test

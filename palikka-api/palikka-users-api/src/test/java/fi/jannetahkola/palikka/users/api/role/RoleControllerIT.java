@@ -71,7 +71,7 @@ class RoleControllerIT extends IntegrationTest {
         @MethodSource("usersWithRolesAllowedToGetRoles")
         void givenGetRolesRequest_whenAllowedRole_andOkResponse(Integer user, Integer roleId) {
             given()
-                    .header(newToken(user))
+                    .header(newBearerTokenHeader(user))
                     .get("/roles")
                     .then().assertThat()
                     .statusCode(200)

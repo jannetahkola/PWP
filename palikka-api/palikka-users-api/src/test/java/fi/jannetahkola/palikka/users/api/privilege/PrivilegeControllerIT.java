@@ -33,7 +33,7 @@ class PrivilegeControllerIT extends IntegrationTest {
         @Test
         void givenGetPrivilegesRequest_whenSystemToken_thenForbiddenResponse() {
             given()
-                    .header(newSystemToken())
+                    .header(newSystemBearerTokenHeader())
                     .get("/privileges")
                     .then().assertThat()
                     .statusCode(403)
@@ -45,7 +45,7 @@ class PrivilegeControllerIT extends IntegrationTest {
         @MethodSource("usersWithRolesAllowedToGetPrivileges")
         void givenGetPrivilegesRequest_whenAllowedRole_thenOkResponse(Integer user) {
             given()
-                    .header(newToken(user))
+                    .header(newBearerTokenHeader(user))
                     .get("/privileges")
                     .then().assertThat()
                     .statusCode(200)

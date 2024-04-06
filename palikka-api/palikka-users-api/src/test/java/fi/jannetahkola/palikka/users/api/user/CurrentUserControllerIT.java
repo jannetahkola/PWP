@@ -33,7 +33,7 @@ class CurrentUserControllerIT extends IntegrationTest {
         @Test
         void givenGetCurrentUserRequest_whenSystemToken_thenForbiddenResponse() {
             given()
-                    .header(newSystemToken())
+                    .header(newSystemBearerTokenHeader())
                     .get("/current-user")
                     .then().assertThat()
                     .statusCode(403)
@@ -45,7 +45,7 @@ class CurrentUserControllerIT extends IntegrationTest {
         @MethodSource("userParams")
         void givenGetCurrentUserRequest_whenAnyRole_thenOkResponse(Integer user) {
             given()
-                    .header(newToken(user))
+                    .header(newBearerTokenHeader(user))
                     .get("/current-user")
                     .then().assertThat()
                     .statusCode(200)

@@ -52,7 +52,7 @@ class RolePrivilegeControllerIT extends IntegrationTest {
                     .then().assertThat()
                     .statusCode(200);
             given()
-                    .header(newSystemToken())
+                    .header(newSystemBearerTokenHeader())
                     .get("/roles/3/privileges")
                     .then().assertThat()
                     .statusCode(200);
@@ -63,7 +63,7 @@ class RolePrivilegeControllerIT extends IntegrationTest {
         void givenGetRolePrivilegesRequest_whenLimitedRole_andRequestedForOwnRole_thenOkResponse(Integer user,
                                                                                                  Integer ownRoleId) {
             given()
-                    .header(newToken(user))
+                    .header(newBearerTokenHeader(user))
                     .get("/roles/" + ownRoleId + "/privileges")
                     .then().assertThat()
                     .statusCode(200);
@@ -81,7 +81,7 @@ class RolePrivilegeControllerIT extends IntegrationTest {
         void givenGetRolePrivilegesRequest_whenLimitedRole_andNotRequestedForOwnRole_thenForbiddenResponse(Integer user,
                                                                                                            Integer notOwnRoleId) {
             given()
-                    .header(newToken(user))
+                    .header(newBearerTokenHeader(user))
                     .get("/roles/" + notOwnRoleId + "/privileges")
                     .then().assertThat()
                     .statusCode(403)
@@ -123,7 +123,7 @@ class RolePrivilegeControllerIT extends IntegrationTest {
                                     .privilegeId(1).build())
                     .build();
             given()
-                    .header(newToken(user))
+                    .header(newBearerTokenHeader(user))
                     .contentType(MediaType.APPLICATION_JSON_VALUE)
                     .body(patch)
                     .patch("/roles/1/privileges")
@@ -194,7 +194,7 @@ class RolePrivilegeControllerIT extends IntegrationTest {
 
             URI baseUri = URI.create(RestAssured.baseURI + ":" + RestAssured.port).resolve("/users-api/roles");
             HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.setBearerAuth(tokens.generateToken(USER_ID_ADMIN));
+            httpHeaders.setBearerAuth(testTokenGenerator.generateToken(USER_ID_ADMIN));
 
             Traverson traverson = new Traverson(baseUri, MediaTypes.HAL_JSON);
             EntityModel<Role> roleCollectionModel = traverson

@@ -5,6 +5,7 @@ import fi.jannetahkola.palikka.core.auth.data.RevokedTokenRepository;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.config.AuthenticationConfig;
 import fi.jannetahkola.palikka.core.config.JwtConfig;
+import fi.jannetahkola.palikka.core.config.RedisConfig;
 import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import org.springframework.context.annotation.Import;
 
@@ -24,6 +25,7 @@ import java.lang.annotation.*;
 @Documented
 @Import({
         JwtConfig.class,
+        RedisConfig.class,
         AuthenticationConfig.class
 })
 public @interface EnableAuthenticationSupport {

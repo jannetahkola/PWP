@@ -49,16 +49,9 @@ public class UserController {
 
     @Operation(summary = "Get all users")
     @GetMapping(produces = {MediaTypes.HAL_JSON_VALUE, MediaTypes.HAL_FORMS_JSON_VALUE})
-    @PreAuthorize("hasAnyRole('ROLE_SYSTEM', 'ROLE_ADMIN', 'ROLE_USER', 'ROLE_VIEWER')")
-    public ResponseEntity<CollectionModel<UserModel>> getUsers(Authentication authentication) {
-        List<UserEntity> users;
-        if (AuthorizationUtil.hasAnyAuthority(authentication,  "ROLE_SYSTEM", "ROLE_ADMIN")) {
-            users = userRepository.findAll();
-        } else {
-            users = userRepository
-                    .findById(Integer.valueOf(authentication.getName())).stream()
-                    .toList();
-        }
+    @PreAuthorize("hasAnyRole('ROLE_SYSTEM', 'ROLE_ADMIN')")
+    public ResponseEntity<CollectionModel<UserModel>> getUsers() {
+        List<UserEntity> users = userRepository.findAll();
         return ResponseEntity
                 .ok(userModelAssembler.toCollectionModel(users));
     }

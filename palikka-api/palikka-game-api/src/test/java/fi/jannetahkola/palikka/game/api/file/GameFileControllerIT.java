@@ -1,11 +1,11 @@
 package fi.jannetahkola.palikka.game.api.file;
 
+import fi.jannetahkola.palikka.core.testutils.token.TestTokenGenerator;
 import fi.jannetahkola.palikka.game.api.file.model.GameConfigUpdateRequest;
 import fi.jannetahkola.palikka.game.exception.GameFileNotFoundException;
 import fi.jannetahkola.palikka.game.service.GameFileProcessor;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
 import fi.jannetahkola.palikka.game.testutils.IntegrationTest;
-import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import io.restassured.RestAssured;
 import io.restassured.builder.MultiPartSpecBuilder;
 import io.restassured.http.Header;
@@ -53,8 +53,6 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles("test")
 @Import(GameFileControllerIT.GameFileControllerTestConfiguration.class)
 class GameFileControllerIT extends IntegrationTest {
-    @Autowired
-    TestTokenUtils tokens;
 
     @BeforeEach
     void beforeEach(@LocalServerPort int localServerPort) {
@@ -74,7 +72,7 @@ class GameFileControllerIT extends IntegrationTest {
         @MethodSource("usersNotAllowedToCallModifyingGameFileEndpoints")
         void givenGetExecutableDownloadStatusRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
             RequestSpecification requestSpec = given();
-            setupRequestAuthentication(requestSpec, user, tokens);
+            setupRequestAuthentication(requestSpec, user, testTokenGenerator);
             requestSpec
                     .get("/game/files/executable/download")
                     .then().assertThat()
@@ -86,7 +84,7 @@ class GameFileControllerIT extends IntegrationTest {
         @MethodSource("usersNotAllowedToCallModifyingGameFileEndpoints")
         void givenStartExecutableDownloadRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
             RequestSpecification requestSpec = given();
-            setupRequestAuthentication(requestSpec, user, tokens);
+            setupRequestAuthentication(requestSpec, user, testTokenGenerator);
             JSONObject json = new JSONObject().put("download_url", "https://test.com");
             requestSpec
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -100,7 +98,7 @@ class GameFileControllerIT extends IntegrationTest {
         @MethodSource("usersNotAllowedToCallNonModifyingGameFileEndpoints")
         void givenGetExecutableMetadataRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
             RequestSpecification requestSpec = given();
-            setupRequestAuthentication(requestSpec, user, tokens);
+            setupRequestAuthentication(requestSpec, user, testTokenGenerator);
             requestSpec
                     .get("/game/files/executable/meta")
                     .then().assertThat()
@@ -111,7 +109,7 @@ class GameFileControllerIT extends IntegrationTest {
         @MethodSource("usersNotAllowedToCallNonModifyingGameFileEndpoints")
         void givenGetConfigRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
             RequestSpecification requestSpec = given();
-            setupRequestAuthentication(requestSpec, user, tokens);
+            setupRequestAuthentication(requestSpec, user, testTokenGenerator);
             requestSpec
                     .get("/game/files/config")
                     .then().assertThat()
@@ -122,7 +120,7 @@ class GameFileControllerIT extends IntegrationTest {
         @MethodSource("usersNotAllowedToCallModifyingGameFileEndpoints")
         void givenPutConfigRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
             RequestSpecification requestSpec = given();
-            setupRequestAuthentication(requestSpec, user, tokens);
+            setupRequestAuthentication(requestSpec, user, testTokenGenerator);
             GameConfigUpdateRequest request = new GameConfigUpdateRequest();
             request.setConfig("config");
             requestSpec
@@ -137,7 +135,7 @@ class GameFileControllerIT extends IntegrationTest {
         @MethodSource("usersNotAllowedToCallModifyingGameFileEndpoints")
         void givenPutIconRequest_whenNoTokenOrRole_thenForbiddenResponse(Integer user) {
             RequestSpecification requestSpec = given();
-            setupRequestAuthentication(requestSpec, user, tokens);
+            setupRequestAuthentication(requestSpec, user, testTokenGenerator);
             MultiPartSpecification file = new MultiPartSpecBuilder("File content".getBytes())
                     .fileName("file.txt")
                     .controlName("file")
@@ -150,12 +148,12 @@ class GameFileControllerIT extends IntegrationTest {
                     .statusCode(403);
         }
 
-        static void setupRequestAuthentication(RequestSpecification requestSpecification, Integer user, TestTokenUtils tokens) {
+        static void setupRequestAuthentication(RequestSpecification requestSpecification, Integer user, TestTokenGenerator tokens) {
             if (user > USER_ID_SYSTEM) {
                 stubForUser(user, wireMockServer);
-                requestSpecification.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(user));
+                requestSpecification.header(HttpHeaders.AUTHORIZATION, tokens.generateBearerToken(user));
             } else if (user == USER_ID_SYSTEM) {
-                requestSpecification.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateSystemToken());
+                requestSpecification.header(HttpHeaders.AUTHORIZATION, tokens.generateBearerSystemToken());
             }
         }
 
@@ -190,7 +188,7 @@ class GameFileControllerIT extends IntegrationTest {
         @BeforeEach
         void beforeEach() {
             stubForAdminUser(wireMockServer);
-            authorizationHeader = new Header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(1));
+            authorizationHeader = new Header(HttpHeaders.AUTHORIZATION, testTokenGenerator.generateBearerToken(1));
 
             MockGameFileProcessor gameFileProcessorMock = (MockGameFileProcessor) gameFileProcessor;
             when(gameFileProcessorMock.readFile(any(), any())).thenCallRealMethod();

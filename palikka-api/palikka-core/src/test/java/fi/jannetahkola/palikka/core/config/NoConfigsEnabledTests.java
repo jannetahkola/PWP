@@ -13,6 +13,8 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
@@ -42,7 +44,11 @@ class NoConfigsEnabledTests {
         assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
                 .isThrownBy(() -> context.getBean(LoggingFilter.class));
 
-        // redis - connection factory is still autoconfigured because starter dependency is in the classpath
+        // redis
+        assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
+                .isThrownBy(() -> context.getBean(RedisTemplate.class));
+        assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
+                .isThrownBy(() -> context.getBean(LettuceConnectionFactory.class));
         assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
                 .isThrownBy(() -> context.getBean(RevokedTokenRepository.class));
     }

@@ -14,7 +14,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 
 @EnableRedisRepositories(basePackageClasses = RevokedTokenRepository.class)
-@EnableConfigurationProperties(RedisProperties.class)
 public class AuthenticationConfig {
     @Bean
     PalikkaAuthenticationFilterConfigurer authenticationFilterConfigurer(JwtAuthenticationProvider jwtAuthenticationProvider) {
@@ -26,20 +25,5 @@ public class AuthenticationConfig {
                                                         UsersClient usersClient,
                                                         RevokedTokenRepository revokedTokenRepository) {
         return new JwtAuthenticationProvider(jwtService, usersClient, revokedTokenRepository);
-    }
-
-    @Bean
-    LettuceConnectionFactory lettuceConnectionFactory(RedisProperties redisProperties) {
-        LettuceConnectionFactory lettuceConnectionFactory = new LettuceConnectionFactory();
-        lettuceConnectionFactory.setHostName(redisProperties.getHost());
-        lettuceConnectionFactory.setPort(redisProperties.getPort());
-        return lettuceConnectionFactory;
-    }
-
-    @Bean
-    RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory);
-        return template;
     }
 }

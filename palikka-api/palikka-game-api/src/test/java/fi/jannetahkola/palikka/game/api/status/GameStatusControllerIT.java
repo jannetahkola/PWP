@@ -1,7 +1,6 @@
 package fi.jannetahkola.palikka.game.api.status;
 
 import fi.jannetahkola.palikka.game.api.status.model.GameStatusResponse;
-import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import fi.jannetahkola.palikka.game.testutils.IntegrationTest;
 import lombok.SneakyThrows;
 import org.apache.http.HttpHeaders;
@@ -33,9 +32,6 @@ class GameStatusControllerIT extends IntegrationTest {
     @Autowired
     MockMvc mockMvc;
 
-    @Autowired
-    TestTokenUtils tokens;
-
     @MockBean
     GameStatusController gameStatusController;
 
@@ -58,7 +54,7 @@ class GameStatusControllerIT extends IntegrationTest {
 
         mockMvc.perform(
                 get("/game/status")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.generateToken(1))
+                        .header(HttpHeaders.AUTHORIZATION, testTokenGenerator.generateBearerToken(1))
         ).andExpect(status().isOk());
     }
 }

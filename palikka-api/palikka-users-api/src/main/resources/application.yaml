@@ -18,11 +18,12 @@ spring:
     password: password
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
         show_sql: true
+        default_schema: public
 
 springdoc:
   writer-with-order-by-keys: true

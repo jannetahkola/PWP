@@ -20,7 +20,7 @@ class EntryPointControllerIT extends IntegrationTest {
         @MethodSource("userParams")
         void givenGetEntryPointRequest_whenAnyUserRole_thenOkResponse(Integer user) {
             given()
-                    .header(newToken(user))
+                    .header(newBearerTokenHeader(user))
                     .get("/")
                     .then().assertThat()
                     .statusCode(200);
@@ -29,7 +29,7 @@ class EntryPointControllerIT extends IntegrationTest {
         @Test
         void givenGetEntryPointRequest_whenSystemToken_thenOkResponse() {
             given()
-                    .header(newSystemToken())
+                    .header(newSystemBearerTokenHeader())
                     .get("/")
                     .then().assertThat()
                     .statusCode(200);

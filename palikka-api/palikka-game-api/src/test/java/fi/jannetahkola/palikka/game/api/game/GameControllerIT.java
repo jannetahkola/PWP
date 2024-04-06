@@ -6,7 +6,6 @@ import fi.jannetahkola.palikka.game.api.game.model.GameLogMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameOutputMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameUserReplyMessage;
 import fi.jannetahkola.palikka.game.testutils.TestStompSessionHandlerAdapter;
-import fi.jannetahkola.palikka.game.testutils.TestTokenUtils;
 import fi.jannetahkola.palikka.game.testutils.GameProcessIntegrationTest;
 import fi.jannetahkola.palikka.game.websocket.SessionStore;
 import io.restassured.RestAssured;
@@ -67,9 +66,6 @@ class GameControllerIT extends GameProcessIntegrationTest {
     @Autowired
     ObjectMapper objectMapper;
 
-    @Autowired
-    TestTokenUtils tokens;
-
     final BlockingQueue<TestStompSessionHandlerAdapter.Frame> userReplyQueue = new LinkedBlockingQueue<>();
     final BlockingQueue<TestStompSessionHandlerAdapter.Frame> logMessageQueue = new LinkedBlockingDeque<>();
     final BlockingQueue<TestStompSessionHandlerAdapter.Frame> lifecycleMessageQueue = new LinkedBlockingDeque<>();
@@ -117,7 +113,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             stubForUserNotFound(wireMockServer, USER_ID_ADMIN);
 
             try {
-                String token = tokens.generateExpiredToken(USER_ID_ADMIN);
+                String token = testTokenGenerator.generateExpiredToken(USER_ID_ADMIN);
                 newStompClient()
                         .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
                         .get(1000, TimeUnit.MILLISECONDS);
@@ -135,7 +131,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             stubForUserNotFound(wireMockServer, 1);
 
             try {
-                String token = tokens.generateToken(1);
+                String token = testTokenGenerator.generateToken(1);
                 newStompClient()
                         .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
                         .get(1000, TimeUnit.MILLISECONDS);
@@ -151,7 +147,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
         @Test
         void givenConnectRequest_withSystemToken_thenForbiddenResponse() {
             try {
-                String token = tokens.generateSystemToken();
+                String token = testTokenGenerator.generateSystemToken();
                 newStompClient()
                         .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
                         .get(1000, TimeUnit.MILLISECONDS);
@@ -170,7 +166,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             stubForNormalUser(wireMockServer);
             stubForViewerUser(wireMockServer);
 
-            String token = tokens.generateToken(user);
+            String token = testTokenGenerator.generateToken(user);
 
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newStompClient()
@@ -192,7 +188,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
         void givenSendMessageToGame_whenNoRoleToSendCommands_thenDisconnected(CapturedOutput capturedOutput) {
             stubForViewerUser(wireMockServer);
 
-            String token = tokens.generateToken(USER_ID_VIEWER);
+            String token = testTokenGenerator.generateToken(USER_ID_VIEWER);
 
             StompSession session = newStompClient()
                     .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
@@ -217,7 +213,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             mockGameProcess();
             stubForAdminUser(wireMockServer);
 
-            String adminToken = tokens.generateToken(USER_ID_ADMIN);
+            String adminToken = testTokenGenerator.generateToken(USER_ID_ADMIN);
             HttpHeaders httpHeaders = newAuthHeader(adminToken);
 
             // Process needs to be up for commands the get processed - only admin can start
@@ -233,7 +229,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
             stubForNormalUser(wireMockServer);
-            String token = tokens.generateToken(USER_ID_USER);
+            String token = testTokenGenerator.generateToken(USER_ID_USER);
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newStompClient()
                     .connectAsync(webSocketUrl + newAuthQueryParam(token), sessionHandler)
@@ -263,7 +259,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
         void givenUserIsConnected_whenTokenExpires_andUserSendsMessageToGame_thenDisconnected(CapturedOutput capturedOutput) {
             stubForAdminUser(wireMockServer);
 
-            String token = tokens.generateTokenExpiringIn(1, Duration.ofSeconds(1));
+            String token = testTokenGenerator.generateTokenExpiringIn(1, Duration.ofSeconds(1));
 
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newStompClient()
@@ -293,7 +289,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             mockGameProcess();
 
             stubForAdminUser(wireMockServer);
-            String token = tokens.generateTokenExpiringIn(1, Duration.ofSeconds(2));
+            String token = testTokenGenerator.generateTokenExpiringIn(1, Duration.ofSeconds(2));
 
             HttpHeaders httpHeaders = newAuthHeader(token);
 
@@ -343,7 +339,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             stubForNormalUser(wireMockServer);
             stubForViewerUser(wireMockServer);
 
-            String token = tokens.generateToken(user);
+            String token = testTokenGenerator.generateToken(user);
 
             StompSession session = newStompClient()
                     .connectAsync(webSocketUrl + newAuthQueryParam(token), newStompSessionHandler())
@@ -385,7 +381,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             assertThat(sessionStore.sessionCount()).isZero();
 
             stubForAdminUser(wireMockServer);
-            String token = tokens.generateToken(1);
+            String token = testTokenGenerator.generateToken(1);
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newSession(token, sessionHandler);
 
@@ -405,7 +401,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
         void testConnectWithHttpProtocol_thenExceptionIsThrown() {
             // SockJS is disabled so ws protocol must be used
             stubForAdminUser(wireMockServer);
-            String token = tokens.generateToken(1);
+            String token = testTokenGenerator.generateToken(1);
             String httpWebSocketUrl = webSocketUrl.replace("ws:", "http:");
             assertThatExceptionOfType(IllegalArgumentException.class)
                     .isThrownBy(() -> newStompClient()
@@ -420,7 +416,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             mockGameProcess();
 
             stubForAdminUser(wireMockServer);
-            String token = tokens.generateToken(1);
+            String token = testTokenGenerator.generateToken(1);
 
             HttpHeaders httpHeaders = newAuthHeader(token);
 
@@ -464,7 +460,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             mockGameProcess();
             stubForAdminUser(wireMockServer);
 
-            String token = tokens.generateToken(1);
+            String token = testTokenGenerator.generateToken(1);
             HttpHeaders httpHeaders = newAuthHeader(token);
 
             given()
@@ -507,7 +503,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             mockGameProcess();
 
             stubForAdminUser(wireMockServer);
-            String token = tokens.generateToken(1);
+            String token = testTokenGenerator.generateToken(1);
             HttpHeaders httpHeaders = newAuthHeader(token);
 
             given()
@@ -550,7 +546,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
 
             stubForAdminUser(wireMockServer);
 
-            String token = tokens.generateToken(1);
+            String token = testTokenGenerator.generateToken(1);
 
             HttpHeaders httpHeaders = newAuthHeader(token);
 
@@ -603,7 +599,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             mockGameProcess();
 
             stubForAdminUser(wireMockServer);
-            String token = tokens.generateToken(1);
+            String token = testTokenGenerator.generateToken(1);
             HttpHeaders httpHeaders = newAuthHeader(token);
 
             // Start
@@ -654,7 +650,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
         @Test
         void testSendMessageToGame_whenMessageInvalid_thenErrorMessageReceived() {
             stubForAdminUser(wireMockServer);
-            String token = tokens.generateToken(1);
+            String token = testTokenGenerator.generateToken(1);
 
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newSession(token, sessionHandler);

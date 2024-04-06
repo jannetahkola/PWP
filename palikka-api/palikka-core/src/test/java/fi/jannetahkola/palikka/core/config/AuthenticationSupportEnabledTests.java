@@ -1,6 +1,5 @@
 package fi.jannetahkola.palikka.core.config;
 
-import fi.jannetahkola.palikka.core.EnableRedisTestSupport;
 import fi.jannetahkola.palikka.core.auth.PalikkaAuthenticationFilterConfigurer;
 import fi.jannetahkola.palikka.core.auth.data.RevokedTokenRepository;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
@@ -11,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,7 +36,6 @@ import static org.assertj.core.api.Assertions.assertThat;
         })
 @EnableAuthenticationSupport
 @EnableRemoteUsersIntegration
-@EnableRedisTestSupport
 class AuthenticationSupportEnabledTests {
 
     @Autowired
@@ -46,6 +46,8 @@ class AuthenticationSupportEnabledTests {
         assertThat(context.getBean(JwtService.class)).isNotNull();
         assertThat(context.getBean(UsersClient.class)).isNotNull();
         assertThat(context.getBean(PalikkaAuthenticationFilterConfigurer.class)).isNotNull();
+        assertThat(context.getBean(LettuceConnectionFactory.class)).isNotNull();
+        assertThat(context.getBean(RedisTemplate.class)).isNotNull();
         assertThat(context.getBean(RevokedTokenRepository.class)).isNotNull();
     }
 }

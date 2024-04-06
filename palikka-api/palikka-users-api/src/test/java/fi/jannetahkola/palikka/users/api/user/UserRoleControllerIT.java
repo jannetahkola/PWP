@@ -69,7 +69,7 @@ class UserRoleControllerIT extends IntegrationTest {
         @Test
         void givenGetUserRolesRequest_whenSystemOrAdmin_andRequestedForAnyRole_thenOkResponse() {
             given()
-                    .header(newSystemToken())
+                    .header(newSystemBearerTokenHeader())
                     .get("/users/" + USER_ID_VIEWER + "/roles")
                     .then().assertThat()
                     .statusCode(200);

@@ -1,22 +1,6 @@
 spring:
-  datasource:
-    # set H2 in PostgreSQL compatibility mode
-    # see http://www.h2database.com/html/features.html
-    url: jdbc:h2:mem:palikka_users;TIME ZONE=UTC;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
   main:
     allow-bean-definition-overriding: true
-  jpa:
-    # let hibernate create the schema before seed data is inserted
-    # see https://www.baeldung.com/spring-boot-h2-database#2-hibernate-and-datasql
-    defer-datasource-initialization: true
-    hibernate:
-      ddl-auto: create-drop
-  sql:
-    init:
-      data-locations:
-        - classpath:data/seed_privileges.sql
-        - classpath:data/seed_roles.sql
-        - classpath:data/seed_users.sql
 
 springdoc:
   swagger-ui:
@@ -44,6 +28,3 @@ palikka:
       user:
         signing:
           validity-time: 10s # override to be shorter
-  redis:
-    host: localhost
-    port: 6379

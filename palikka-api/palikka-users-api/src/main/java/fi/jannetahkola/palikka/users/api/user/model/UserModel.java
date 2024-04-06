@@ -37,7 +37,7 @@ public class UserModel extends RepresentationModel<UserModel> {
 
     @Schema(description = "Password of the user. Required when creating a user")
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @Password(groups = {PostGroup.class, PutGroup.class})
+    @Password(groups = {PostGroup.class})
     char[] password;
 
     @Schema(description = "Whether the user is active, i.e. they can log in. Required when creating a user")
