@@ -5,6 +5,7 @@ import fi.jannetahkola.palikka.game.service.GameProcessService;
 import fi.jannetahkola.palikka.game.service.factory.ProcessFactory;
 import fi.jannetahkola.palikka.game.service.validator.PathValidator;
 import lombok.SneakyThrows;
+import org.junit.jupiter.api.AfterEach;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -74,8 +75,10 @@ public abstract class GameProcessIntegrationTest extends IntegrationTest {
     @SneakyThrows
     protected void mockGameProcess() {
         if (!gameProcessService.isDown()) {
-            throw new IllegalAccessException("Game process is not DOWN");
+            throw new IllegalAccessException("Game process is not DOWN, status=" + gameProcessService.getGameProcessStatus());
         }
+
+        Mockito.reset(processFactory, pathValidator);
 
         gameOut = new PipedOutputStream();
         var out = new PipedOutputStream(new PipedInputStream());

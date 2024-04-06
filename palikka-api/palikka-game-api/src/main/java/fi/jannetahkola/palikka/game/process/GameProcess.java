@@ -102,7 +102,7 @@ public class GameProcess {
         if (stop(timeoutInMillis)) {
             return true;
         }
-        log.info("Graceful stop timed out, forcing now");
+        log.info("Graceful stop timed out ({} ms), forcing now", timeoutInMillis);
         try {
             process.destroyForcibly().onExit().get(timeoutInMillis, TimeUnit.MILLISECONDS);
         } catch (ExecutionException | TimeoutException e) {

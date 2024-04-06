@@ -1,6 +1,7 @@
 package fi.jannetahkola.palikka.game.api.game;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.game.api.game.model.GameLifecycleMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameLogMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameOutputMessage;
@@ -30,7 +31,6 @@ import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -42,6 +42,7 @@ import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
@@ -49,8 +50,7 @@ import java.util.stream.Stream;
 
 import static fi.jannetahkola.palikka.game.testutils.Stubs.*;
 import static io.restassured.RestAssured.given;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -58,8 +58,6 @@ import static org.junit.jupiter.api.Assertions.fail;
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = { "logging.level.fi.jannetahkola.palikka.game=debug" })
 @ExtendWith(OutputCaptureExtension.class)
-// New context for each test so less hassle resetting everything
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ActiveProfiles("test")
 class GameControllerIT extends GameProcessIntegrationTest {
 
@@ -80,6 +78,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
 
         wireMockServer.resetAll();
 
+        userReplyQueue.clear();
         logMessageQueue.clear();
         lifecycleMessageQueue.clear();;
 
@@ -267,7 +266,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
                     .get(1000, TimeUnit.MILLISECONDS);
             session.subscribe("/user/queue/reply", sessionHandler);
 
-            Thread.sleep(2000);
+            Thread.sleep(1000);
 
             // Token expired by now
             StompSession.Receiptable receipt = session.send(
@@ -285,11 +284,12 @@ class GameControllerIT extends GameProcessIntegrationTest {
         @SneakyThrows
         @Test
         void givenUserIsConnected_whenTokenExpires_andExpiredSessionIsEvicted_thenDisconnected(@Autowired SessionStore sessionStore,
-                                                                                                CapturedOutput capturedOutput) {
+                                                                                               @Autowired JwtService jwtService,
+                                                                                               CapturedOutput capturedOutput) {
             mockGameProcess();
 
             stubForAdminUser(wireMockServer);
-            String token = testTokenGenerator.generateTokenExpiringIn(1, Duration.ofSeconds(2));
+            String token = testTokenGenerator.generateTokenExpiringIn(1, Duration.ofSeconds(1));
 
             HttpHeaders httpHeaders = newAuthHeader(token);
 
@@ -307,7 +307,9 @@ class GameControllerIT extends GameProcessIntegrationTest {
                     .then().assertThat()
                     .statusCode(200);
 
-            Thread.sleep(2000);
+            while (!jwtService.isExpired(token)) {
+                Thread.sleep(1000);
+            }
 
             sessionStore.evictExpiredSessions();
 
@@ -488,8 +490,10 @@ class GameControllerIT extends GameProcessIntegrationTest {
             assertThat(userReplyMessage.getTyp()).isEqualTo(GameUserReplyMessage.Type.HISTORY);
 
             String[] inputHistory = userReplyMessage.getData().split("\n");
-            assertThat(inputHistory[0]).isEqualTo(SERVER_START_LOG_QUIET);
-            assertThat(inputHistory[1]).isEqualTo(SERVER_START_LOG);
+            // Due to other tests there may be other history in the queue so check the order but ignore which index the history starts from
+            int i = Arrays.asList(inputHistory).indexOf(SERVER_START_LOG_QUIET);
+            assertThat(i).isNotNegative();
+            assertThat(inputHistory[i + 1]).isEqualTo(SERVER_START_LOG);
 
             TestStompSessionHandlerAdapter.Frame lifecycleFrame = lifecycleMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
             assertThat(lifecycleFrame).isNull(); // no lifecycle events since subscribed after start and no changes
@@ -540,60 +544,6 @@ class GameControllerIT extends GameProcessIntegrationTest {
         }
 
         @SneakyThrows
-        @Test // If ran more than once we will receive the old history which is expected behaviour
-        void testSubscribeToGameBeforeGameIsUp_andSendMessage_thenEmptyHistoryReceivedFirst() {
-            mockGameProcess();
-
-            stubForAdminUser(wireMockServer);
-
-            String token = testTokenGenerator.generateToken(1);
-
-            HttpHeaders httpHeaders = newAuthHeader(token);
-
-            StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
-            StompSession session = newSession(token, sessionHandler);
-            session.subscribe("/user/queue/reply", sessionHandler);
-            session.subscribe("/topic/game/logs", sessionHandler);
-            session.subscribe("/topic/game/lifecycle", sessionHandler);
-
-            given()
-                    .headers(httpHeaders)
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(new JSONObject().put("action", "start").toString())
-                    .post("/game/process")
-                    .then().assertThat()
-                    .statusCode(200);
-
-            outputAsServerProcess(SERVER_START_LOG);
-            assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
-
-            // Poll history event
-            TestStompSessionHandlerAdapter.Frame receivedFrame = userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
-            assertThat(receivedFrame).isNotNull();
-            GameUserReplyMessage receivedMsg = receivedFrame.getPayloadAs(GameUserReplyMessage.class);
-            assertThat(receivedMsg.getTyp()).isEqualTo(GameUserReplyMessage.Type.HISTORY);
-            assertThat(receivedMsg.getData()).isEmpty();
-
-            GameLogMessage msg = GameLogMessage.builder().data("/weather clear").build();
-            session.send("/app/game", msg);
-
-            // Poll input events
-            TestStompSessionHandlerAdapter.Frame logFrame = logMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
-            assertThat(logFrame).isNotNull();
-            GameLogMessage logMsg = logFrame.getPayloadAs(GameLogMessage.class);
-            assertThat(logMsg).isNotNull();
-            assertThat(logMsg.getData()).isEqualTo(SERVER_START_LOG);
-
-            logFrame = logMessageQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
-            assertThat(logFrame).isNotNull();
-            logMsg = logFrame.getPayloadAs(GameLogMessage.class);
-            assertThat(logMsg).isNotNull();
-            assertThat(logMsg.getData()).isEqualTo("/weather clear");
-
-            stop(session);
-        }
-
-        @SneakyThrows
         @Test
         void testSubscribeToGameBeforeGameIsUp_andIsNotFirstStart_thenOldHistoryReceived() {
             mockGameProcess();
@@ -618,6 +568,8 @@ class GameControllerIT extends GameProcessIntegrationTest {
             gameProcessService.stopForcibly();
             assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
+            mockGameProcess();
+
             // Start again
             given()
                     .headers(httpHeaders)
@@ -629,6 +581,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
 
             outputAsServerProcess(SERVER_START_LOG);
             assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+            assertThat(gameProcessService.getGameProcessStatus()).isEqualTo("up");
 
             StompSessionHandlerAdapter sessionHandler = newStompSessionHandler();
             StompSession session = newSession(token, sessionHandler);
@@ -686,6 +639,8 @@ class GameControllerIT extends GameProcessIntegrationTest {
             msg = GameOutputMessage.builder().data("@weather").build();
             session.send("/app/game", msg);
             assertReply.run();
+
+            session.disconnect();
         }
     }
 

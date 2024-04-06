@@ -4,16 +4,14 @@ import fi.jannetahkola.palikka.game.config.properties.GameProperties;
 import fi.jannetahkola.palikka.game.process.GameProcess;
 import fi.jannetahkola.palikka.game.service.factory.ProcessFactory;
 import fi.jannetahkola.palikka.game.service.validator.PathValidator;
+import fi.jannetahkola.palikka.game.util.SynchronizedLimitedQueue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -32,8 +30,7 @@ public class GameProcessService {
 
     private final AtomicReference<GameProcessStatus> gameProcessStatus = new AtomicReference<>(GameProcessStatus.DOWN);
     private final BlockingQueue<String> outputQueue = new LinkedBlockingQueue<>();
-    // todo this needs to be a queue that evicts entries once max size reached - or redis
-    private final List<String> inputList = Collections.synchronizedList(new ArrayList<>());
+    private final SynchronizedLimitedQueue inputList = new SynchronizedLimitedQueue(100);
 
     private final GameProperties gameProperties;
     private final ProcessFactory processFactory;
@@ -167,16 +164,11 @@ public class GameProcessService {
     }
 
     /**
-     * @return An unmodifiable copy of the underlying input history
-     * list. See {@link Collections#synchronizedList(List)}.
+     * @return A copy of the underlying input history list.
      */
     public List<String> copyInputList() {
-        List<String> copy;
-        synchronized (inputList) {
-            copy = Collections.unmodifiableList(inputList);
-        }
         log.debug("Input history list copied");
-        return copy;
+        return inputList.copy();
     }
 
     public void registerInputListener(Consumer<String> listener) {
@@ -223,10 +215,10 @@ public class GameProcessService {
 
     private void storeInputAndPublish(String input) {
         GAME_PROCESS_LOGGER.log(input);
-        inputList.add(input);
-        gameProcessInputListeners.forEach(listener ->
-                // Publish to listeners asynchronously to be safe
-                // todo may mess up the ordering, use another thread maybe
-                CompletableFuture.runAsync(() -> listener.accept(input)));
+        CompletableFuture.runAsync(() -> {
+            inputList.add(input);
+            gameProcessInputListeners
+                    .forEach(listener -> listener.accept(input));
+        });
     }
 }

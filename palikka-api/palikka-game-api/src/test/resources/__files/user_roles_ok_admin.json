@@ -248,167 +248,167 @@
           },
           {
             "id": 50,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "save-all"
           },
           {
             "id": 75,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "tp"
           },
           {
             "id": 64,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "stopsound"
           },
           {
             "id": 70,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "tell"
           },
           {
             "id": 11,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "datapack"
           },
           {
             "id": 46,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "recipe"
           },
           {
             "id": 24,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "gamemode"
           },
           {
             "id": 59,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "setworldspawn"
           },
           {
             "id": 1,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "advancement"
           },
           {
             "id": 4,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "ban-ip"
           },
           {
             "id": 72,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "time"
           },
           {
             "id": 43,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "playsound"
           },
           {
             "id": 18,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "execute"
           },
           {
             "id": 7,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "clear"
           },
           {
             "id": 22,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "forceload"
           },
           {
             "id": 45,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "random"
           },
           {
             "id": 15,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "difficulty"
           },
           {
             "id": 65,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "summon"
           },
           {
             "id": 53,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "say"
           },
           {
             "id": 12,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "debug"
           },
           {
             "id": 67,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "team"
           },
           {
             "id": 20,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "fill"
           },
           {
             "id": 74,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "tm"
           },
           {
             "id": 6,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "bossbar"
           },
           {
             "id": 61,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "spectate"
           },
           {
             "id": 17,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "enchant"
           },
           {
             "id": 14,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "deop"
           },
           {
             "id": 48,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "return"
           },
           {
             "id": 21,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "fillbiome"
           },
           {
             "id": 80,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "worldborder"
           },
           {
             "id": 34,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "loot"
           },
           {
             "id": 60,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "spawnpoint"
           },
           {
             "id": 19,
-            "category": "COMMAND",
+            "domain": "COMMAND",
             "name": "experience"
           }
         ],

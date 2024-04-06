@@ -9,6 +9,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 
@@ -26,9 +28,10 @@ public abstract class IntegrationTest {
         embeddedRedisServer = new EmbeddedRedisServer(redisProperties);
     }
 
+    // Use a static port because the instance is created again between @Nested test classes
     @RegisterExtension
     protected static WireMockExtension wireMockServer = WireMockExtension.newInstance()
-            .options(wireMockConfig().dynamicPort().globalTemplating(true))
+            .options(wireMockConfig().port(58244).globalTemplating(true))
             .build();
 
     @BeforeAll
@@ -39,5 +42,11 @@ public abstract class IntegrationTest {
     @AfterAll
     static void stopRedis() {
         embeddedRedisServer.stop();
+    }
+
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("palikka.redis.host", embeddedRedisServer::getHost);
+        registry.add("palikka.redis.port", embeddedRedisServer::getPort);
     }
 }

@@ -4,8 +4,8 @@ spring:
 logging:
   level:
     fi.jannetahkola.palikka: debug
-    org.springframework.web.socket: debug
-    org.springframework.messaging: debug
+    org.springframework.web.socket: info
+    org.springframework.messaging: info
     org.springframework.security: debug
 palikka:
   jwt:
@@ -26,8 +26,5 @@ palikka:
     session:
       auto-clean:
         enabled: false
-  redis:
-    host: localhost
-    port: 6379
   test:
     timeout-in-millis: 2000
