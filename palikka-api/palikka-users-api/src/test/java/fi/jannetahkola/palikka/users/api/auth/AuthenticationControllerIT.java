@@ -44,6 +44,8 @@ class AuthenticationControllerIT extends IntegrationTest {
                 .body("token", not(emptyOrNullString()))
                 .body("expires_at", endsWith("Z"))
                 .body("_links.self.href", endsWith("/users-api/auth/login"))
+                .body("_links.logout.href", endsWith("/users-api/auth/logout"))
+                .body("_links.current_user.href", endsWith("/users-api/current-user"))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
     }
 

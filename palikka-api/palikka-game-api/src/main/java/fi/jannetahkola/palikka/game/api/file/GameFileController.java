@@ -113,7 +113,7 @@ public class GameFileController {
 
     @PutMapping(value = "/icon", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('ROLE_ADMIN')")
-    public ResponseEntity<?> uploadIcon(@RequestPart("file") MultipartFile multipartFile) {
+    public ResponseEntity<Void> uploadIcon(@RequestPart("file") MultipartFile multipartFile) {
         // todo default max size is 1MB, test
         final long startTime = System.currentTimeMillis();
         log.info("Uploading icon");

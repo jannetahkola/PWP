@@ -39,15 +39,21 @@
         <!-- Common dependencies -->
         <rest-assured.version>5.4.0</rest-assured.version>
         <wiremock.version>3.4.0</wiremock.version>
-        <h2.version>2.2.224</h2.version>
         <testcontainers.version>1.19.7</testcontainers.version>
         <embedded-redis.version>1.4.3</embedded-redis.version>
         <jacoco-plugin.version>0.8.11</jacoco-plugin.version>
 
-        <!-- Coverage -->
+        <!-- Sonar -->
         <sonar.coverage.jacoco.xmlReportPaths>
             ${maven.multiModuleProjectDirectory}/coverage-reporting/target/site/jacoco-aggregate/jacoco.xml
         </sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.junit.reportPaths>
+            <!-- todo these should be configured as aggregates instead of like this -->
+            ${maven.multiModuleProjectDirectory}/palikka-users-api/target/surefire-reports/,
+            ${maven.multiModuleProjectDirectory}/palikka-users-api/target/failsafe-reports/,
+            ${maven.multiModuleProjectDirectory}/palikka-game-api/target/surefire-reports/,
+            ${maven.multiModuleProjectDirectory}/palikka-game-api/target/failsafe-reports/
+        </sonar.junit.reportPaths>
 
         <!-- SpringDoc -->
         <springdoc-openapi-starter.version>2.4.0</springdoc-openapi-starter.version>
@@ -73,11 +79,6 @@
                 <groupId>io.rest-assured</groupId>
                 <artifactId>rest-assured</artifactId>
                 <version>${rest-assured.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.h2database</groupId>
-                <artifactId>h2</artifactId>
-                <version>${h2.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.testcontainers</groupId>

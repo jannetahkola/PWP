@@ -22,6 +22,7 @@ import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
 public abstract class GameProcessIntegrationTest extends IntegrationTest {
@@ -84,6 +85,8 @@ public abstract class GameProcessIntegrationTest extends IntegrationTest {
         var out = new PipedOutputStream(new PipedInputStream());
 
         Process mockProcess = Mockito.mock(Process.class);
+        // Graceful shutdown set to always succeed as we react to the "stop" command in the hooks below
+        when(mockProcess.waitFor(anyLong(), any())).thenReturn(true);
         when(mockProcess.onExit()).thenReturn(new CompletableFuture<>());
         when(mockProcess.destroyForcibly()).thenAnswer(invocationOnMock -> {
             mockProcess.onExit().complete(mockProcess); // Same as what would normally happen

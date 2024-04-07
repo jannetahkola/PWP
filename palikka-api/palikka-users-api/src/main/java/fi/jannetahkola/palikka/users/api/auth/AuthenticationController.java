@@ -8,6 +8,7 @@ import fi.jannetahkola.palikka.core.auth.data.RevokedTokenEntity;
 import fi.jannetahkola.palikka.core.auth.data.RevokedTokenRepository;
 import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.auth.jwt.PalikkaJwtType;
+import fi.jannetahkola.palikka.users.api.user.CurrentUserController;
 import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import fi.jannetahkola.palikka.users.data.user.UserRepository;
 import fi.jannetahkola.palikka.users.exception.UsersLoginFailedException;
@@ -75,7 +76,7 @@ public class AuthenticationController {
                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE))
     @PostMapping(
             value = "/login",
-            produces = MediaTypes.HAL_JSON_VALUE,
+            produces = {MediaTypes.HAL_JSON_VALUE, MediaTypes.HAL_JSON_VALUE},
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         LoginResponse loginResponse = userRepository
@@ -103,7 +104,9 @@ public class AuthenticationController {
                 })
                 .orElseThrow(() -> new UsersLoginFailedException("Login failed"));
         return ResponseEntity.ok(loginResponse.add(
-                linkTo(methodOn(AuthenticationController.class).login(null)).withSelfRel()
+                linkTo(methodOn(AuthenticationController.class).login(null)).withSelfRel(),
+                linkTo(methodOn(AuthenticationController.class).logout(null)).withRel("logout"),
+                linkTo(methodOn(CurrentUserController.class).getCurrentUser(null)).withRel("current_user")
         ));
     }
 

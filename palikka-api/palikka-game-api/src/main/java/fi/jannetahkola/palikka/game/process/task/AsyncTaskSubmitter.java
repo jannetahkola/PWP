@@ -13,6 +13,7 @@ public class AsyncTaskSubmitter {
      * {@link ExecutorService#invokeAll(Collection)} will block until the tasks are done, so this is a
      * utility method that returns the futures immediately after they've been submitted.
      */
+    @SuppressWarnings("squid:S1452") // Wildcards are ok here, we don't return anything from the tasks
     public List<? extends Future<?>> submitAll(ExecutorService executorService, List<Runnable> tasks) {
         return tasks.stream()
                 .map(executorService::submit)

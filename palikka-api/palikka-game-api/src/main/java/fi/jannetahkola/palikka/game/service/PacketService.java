@@ -1,6 +1,7 @@
 package fi.jannetahkola.palikka.game.service;
 
 import fi.jannetahkola.palikka.game.util.VarIntUtil;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -9,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 
+@Slf4j
 public class PacketService {
     public static class Packet {
         private final byte[] bytes;
@@ -27,7 +29,7 @@ public class PacketService {
                     stream.write(1);
                     stream.write(0);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    log.error("Error writing packet", e);
                 }
                 this.bytes = buffer.toByteArray();
             } else {
@@ -88,7 +90,7 @@ public class PacketService {
             stream.writeShort(port);
             VarIntUtil.write(stream, 1); // State (1 = server status)
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Error writing packet", e);
         }
         return new Packet(buffer.toByteArray(), packetType);
     }

@@ -44,6 +44,7 @@ public class GameProcess {
             throw new GameProcessAlreadyActiveException("Failed to start - game process already active");
         }
 
+        long processStartTime = System.currentTimeMillis();
         setStatusAndLog(Status.ACTIVE);
 
         Thread processThread = new Thread(() -> {
@@ -54,6 +55,7 @@ public class GameProcess {
             log.info("{} I/O task(s) started", ioTasks.size());
 
             process.onExit().thenAccept(exitedProcess -> {
+                long processExitTime = System.currentTimeMillis();
                 log.info("Game process exit (1)");
 
                 // Not necessarily terminated immediately
@@ -71,11 +73,11 @@ public class GameProcess {
 
                 setStatusAndLog(Status.INACTIVE);
                 hooks.getOnProcessExited().ifPresent(Runnable::run);
-                log.info("Game process exit (2)");
+                log.info("Game process exit (2) ({} ms)", System.currentTimeMillis() - processExitTime);
             });
 
             hooks.getOnProcessStarted().ifPresent(Runnable::run);
-            log.info("Game process start (2)");
+            log.info("Game process start (2) ({} ms)", System.currentTimeMillis() - processStartTime);
         });
 
         processThread.start();
@@ -86,7 +88,10 @@ public class GameProcess {
         log.info("Stopping game process gracefully with timeout of {} ms", timeoutInMillis);
         if (isActive()) {
             outputQueue.add("stop");
-            return process.waitFor(timeoutInMillis, TimeUnit.MILLISECONDS);
+            boolean gracefulSuccess = process.waitFor(timeoutInMillis, TimeUnit.MILLISECONDS);
+            if (gracefulSuccess)
+                log.info("Graceful stop success");
+            return gracefulSuccess;
         }
         log.info("Game process already stopped");
         return true;
@@ -99,6 +104,7 @@ public class GameProcess {
      * @throws InterruptedException
      */
     public boolean stopForcibly(long timeoutInMillis) throws InterruptedException {
+        log.info("Attempting graceful shutdown before forcing");
         if (stop(timeoutInMillis)) {
             return true;
         }
@@ -177,15 +183,6 @@ public class GameProcess {
                         processStarted = true;
                         hooks.getOnGameStarted().ifPresent(Runnable::run);
                     }
-
-//                    if (!gameProcessStartDetected && input.matches(GameProcessLogPatterns.SERVER_START_PATTERN.pattern())) {
-//                        hooks.getOnGameStarted().ifPresent(Runnable::run);
-//                        gameProcessStartDetected = true;
-//                    }
-//                    if (!gameProcessExitDetected && input.matches(GameProcessLogPatterns.SERVER_STOP_PATTERN.pattern())) {
-//                        hooks.getOnGameExited().ifPresent(Runnable::run);
-//                        gameProcessExitDetected = true;
-//                    }
                 }),
                 new OutputWriterTask(process.getOutputStream(), outputQueue,
                         input -> hooks.getOnInput().ifPresent(onInputHook -> onInputHook.accept(input)))

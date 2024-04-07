@@ -45,7 +45,7 @@ public class PalikkaUsersApiAppConfig {
         http
                 .sessionManagement(sessions -> sessions.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/", "/auth/login").permitAll()
                         // This is the last resort if controller advice fails e.g. resolving the method
                         // handler parameter. Not customized currently so returns JSON.
                         .requestMatchers("/error").permitAll()

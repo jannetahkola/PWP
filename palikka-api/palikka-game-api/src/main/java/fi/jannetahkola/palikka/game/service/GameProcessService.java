@@ -136,6 +136,7 @@ public class GameProcessService {
 
     public void stopForcibly() {
         if (gameProcess == null || gameProcessStatus.get().equals(GameProcessStatus.DOWN)) return;
+        log.info("Forcing stop for game process");
         try {
             Duration stopTimeout = gameProperties.getProcess().getStopTimeout();
             if (gameProcess.stopForcibly(stopTimeout.toMillis())) {
@@ -209,8 +210,9 @@ public class GameProcessService {
     private void setStatusAndPublish(GameProcessStatus newStatus) {
         GameProcessStatus currentStatus = gameProcessStatus.updateAndGet(oldStatus -> newStatus);
         log.info("Set game process status={}", currentStatus);
-        gameProcessLifecycleListeners.forEach(listener ->
-                CompletableFuture.runAsync(() -> listener.accept(currentStatus.getValue())));
+        CompletableFuture.runAsync(() ->
+                gameProcessLifecycleListeners.forEach(listener ->
+                        listener.accept(currentStatus.getValue())));
     }
 
     private void storeInputAndPublish(String input) {

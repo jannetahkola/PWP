@@ -16,6 +16,14 @@ import static org.hamcrest.Matchers.endsWith;
 class EntryPointControllerIT extends IntegrationTest {
     @Nested
     class ResourceSecurityIT {
+        @Test
+        void givenGetEntryPointRequest_whenNoToken_thenOkResponse() {
+            given()
+                    .get("/")
+                    .then().assertThat()
+                    .statusCode(200);
+        }
+
         @ParameterizedTest
         @MethodSource("userParams")
         void givenGetEntryPointRequest_whenAnyUserRole_thenOkResponse(Integer user) {
@@ -49,11 +57,11 @@ class EntryPointControllerIT extends IntegrationTest {
         @Test
         void givenGetEntryPointRequest_thenCorrectLinksReturned() {
             given()
-                    .header(newAdminToken())
                     .get("/")
                     .then().assertThat()
                     .statusCode(200)
                     .body("_links.self.href", endsWith("/users-api/"))
+                    .body("_links.login.href", endsWith("/users-api/auth/login"))
                     .body("_links.users.href", endsWith("/users-api/users"))
                     .body("_links.current_user.href", endsWith("/users-api/current-user"));
         }

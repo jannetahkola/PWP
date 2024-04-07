@@ -3,7 +3,7 @@ test=1
 build:
 	chmod +x ./mvnw
 ifeq ($(test),1)
-	./mvnw clean package
+	./mvnw clean verify
 else
 	./mvnw clean package -DskipTests
 endif
@@ -13,7 +13,13 @@ build-coverage:
 	./mvnw clean verify
 
 docker-run:
-	docker-compose up -d --build --force-recreate && docker-compose logs -f
+	docker-compose up -d --build --force-recreate \
+		postgres \
+		redis \
+		palikka-users-api \
+		palikka-game-api \
+		palikka-mock-file-server
+	docker-compose logs -f
 
 docker-kill:
 	docker-compose down --remove-orphans
@@ -23,10 +29,14 @@ docker-logs:
 
 docker-reset:
 	- docker-compose down --remove-orphans
+	- docker-compose rm -f
 	- docker volume rm $(shell docker volume ls -q)
 
 init-data:
+	docker-compose up -d --build --force-recreate postgres
+	sleep 5
 	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/users/truncate_data.sql
+	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/users/schema.sql
 	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/users/seed_privileges.sql
 	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/users/seed_roles.sql
 	docker exec -i postgres psql -Uuser palikka_users < ./conf/data/users/seed_users.sql

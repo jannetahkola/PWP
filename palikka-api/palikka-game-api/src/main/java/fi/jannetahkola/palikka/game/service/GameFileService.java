@@ -71,13 +71,14 @@ public class GameFileService {
     }
 
     public void storeFile(String pathToDir, MultipartFile file) {
-        if (file.isEmpty() || file.getOriginalFilename() == null || file.getContentType() == null) {
+        String fileName = file.getOriginalFilename();
+        String fileContentType = file.getContentType();
+        if (file.isEmpty() || fileContentType == null || fileName == null) {
             throw new GameFileException("Provided file is missing or invalid");
         }
-        String fileName = file.getOriginalFilename();
         log.info("Icon filename={}", fileName);
         String fileExtension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase(Locale.ROOT);
-        if (!fileExtension.equals("png") || !file.getContentType().equals("image/png")) {
+        if (!fileExtension.equals("png") || !fileContentType.equals("image/png")) {
             throw new GameFileException("Provided file is not a PNG");
         }
         try {

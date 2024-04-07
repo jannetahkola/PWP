@@ -202,20 +202,16 @@ public class JwtService {
         JwtProperties.KeyStoreProperties verificationKeyStoreProperties = properties.getKeystore().getVerification();
 
         if (signingProperties != null) {
+            String errorPrefix = "Incomplete configuration - signing support configured for token type " + tokenType;
             if (signingKeyStoreProperties == null) {
                 throw new IllegalStateException(
-                        "Incomplete configuration - signing support configured for token type "
-                                + tokenType + " but signing keystore configuration missing");
+                        errorPrefix + " but signing keystore configuration missing");
             }
             if (signingProperties.getKeyPass() == null) {
-                throw new IllegalStateException(
-                        "Incomplete configuration - signing support configured for token type "
-                                + tokenType + " but signing key password missing");
+                throw new IllegalStateException(errorPrefix + " but signing key password missing");
             }
             if (signingProperties.getValidityTime() == null) {
-                throw new IllegalStateException(
-                        "Incomplete configuration - signing support configured for token type "
-                                + tokenType + " but validity time missing");
+                throw new IllegalStateException(errorPrefix + " but validity time missing");
             }
             final KeyPair keyPair = KeyUtil.loadKeyPairFromPropertiesOrError(signingKeyStoreProperties, tokenProperties);
             jwsSigners.putIfAbsent(tokenType, new RSASSASigner(keyPair.getPrivate()));
