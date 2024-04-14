@@ -19,7 +19,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.method.HandlerMethod;
 
@@ -94,8 +96,9 @@ public class OpenApiConfig {
                                             .example("Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0..."));
                 }
             }
-            if (!handlerMethod.hasMethodAnnotation(GetMapping.class)) {
-                // Supported Content-Type required when not GET
+            if (!handlerMethod.hasMethodAnnotation(GetMapping.class)
+                    && !handlerMethod.hasMethodAnnotation(DeleteMapping.class)) {
+                // Supported Content-Type required when not GET or DELETE
                 operation
                         .addParametersItem(
                                 new Parameter()

@@ -181,6 +181,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             assertThat(capturedOutput.getAll()).doesNotContain("Failed to authorize message with authorization manager");
 
             session.disconnect();
+            await().atMost(Duration.ofSeconds(1)).until(() -> sessionStore.sessionCount() == 0);
         }
 
         @SneakyThrows
@@ -204,6 +205,8 @@ class GameControllerIT extends GameProcessIntegrationTest {
             assertThat(frame).isNull();
 
             assertThat(capturedOutput.getAll()).contains("Failed to authorize message with authorization manager");
+
+            await().atMost(Duration.ofSeconds(1)).until(() -> sessionStore.sessionCount() == 0);
             assertThat(session.isConnected()).isFalse(); // should disconnect session
         }
 
@@ -278,6 +281,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             TestStompSessionHandlerAdapter.Frame userReplyFrame =
                     userReplyQueue.poll(testTimeoutMillis, TimeUnit.MILLISECONDS);
             assertThat(userReplyFrame).isNull();
+            await().atMost(Duration.ofSeconds(1)).until(() -> sessionStore.sessionCount() == 0);
             assertThat(session.isConnected()).isFalse();
             assertThat(capturedOutput.getAll()).contains("Access revoked from STOMP session with an expired JWT, principal=1");
         }
@@ -311,6 +315,8 @@ class GameControllerIT extends GameProcessIntegrationTest {
             await().atMost(Duration.ofSeconds(1)).until(() -> jwtService.isExpired(token));
 
             sessionStore.evictExpiredSessions();
+
+            await().atMost(Duration.ofSeconds(1)); // await for disconnect
 
             outputAsServerProcess(SERVER_START_LOG);
 
@@ -354,6 +360,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             assertThat(subscriptionToLifecycle.getSubscriptionId()).isNotNull();
 
             session.disconnect();
+            await().atMost(Duration.ofSeconds(1)).until(() -> sessionStore.sessionCount() == 0);
         }
 
         static Stream<Arguments> sendMessageToGameAllowedUserArgs() {
@@ -376,8 +383,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
     class ResourceFunctionalityIT {
         @SneakyThrows
         @Test
-        void testRawWebSocketSessionIsStoredOnConnectAndRemovedOnDisconnect(@Autowired SessionStore sessionStore,
-                                                                            CapturedOutput capturedOutput) {
+        void testRawWebSocketSessionIsStoredOnConnectAndRemovedOnDisconnect(CapturedOutput capturedOutput) {
             assertThat(sessionStore.sessionCount()).isZero();
 
             stubForAdminUser(wireMockServer);
@@ -606,6 +612,7 @@ class GameControllerIT extends GameProcessIntegrationTest {
             assertReply.run();
 
             session.disconnect();
+            await().atMost(Duration.ofSeconds(1)).until(() -> sessionStore.sessionCount() == 0);
         }
     }
 

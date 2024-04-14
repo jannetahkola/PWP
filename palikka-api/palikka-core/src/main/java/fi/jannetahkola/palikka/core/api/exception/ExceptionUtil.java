@@ -8,8 +8,8 @@ public class ExceptionUtil {
     public static Throwable getOriginalCause(Throwable e) {
         if (e == null) return null;
         Throwable cause = e.getCause();
-        if (cause.getCause() == null) {
-            return cause;
+        if (cause == null) {
+            return e;
         }
         return getOriginalCause(cause);
     }

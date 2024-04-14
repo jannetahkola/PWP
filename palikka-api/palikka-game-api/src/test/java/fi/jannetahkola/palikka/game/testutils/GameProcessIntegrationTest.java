@@ -4,8 +4,8 @@ import fi.jannetahkola.palikka.game.process.GameProcess;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
 import fi.jannetahkola.palikka.game.service.factory.ProcessFactory;
 import fi.jannetahkola.palikka.game.service.validator.PathValidator;
+import fi.jannetahkola.palikka.game.websocket.SessionStore;
 import lombok.SneakyThrows;
-import org.junit.jupiter.api.AfterEach;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,12 +15,14 @@ import org.springframework.messaging.simp.stomp.StompSession;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -39,6 +41,9 @@ public abstract class GameProcessIntegrationTest extends IntegrationTest {
     @Autowired
     protected GameProcessService gameProcessService;
 
+    @Autowired
+    protected SessionStore sessionStore;
+
     @MockBean
     protected ProcessFactory processFactory;
 
@@ -49,6 +54,7 @@ public abstract class GameProcessIntegrationTest extends IntegrationTest {
     protected void stop(StompSession session) {
         try {
             session.disconnect();
+            await().atMost(Duration.ofSeconds(1)).until(() -> sessionStore.sessionCount() == 0);
         } catch (Exception e) {
             // Ignore
         } finally {

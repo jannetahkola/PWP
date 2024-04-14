@@ -2,14 +2,12 @@ package fi.jannetahkola.palikka.users.api.user.model;
 
 import fi.jannetahkola.palikka.users.api.user.UserController;
 import fi.jannetahkola.palikka.users.api.user.UserRoleController;
-import fi.jannetahkola.palikka.users.data.role.RoleEntity;
 import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import jakarta.annotation.Nonnull;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
 
-import java.util.Comparator;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -28,11 +26,6 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
                 .root(entity.getRoot())
                 .createdAt(entity.getCreatedAt())
                 .lastUpdatedAt(entity.getLastUpdatedAt())
-                .roles(
-                        entity.getRoles().stream()
-                                .sorted(Comparator.comparing(RoleEntity::getName))
-                                .map(RoleEntity::getName)
-                                .toList())
                 .build();
 
         userModel.add(

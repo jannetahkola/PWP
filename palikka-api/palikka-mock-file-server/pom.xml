@@ -16,6 +16,11 @@
     <name>palikka-mock-file-server</name>
     <description>palikka-mock-file-server</description>
 
+    <properties>
+        <!-- Not a real production service -->
+        <sonar.skip>true</sonar.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,6 +1,7 @@
 package fi.jannetahkola.palikka.users.api.privilege.model;
 
 import fi.jannetahkola.palikka.users.api.privilege.PrivilegeController;
+import fi.jannetahkola.palikka.users.api.role.RolePrivilegeController;
 import fi.jannetahkola.palikka.users.data.privilege.PrivilegeEntity;
 import jakarta.annotation.Nonnull;
 import org.springframework.hateoas.CollectionModel;
@@ -10,8 +11,7 @@ import org.springframework.stereotype.Component;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 @Component
 public class PrivilegeModelAssembler implements RepresentationModelAssembler<PrivilegeEntity, PrivilegeModel> {
@@ -37,5 +37,12 @@ public class PrivilegeModelAssembler implements RepresentationModelAssembler<Pri
                                 linkTo(methodOn(PrivilegeController.class).getPrivileges(null,null)).withSelfRel())
                         )
                 );
+    }
+
+    public PrivilegeModel toModel(PrivilegeEntity entity, Integer roleId) {
+        PrivilegeModel model = toModel(entity);
+        model.removeLinks(); // Remove the default links added by the assembler
+        return model.add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivilege(roleId, model.getId(), null)).withSelfRel()
+                .andAffordance(afford(methodOn(RolePrivilegeController.class).deleteRolePrivileges(roleId, model.getId()))));
     }
 }

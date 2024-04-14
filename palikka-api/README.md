@@ -1,14 +1,21 @@
 # Palikka API
 
+## Dependencies
+- Docker 25.0+
+- Docker Compose 2.24+
+- Java 21
+- (Optional) Make 3.81+
+
 ## Local deployment
+If you don't use Make, you can run the commands from [Makefile](Makefile) individually.
 
 1. Create and run the PostgreSQL container, initialize schema and insert seed data
     ```shell
     make init-data
     ```
-2. Build the services (omit `test=0` to run tests)
+2. Build the services (use `build-test` to also run tests with coverage)
     ```shell
-    make init-data
+    make build
     ```
 3. Create and run the service containers
     ```shell
@@ -36,7 +43,7 @@ code analysis.
     ```shell
     ./mvnw clean verify sonar:sonar -Dsonar.login=<my_user_token>
     ```
-   or if you omitted `test=0` during deployment, you can just upload the 
+   or if you used `build-test` during deployment, you can just upload the 
    existing reports:
    ```shell
    ./mvnw sonar:sonar -Dsonar.login=<my_user_token>

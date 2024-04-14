@@ -48,6 +48,7 @@
             ${maven.multiModuleProjectDirectory}/coverage-reporting/target/site/jacoco-aggregate/jacoco.xml
         </sonar.coverage.jacoco.xmlReportPaths>
         <sonar.junit.reportPaths>
+            <!-- Include both UTs and ITs in the Sonar unit test count -->
             <!-- todo these should be configured as aggregates instead of like this -->
             ${maven.multiModuleProjectDirectory}/palikka-users-api/target/surefire-reports/,
             ${maven.multiModuleProjectDirectory}/palikka-users-api/target/failsafe-reports/,

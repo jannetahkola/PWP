@@ -2,15 +2,16 @@ package fi.jannetahkola.palikka.users.api.role;
 
 import fi.jannetahkola.palikka.core.integration.users.Privilege;
 import fi.jannetahkola.palikka.core.integration.users.Role;
-import fi.jannetahkola.palikka.users.api.role.model.RolePrivilegePatchModel;
+import fi.jannetahkola.palikka.users.api.role.model.RolePrivilegePostModel;
+import fi.jannetahkola.palikka.users.data.privilege.PrivilegeEntity;
 import fi.jannetahkola.palikka.users.data.privilege.PrivilegeRepository;
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
 import io.restassured.RestAssured;
+import io.restassured.http.Header;
 import lombok.SneakyThrows;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Named;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -24,6 +25,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -33,279 +36,262 @@ import static org.hamcrest.Matchers.*;
 import static org.springframework.hateoas.client.Hop.rel;
 
 class RolePrivilegeControllerIT extends IntegrationTest {
-    @Nested
-    class ResourceSecurityIT {
-        @Test
-        void givenGetRolePrivilegesRequest_whenNoToken_thenForbiddenResponse() {
-            given()
-                    .get("/roles/1/privileges")
-                    .then().assertThat()
-                    .statusCode(403)
-                    .body("detail", equalTo("Full authentication is required to access this resource"));
-        }
-
-        @Test
-        void givenGetRolePrivilegesRequest_whenAdminOrSystem_andRequestedForAnyRole_thenOkResponse() {
-            given()
-                    .header(newAdminToken())
-                    .get("/roles/2/privileges")
-                    .then().assertThat()
-                    .statusCode(200);
-            given()
-                    .header(newSystemBearerTokenHeader())
-                    .get("/roles/3/privileges")
-                    .then().assertThat()
-                    .statusCode(200);
-        }
-
-        @ParameterizedTest
-        @MethodSource("usersAndOwnRolesWithLimitedAccessToGetRolePrivileges")
-        void givenGetRolePrivilegesRequest_whenLimitedRole_andRequestedForOwnRole_thenOkResponse(Integer user,
-                                                                                                 Integer ownRoleId) {
-            given()
-                    .header(newBearerTokenHeader(user))
-                    .get("/roles/" + ownRoleId + "/privileges")
-                    .then().assertThat()
-                    .statusCode(200);
-        }
-
-        static Stream<Arguments> usersAndOwnRolesWithLimitedAccessToGetRolePrivileges() {
-            return Stream.of(
-                    Arguments.of(Named.of("USER", 2), 2),
-                    Arguments.of(Named.of("VIEWER", 3), 3)
-            );
-        }
-
-        @ParameterizedTest
-        @MethodSource("usersAndNotOwnRolesWithLimitedAccessToGetRolePrivileges")
-        void givenGetRolePrivilegesRequest_whenLimitedRole_andNotRequestedForOwnRole_thenForbiddenResponse(Integer user,
-                                                                                                           Integer notOwnRoleId) {
-            given()
-                    .header(newBearerTokenHeader(user))
-                    .get("/roles/" + notOwnRoleId + "/privileges")
-                    .then().assertThat()
-                    .statusCode(403)
-                    .body("detail", equalTo("Access Denied"));
-        }
-
-        static Stream<Arguments> usersAndNotOwnRolesWithLimitedAccessToGetRolePrivileges() {
-            return Stream.of(
-                    Arguments.of(Named.of("USER", 2), 1),
-                    Arguments.of(Named.of("VIEWER", 3), 2)
-            );
-        }
-
-        @Test
-        void givenPatchRolePrivilegesRequest_whenNoToken_thenForbiddenResponse() {
-            RolePrivilegePatchModel patch = RolePrivilegePatchModel.builder()
-                    .patch(
-                            RolePrivilegePatchModel.RolePrivilegePatch.builder()
-                                    .action(RolePrivilegePatchModel.Action.DELETE)
-                                    .privilegeId(1).build())
-                    .build();
-            given()
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(patch)
-                    .patch("/roles/1/privileges")
-                    .then().assertThat()
-                    .statusCode(403)
-                    .body("detail", equalTo("Full authentication is required to access this resource"))
-                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
-        }
-
-        @ParameterizedTest
-        @MethodSource("usersWithNoAllowedRolesToPatchUserPrivileges")
-        void givenPatchRolePrivilegesRequest_whenNoAllowedRole_thenForbiddenResponse(Integer user) {
-            RolePrivilegePatchModel patch = RolePrivilegePatchModel.builder()
-                    .patch(
-                            RolePrivilegePatchModel.RolePrivilegePatch.builder()
-                                    .action(RolePrivilegePatchModel.Action.DELETE)
-                                    .privilegeId(1).build())
-                    .build();
-            given()
-                    .header(newBearerTokenHeader(user))
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(patch)
-                    .patch("/roles/1/privileges")
-                    .then().assertThat()
-                    .statusCode(403)
-                    .body("detail", equalTo("Access Denied"))
-                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
-        }
-
-        static Stream<Arguments> usersWithNoAllowedRolesToPatchUserPrivileges() {
-            return Stream.of(
-                    Arguments.of(Named.of("USER", 2)),
-                    Arguments.of(Named.of("VIEWER", 3))
-            );
-        }
+    @Test
+    void givenGetRolePrivilegesOptionsRequest_thenAllowedMethodsReturned() {
+        given()
+                .header(newAdminToken())
+                .options("/roles/2/privileges")
+                .then().assertThat()
+                .statusCode(200)
+                .header(HttpHeaders.ALLOW, containsString("GET"))
+                .header(HttpHeaders.ALLOW, containsString("POST"))
+                .header(HttpHeaders.ALLOW, not(containsString("PUT")))
+                .header(HttpHeaders.ALLOW, not(containsString("PATCH")));
     }
 
-    @Nested
-    class ResourceFunctionalityIT {
-        @Test
-        void givenGetRolePrivilegesOptionsRequest_thenAllowedMethodsReturned() {
-            given()
-                    .header(newAdminToken())
-                    .options("/roles/2/privileges")
-                    .then().assertThat()
-                    .statusCode(200)
-                    .header(HttpHeaders.ALLOW, containsString("PATCH"))
-                    .header(HttpHeaders.ALLOW, not(containsString("POST")))
-                    .header(HttpHeaders.ALLOW, not(containsString("PUT")));
-        }
+    @Test
+    void givenGetRolePrivilegesRequest_whenAcceptHalFormsHeaderGiven_thenResponseContainsTemplates() {
+        given()
+                .header(newAdminToken())
+                .accept(MediaTypes.HAL_FORMS_JSON_VALUE)
+                .get("/roles/1/privileges")
+                .then().assertThat()
+                .statusCode(200)
+                .body("_embedded.privileges[0]._links.self.href", endsWith("/users-api/roles/1/privileges/1"))
+                .body("_embedded.privileges[0]._templates.default.method", equalTo("DELETE"))
+                .body("_templates.default.method", equalTo("POST"))
+                .body("_templates.default.properties[0].name", equalTo("privilege_id"))
+                .body("_templates.default.properties[0].required", equalTo(true))
+                .body("_templates.default.properties[0].type", equalTo("number"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_FORMS_JSON_VALUE));
+    }
 
-        @Test
-        void givenGetRolePrivilegesRequest_whenAcceptHalFormsHeaderGiven_thenResponseContainsTemplate() {
-            given()
-                    .header(newAdminToken())
-                    .accept(MediaTypes.HAL_FORMS_JSON_VALUE)
-                    .get("/roles/1/privileges")
-                    .then().log().all().assertThat()
-                    .statusCode(200)
-                    .body("_templates.default.method", equalTo("PATCH"))
-                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_FORMS_JSON_VALUE));
-        }
+    @Test
+    void givenGetSingleRolePrivilegeRequest_whenAcceptHalFormsHeaderGiven_thenResponseContainsTemplates() {
+        given()
+                .header(newAdminToken())
+                .accept(MediaTypes.HAL_FORMS_JSON_VALUE)
+                .get("/roles/1/privileges/1")
+                .then().assertThat()
+                .statusCode(200)
+                .body("id", equalTo(1))
+                .body("_links.self.href", endsWith("/users-api/roles/1/privileges/1"))
+                .body("_templates.default.method", equalTo("DELETE"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_FORMS_JSON_VALUE));
+    }
 
-        @Test
-        void givenPatchRolePrivilegesRequest_thenAcceptedResponse(@Autowired PrivilegeRepository privilegeRepository) {
-            Integer existingPrivilegeId = privilegeRepository.findByName("weather").orElseThrow().getId();
-            Integer newPrivilegeId = privilegeRepository.findByName("op").orElseThrow().getId();
-            RolePrivilegePatchModel patch = RolePrivilegePatchModel.builder()
-                    .patch(
-                            RolePrivilegePatchModel.RolePrivilegePatch.builder()
-                                    .action(RolePrivilegePatchModel.Action.ADD)
-                                    .privilegeId(newPrivilegeId).build())
-                    .patch(
-                            RolePrivilegePatchModel.RolePrivilegePatch.builder()
-                                    .action(RolePrivilegePatchModel.Action.DELETE)
-                                    .privilegeId(existingPrivilegeId).build())
-                    .build();
-            given()
-                    .header(newAdminToken())
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(patch)
-                    .patch("/roles/2/privileges")
-                    .then().assertThat()
-                    .statusCode(202)
-                    .body("_embedded.privileges", hasSize(4))
-                    .body("_links.self.href", endsWith("/roles/2/privileges"))
-                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
+    @Test
+    void givenGetSingleRolePrivilegeRequest_thenOkResponse() {
+        given()
+                .header(newAdminToken())
+                .get("/roles/1/privileges/1")
+                .then().assertThat()
+                .statusCode(200)
+                .body("id", equalTo(1))
+                .body("_links.self.href", endsWith("/users-api/roles/1/privileges/1"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
+    }
 
-            URI baseUri = URI.create(RestAssured.baseURI + ":" + RestAssured.port).resolve("/users-api/roles");
-            HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.setBearerAuth(testTokenGenerator.generateToken(USER_ID_ADMIN));
+    @Test
+    void givenGetSingleRolePrivilegeRequest_whenRoleNotFound_thenNotFoundResponse() {
+        given()
+                .header(newAdminToken())
+                .get("/roles/999/privileges/1")
+                .then().assertThat()
+                .statusCode(404)
+                .body("detail", equalTo("Role with id '999' not found"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+    }
 
-            Traverson traverson = new Traverson(baseUri, MediaTypes.HAL_JSON);
-            EntityModel<Role> roleCollectionModel = traverson
-                    .follow(rel("role").withParameter("id", 2))
-                    .withHeaders(httpHeaders)
-                    .toObject(new TypeReferences.EntityModelType<>() {});
-            assertThat(roleCollectionModel).isNotNull();
-            assertThat(roleCollectionModel.getContent()).isNotNull();
-            Set<Privilege> privileges = roleCollectionModel.getContent().getPrivileges();
-            assertThat(privileges.stream().anyMatch(privilege -> privilege.getId().equals(newPrivilegeId))).isTrue();
-            assertThat(privileges.stream().noneMatch(privilege -> privilege.getId().equals(existingPrivilegeId))).isTrue();
+    @Test
+    void givenGetSingleRolePrivilegeRequest_whenPrivilegeNotAssociatedWithRole_thenNotFoundResponse() {
+        given()
+                .header(newAdminToken())
+                .get("/roles/1/privileges/999")
+                .then().assertThat()
+                .statusCode(404)
+                .body("detail", equalTo("Privilege with id '999' not found"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+    }
 
-            // Add a previous privilege back to check that link table was cleaned up
-            patch = RolePrivilegePatchModel.builder()
-                    .patch(
-                            RolePrivilegePatchModel.RolePrivilegePatch.builder()
-                                    .action(RolePrivilegePatchModel.Action.ADD)
-                                    .privilegeId(existingPrivilegeId).build())
-                    .build();
-            given()
-                    .header(newAdminToken())
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(patch)
-                    .patch("/roles/2/privileges")
-                    .then().assertThat()
-                    .statusCode(202);
-        }
+    @Test
+    void givenPostRolePrivilegesRequest_thenAssociationCreated_andCreatedResponse(@Autowired PrivilegeRepository privilegeRepository) {
+        Integer privilegeId = privilegeRepository.findByName("weather").orElseThrow().getId();
+        RolePrivilegePostModel postModel = RolePrivilegePostModel.builder().privilegeId(privilegeId).build();
+        given()
+                .header(newAdminToken())
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .body(postModel)
+                .post("/roles/2/privileges")
+                .then().assertThat()
+                .statusCode(201)
+                .body("_embedded.privileges", hasSize(4))
+                .body("_links.self.href", endsWith("/roles/2/privileges"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
 
-        @Test
-        void givenPatchRolePrivilegesRequest_whenRoleNotFound_thenNotFoundResponse() {
-            RolePrivilegePatchModel patch = RolePrivilegePatchModel.builder()
-                    .patch(
-                            RolePrivilegePatchModel.RolePrivilegePatch.builder()
-                                    .action(RolePrivilegePatchModel.Action.DELETE)
-                                    .privilegeId(1).build())
-                    .build();
-            given()
-                    .header(newAdminToken())
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(patch)
-                    .patch("/roles/999/privileges")
-                    .then().assertThat()
-                    .statusCode(404)
-                    .body("detail", equalTo("Role with id '999' not found"))
-                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
-        }
+        URI baseUri = URI.create(RestAssured.baseURI + ":" + RestAssured.port).resolve("/users-api/roles");
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.setBearerAuth(testTokenGenerator.generateToken(USER_ID_ADMIN));
 
-        @ParameterizedTest
-        @MethodSource("invalidPatchRolePrivilegesParameters")
-        void givenPatchRolePrivilegesRequest_whenParametersInvalid_thenBadRequestResponse(JSONObject json,
-                                                                                          String expectedMessageSubstring) {
-            given()
-                    .header(newAdminToken())
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(json.toString())
-                    .patch("/roles/2/privileges")
-                    .then().assertThat()
-                    .statusCode(400)
-                    .body("detail", containsString(expectedMessageSubstring))
-                    .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));;
-        }
+        Traverson traverson = new Traverson(baseUri, MediaTypes.HAL_JSON);
+        EntityModel<Role> roleCollectionModel = traverson
+                .follow(rel("role").withParameter("id", 2))
+                .withHeaders(httpHeaders)
+                .toObject(new TypeReferences.EntityModelType<>() {});
+        assertThat(roleCollectionModel).isNotNull();
+        assertThat(roleCollectionModel.getContent()).isNotNull();
+        Set<Privilege> privileges = roleCollectionModel.getContent().getPrivileges();
+        assertThat(privileges.stream().anyMatch(privilege -> privilege.getId().equals(privilegeId))).isTrue();
+    }
 
-        @SneakyThrows
-        static Stream<Arguments> invalidPatchRolePrivilegesParameters() {
-            return Stream.of(
-                    Arguments.of(
-                            Named.of(
-                                    "Missing action",
-                                    new JSONObject().put(
-                                            "patches",
-                                            new JSONArray().put(
-                                                    new JSONObject()
-                                                            .put("role_id", 1)))),
-                            "patches[].action: must not be null"
-                    ),
-                    Arguments.of(
-                            Named.of(
-                                    "Invalid action",
-                                    new JSONObject().put(
-                                            "patches",
-                                            new JSONArray().put(
-                                                    new JSONObject()
-                                                            .put("role_id", 1)
-                                                            .put("action", "unknown")))),
-                            "No enum constant"
-                    ),
-                    Arguments.of(
-                            Named.of(
-                                    "Missing role",
-                                    new JSONObject().put(
-                                            "patches",
-                                            new JSONArray().put(
-                                                    new JSONObject()
-                                                            .put("action", "delete")))),
-                            "patches[].privilegeId: must not be null"
-                    ),
-                    Arguments.of(
-                            Named.of(
-                                    "Empty patch list",
-                                    new JSONObject().put(
-                                            "patches",
-                                            new JSONArray())),
-                            "patches: size must be between 1 and 20"
-                    ),
-                    Arguments.of(
-                            Named.of(
-                                    "No patch list",
-                                    new JSONObject()),
-                            "patches: must not be null"
-                    )
-            );
-        }
+    @Test
+    void givenPostRolePrivilegesRequest_whenAssociationAlreadyExists_thenCreatedResponse(@Autowired PrivilegeRepository privilegeRepository) {
+        Header authHeader = newAdminToken();
+        given()
+                .header(authHeader)
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .get("/roles/2/privileges")
+                .then().assertThat()
+                .statusCode(200)
+                .body("_embedded.privileges", hasSize(4));
+        Integer privilegeId = privilegeRepository.findByName("help").orElseThrow().getId();
+        RolePrivilegePostModel postModel = RolePrivilegePostModel.builder().privilegeId(privilegeId).build();
+        given()
+                .header(authHeader)
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .body(postModel)
+                .post("/roles/2/privileges")
+                .then().assertThat()
+                .statusCode(201)
+                .body("_embedded.privileges", hasSize(4))
+                .body("_links.self.href", endsWith("/roles/2/privileges"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
+    }
+
+    @Test
+    void givenPostRolePrivilegesRequest_whenRoleNotFound_thenNotFoundResponse(@Autowired PrivilegeRepository privilegeRepository) {
+        Integer privilegeId = privilegeRepository.findByName("weather").orElseThrow().getId();
+        RolePrivilegePostModel postModel = RolePrivilegePostModel.builder().privilegeId(privilegeId).build();
+        given()
+                .header(newAdminToken())
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .body(postModel)
+                .post("/roles/999/privileges")
+                .then().assertThat()
+                .statusCode(404)
+                .body("detail", equalTo("Role with id '999' not found"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+    }
+
+    @Test
+    void givenPostRolePrivilegesRequest_whenPrivilegeNotFound_thenNotFoundResponse() {
+        RolePrivilegePostModel postModel = RolePrivilegePostModel.builder().privilegeId(999).build();
+        given()
+                .header(newAdminToken())
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .body(postModel)
+                .post("/roles/1/privileges")
+                .then().assertThat()
+                .statusCode(404)
+                .body("detail", equalTo("Privilege with id '999' not found"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidPostRolePrivilegesParameters")
+    void givenPostRolePrivilegesRequest_whenParametersInvalid_thenBadRequestResponse(JSONObject json,
+                                                                                     String expectedMessageSubstring) {
+        given()
+                .header(newAdminToken())
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .body(json.toString())
+                .post("/roles/2/privileges")
+                .then().assertThat()
+                .statusCode(400)
+                .body("detail", containsString(expectedMessageSubstring))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));;
+    }
+
+    @Test
+    void givenDeleteRolePrivilegesRequest_thenAssociationDeleted_andNoContentResponse(@Autowired PrivilegeRepository privilegeRepository) {
+        final int roleId = 2;
+        final List<PrivilegeEntity> allAssociatedPrivileges = privilegeRepository.findAllByRoleId(roleId);
+        final Integer associatedPrivilegeId = allAssociatedPrivileges.stream().findAny().orElseThrow().getId();
+        final Header authHeader = newAdminToken();
+        given()
+                .header(authHeader)
+                .delete("/roles/" + roleId + "/privileges/" + associatedPrivilegeId)
+                .then().assertThat()
+                .statusCode(204);
+        given()
+                .header(authHeader)
+                .get("/roles/" + roleId + "/privileges")
+                .then().assertThat()
+                .statusCode(200)
+                .body("_embedded.privileges", hasSize(allAssociatedPrivileges.size() - 1));
+    }
+
+    @Test
+    void givenDeleteRolePrivilegesRequest_whenPrivilegeNotAssociatedWithRole_thenNoContentResponse(@Autowired PrivilegeRepository privilegeRepository) {
+        final int roleId = 2;
+        final int originalPrivilegesCount = privilegeRepository.findAllByRoleId(roleId).size();
+        final Integer nonAssociatedPrivilegeId = privilegeRepository.findByName("op").orElseThrow().getId();
+        final Header authHeader = newAdminToken();
+        given()
+                .header(authHeader)
+                .delete("/roles/" + roleId + "/privileges/" + nonAssociatedPrivilegeId)
+                .then().assertThat()
+                .statusCode(204);
+        given()
+                .header(authHeader)
+                .get("/roles/" + roleId + "/privileges")
+                .then().assertThat()
+                .statusCode(200)
+                .body("_embedded.privileges", hasSize(originalPrivilegesCount));
+    }
+
+    @Test
+    void givenDeleteRolePrivilegesRequest_whenRoleNotFound_thenNotFoundResponse() {
+        given()
+                .header(newAdminToken())
+                .delete("/roles/999/privileges/1")
+                .then().assertThat()
+                .statusCode(404)
+                .body("detail", equalTo("Role with id '999' not found"))
+                .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaType.APPLICATION_PROBLEM_JSON_VALUE));
+    }
+
+    @SneakyThrows
+    static Stream<Arguments> invalidPostRolePrivilegesParameters() {
+        return Stream.of(
+                Arguments.of(
+                        Named.of(
+                                "Empty privilege id",
+                                new JSONObject().put(
+                                        "privilege_id",
+                                        "")),
+                        "privilegeId: must not be null"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Blank privilege id",
+                                new JSONObject().put(
+                                        "privilege_id",
+                                        " ")),
+                        "privilegeId: must not be null"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "No privilege id",
+                                new JSONObject()),
+                        "privilegeId: must not be null"
+                ),
+                Arguments.of(
+                        Named.of(
+                                "Invalid privilege id",
+                                new JSONObject().put("privilege_id", "a")),
+                        "Cannot deserialize value of type"
+                )
+        );
     }
 }

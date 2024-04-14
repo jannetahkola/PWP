@@ -1,14 +1,8 @@
-test=1
-
 build:
 	chmod +x ./mvnw
-ifeq ($(test),1)
-	./mvnw clean verify
-else
 	./mvnw clean package -DskipTests
-endif
 
-build-coverage:
+build-test:
 	chmod +x ./mvnw
 	./mvnw clean verify
 

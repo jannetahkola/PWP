@@ -14,4 +14,8 @@ public class UsersNotFoundException extends NotFoundException {
     public static RuntimeException ofRole(Integer roleId) {
         return new UsersNotFoundException(String.format("Role with id '%d' not found", roleId));
     }
+
+    public static RuntimeException ofPrivilege(Integer privilegeId) {
+        return new UsersNotFoundException(String.format("Privilege with id '%d' not found", privilegeId));
+    }
 }
