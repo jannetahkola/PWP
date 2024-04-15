@@ -33,3 +33,4 @@ build/
 
 ### Other ###
 /conf/public/server.jar
+sonar.txt
