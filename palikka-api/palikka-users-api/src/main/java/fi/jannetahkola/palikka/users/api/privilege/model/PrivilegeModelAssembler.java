@@ -40,8 +40,12 @@ public class PrivilegeModelAssembler implements RepresentationModelAssembler<Pri
     }
 
     public PrivilegeModel toModel(PrivilegeEntity entity, Integer roleId) {
-        PrivilegeModel model = toModel(entity);
-        model.removeLinks(); // Remove the default links added by the assembler
+        PrivilegeModel model = PrivilegeModel.builder()
+                .id(entity.getId())
+                .domain(entity.getDomain())
+                .name(entity.getName())
+                .domainDescription(entity.getDomainDescription())
+                .build();
         return model.add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivilege(roleId, model.getId(), null)).withSelfRel()
                 .andAffordance(afford(methodOn(RolePrivilegeController.class).deleteRolePrivileges(roleId, model.getId()))));
     }

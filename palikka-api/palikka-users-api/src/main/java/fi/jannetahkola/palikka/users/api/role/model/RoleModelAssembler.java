@@ -1,5 +1,6 @@
 package fi.jannetahkola.palikka.users.api.role.model;
 
+import fi.jannetahkola.palikka.users.api.privilege.model.PrivilegeModel;
 import fi.jannetahkola.palikka.users.api.privilege.model.PrivilegeModelAssembler;
 import fi.jannetahkola.palikka.users.api.role.RoleController;
 import fi.jannetahkola.palikka.users.api.role.RolePrivilegeController;
@@ -71,10 +72,22 @@ public class RoleModelAssembler implements RepresentationModelAssembler<RoleEnti
      * @return Role model
      */
     public RoleModel toModel(RoleEntity entity, Integer userId) {
-        RoleModel model = toModel(entity);
-        model.removeLinks(); // Remove the default links added by the assembler
-        return model.add(linkTo(methodOn(UserRoleController.class).getUserRole(userId, model.getId())).withSelfRel()
-                .andAffordance(afford(methodOn(UserRoleController.class).deleteUserRoles(userId, model.getId()))))
-                .add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivileges(model.getId(), null)).withRel("privileges"));
+        RoleModel roleModel = RoleModel.builder()
+                .id(entity.getId())
+                .name(entity.getName())
+                .description(entity.getDescription())
+                .privileges(
+                        // Sort by domain, name
+                        entity.getPrivileges().stream()
+                                .map(privilege -> privilegeModelAssembler.toModel(privilege, entity.getId()))
+                                .sorted(Comparator.comparing(PrivilegeModel::getDomain))
+                                .sorted(Comparator.comparing(PrivilegeModel::getName))
+                                .toList())
+                .build();
+        return roleModel
+                .add(linkTo(methodOn(UserRoleController.class).getUserRole(userId, roleModel.getId())).withSelfRel()
+                        .andAffordance(afford(methodOn(UserRoleController.class).deleteUserRoles(userId, roleModel.getId()))))
+                .add(linkTo(methodOn(RoleController.class).getRole(roleModel.getId(), null)).withRel("role"))
+                .add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivileges(roleModel.getId(), null)).withRel("role_privileges"));
     }
 }

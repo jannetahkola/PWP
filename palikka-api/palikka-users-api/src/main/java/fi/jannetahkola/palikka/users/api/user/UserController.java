@@ -135,6 +135,7 @@ public class UserController {
         UserModel createdUser = userModelAssembler.toModel(userRepository.save(userEntity));
 
         return ResponseEntity
+                // todo add to other POST endpoints
                 .created(createdUser.getRequiredLink(IanaLinkRelations.SELF).toUri())
                 .body(createdUser);
     }

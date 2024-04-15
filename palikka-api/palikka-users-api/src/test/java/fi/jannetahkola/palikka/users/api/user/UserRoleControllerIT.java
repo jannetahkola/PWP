@@ -42,7 +42,8 @@ class UserRoleControllerIT extends IntegrationTest {
                 .then().assertThat()
                 .statusCode(200)
                 .body("_embedded.roles[0]._links.self.href", endsWith("/users-api/users/1/roles/1"))
-                .body("_embedded.roles[0]._links.privileges.href", endsWith("/users-api/roles/1/privileges"))
+                .body("_embedded.roles[0]._links.role.href", endsWith("/users-api/roles/1"))
+                .body("_embedded.roles[0]._links.role_privileges.href", endsWith("/users-api/roles/1/privileges"))
                 .body("_embedded.roles[0]._templates.default.method", equalTo("DELETE"))
                 .body("_links.self.href", endsWith("/users-api/users/1/roles"))
                 .body("_templates.default.method", equalTo("POST"))
@@ -81,8 +82,11 @@ class UserRoleControllerIT extends IntegrationTest {
                 .then().assertThat()
                 .statusCode(200)
                 .body("_links.self.href", endsWith("/users-api/users/" + USER_ID_ADMIN + "/roles/1"))
-                .body("_links.privileges.href", endsWith("/users-api/roles/1/privileges"))
+                .body("_links.role.href", endsWith("/users-api/roles/1"))
+                .body("_links.role_privileges.href", endsWith("/users-api/roles/1/privileges"))
                 .body("_templates.default.method", equalTo("DELETE"))
+                .body("privileges[0]._links.self.href", endsWith("/users-api/roles/1/privileges/1"))
+                .body("privileges[0]._templates.default.method", equalTo("DELETE"))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_FORMS_JSON_VALUE));
     }
 

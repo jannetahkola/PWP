@@ -9,7 +9,6 @@ import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
 import io.restassured.RestAssured;
 import io.restassured.http.Header;
 import lombok.SneakyThrows;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
@@ -26,7 +25,6 @@ import org.springframework.http.MediaType;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 
