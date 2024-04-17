@@ -1,27 +1,50 @@
 # Palikka API
 
-## Dependencies
-- Docker 25.0+
-- Docker Compose 2.24+
-- (Optional) Make 3.81+
-  - Requires also some common Linux shell such as Bash or Zsh
-
 ## Project structure
 The multi-module project consists of the following submodules:
 
 - [palikka-core](palikka-core)
-  - Library that contains code that is shared between the services
+  - Library for shared code between the services
+- [palikka-users-api](palikka-users-api)
+  - Service for authenticating and managing users, roles and privileges
 - [palikka-game-api](palikka-game-api)
   - Service for managing the game executable and its files
   - Requires authentication via the users API
-- [palikka-users-api](palikka-users-api)
-  - Service for authenticating and managing users, roles and privileges
 - [palikka-mock-file-server](palikka-mock-file-server)
   - Serves a manually downloaded game executable (.jar) for local testing
   - Avoids constant calls to Mojang's servers
-  - **Not a production service**
+  - **_Not a production service!_**
+
+All of the above modules inherit the [parent POM](pom.xml), which provides a few common dependencies as well as
+dependency version management.
 
 ## Local deployment
+
+### General description
+Local deployments utilize Dockerfiles and Docker Compose. Each API service has its own Dockerfile, and all of these 
+are managed by a single Compose file (see [docker-compose.yaml](docker-compose.yaml)). PostgreSQL and SonarQube 
+have separate Compose files.
+
+Before the service images are built, a few other Dockerfiles are executed when using the provided Makefile
+
+- a common [deps.Dockerfile](deps.Dockerfile) that installs all dependencies for the API services
+- a [mode](#modes)-dependent, common Dockerfile for the core library that installs the root POM and the core library itself (see [Dockerfiles](/conf/dockerfiles))
+
+Results from the above are reused when building images for the API services.
+
+### Modes
+Local deployment can be done either in development or production mode. The difference can be seen by looking at the 
+[Dockerfiles](/conf/dockerfiles) - development will use files suffixed with `.dev.Dockerfile`. This section describes the development mode.
+
+See [Code Analysis](#code-analysis) for using production mode. The main difference is that builds in production 
+mode run tests and require SonarQube to provide code quality analysis, which makes the builds slower.
+
+### Dependencies
+- Docker 25.0+
+- Docker Compose 2.24+
+- (Optional) GNU Make 3.81+
+    - Requires also some common Linux shell such as Bash or Zsh
+
 If you don't use Make, you can run the commands from [Makefile](Makefile) individually. Note that some of them utilise 
 shell commands. Run `make` to get descriptions of available Make targets.
 
@@ -45,7 +68,15 @@ Once the containers are up, see:
 - OpenAPI documentation at [http://localhost:8080/users-api/swagger-ui/index.html](http://localhost:8080/users-api/swagger-ui/index.html)
 - Entry point at [http://localhost:8080/users-api/](http://localhost:8080/users-api/)
 
-## Testing
+## Local development
+### Dependencies
+- Docker 25.0+
+- Docker Compose 2.24+
+- Java 21+
+- (Optional) GNU Make 3.81+
+    - Requires also some common Linux shell such as Bash or Zsh
+
+### Testing
 Unit and integration tests for each module are under `/{module_name}/src/test/`. Run the whole test suite from the root directory ([palikka-api](./)) with
 ```shell
 ./mvnw clean verify
@@ -64,7 +95,8 @@ Database and test data are handled automatically. External libraries used in tes
 ## Code analysis
 
 [SonarQube](https://www.sonarsource.com/products/sonarqube/) is available as an additional Docker service for 
-code quality analysis. It is enabled only in "production environment".
+code quality analysis. It is enabled only in production mode when using Docker deployment. It is configured to use 
+the PostgreSQL container as its database, thus Postgres needs to be up before the SonarQube container.
 
 1. Create and run the PostgresSQL container
     ```shell
