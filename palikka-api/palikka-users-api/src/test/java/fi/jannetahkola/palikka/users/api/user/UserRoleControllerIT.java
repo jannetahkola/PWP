@@ -67,7 +67,8 @@ class UserRoleControllerIT extends IntegrationTest {
                 .body("_embedded.roles[0].privileges[0].domain", not(emptyOrNullString()))
                 .body("_embedded.roles[0].privileges[0].name", not(emptyOrNullString()))
                 .body("_embedded.roles[0]._links.self.href", endsWith("/users-api/users/1/roles/1"))
-                .body("_embedded.roles[0]._links.privileges.href", endsWith("/users-api/roles/1/privileges"))
+                .body("_embedded.roles[0]._links.role.href", endsWith("/users-api/roles/1"))
+                .body("_embedded.roles[0]._links.role_privileges.href", endsWith("/users-api/roles/1/privileges"))
                 .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
     }

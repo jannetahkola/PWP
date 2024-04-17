@@ -1,33 +1,4 @@
 services:
-  sonarqube:
-    container_name: sonarqube
-    image: sonarqube:9.9-community
-    environment:
-      - SONAR_JDBC_URL=jdbc:postgresql://postgres:5432/sonar
-      - SONAR_JDBC_USERNAME=user
-      - SONAR_JDBC_PASSWORD=password
-    volumes:
-      - sonarqube_data:/opt/sonarqube/data
-      - sonarqube_extensions:/opt/sonarqube/extensions
-      - sonarqube_logs:/opt/sonarqube/logs
-    ports:
-      - 9000:9000
-    depends_on:
-      - postgres
-
-  postgres:
-    container_name: postgres
-    image: postgres:16.2
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=palikka_users
-    volumes:
-      - postgres:/var/lib/postgresql
-      - postgres_data:/var/lib/postgresql/data
-      # anything inside this folder will be executed on start up
-      - ./conf/data/sonar:/docker-entrypoint-initdb.d
-
   redis:
     container_name: redis
     image: redis:7.2
@@ -35,50 +6,62 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
     volumes:
       - redis:/redis/data
+    networks:
+      - palikka-api-net
 
   palikka-users-api:
     container_name: palikka-users-api
     build:
-      context: ./palikka-users-api
-      dockerfile: Dockerfile
-    depends_on:
-      - postgres
+      context: .
+      dockerfile: palikka-users-api.Dockerfile
+      # build stage will access SonarQube container through host
+      network: host
     volumes:
       - ./conf/keystore-dev.p12:/app/keystore-dev.p12
       - ./conf/truststore-dev.p12:/app/truststore-dev.p12
     ports:
       - 8080:8080
+    networks:
+      - palikka-api-net
+    depends_on:
+      - redis
 
   palikka-game-api:
     container_name: palikka-game-api
     build:
-      context: ./palikka-game-api
-      dockerfile: Dockerfile
-    ports:
-      - 8082:8082
-      - 25565:25565
+      context: .
+      dockerfile: palikka-game-api.Dockerfile
+      # build stage will access SonarQube container through host
+      network: host
     volumes:
       - ./conf/keystore-dev.p12:/app/keystore-dev.p12
       - ./conf/truststore-dev.p12:/app/truststore-dev.p12
       - game:/app/game
+    ports:
+      - 8082:8082
+      - 25565:25565
+    networks:
+      - palikka-api-net
 
   palikka-mock-file-server:
     container_name: palikka-mock-file-server
     build:
-      context: ./palikka-mock-file-server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: palikka-mock-file-server.Dockerfile
     volumes:
       - ./conf/public/server.jar:/app/public/server.jar
     ports:
       - 8081:8081
+    networks:
+      - palikka-api-net
 
 volumes:
-  sonarqube_data:
-  sonarqube_extensions:
-  sonarqube_logs:
-  postgres:
-  postgres_data:
   redis:
     driver: local
   game:
     driver: local
+
+networks:
+  palikka-api-net:
+    name: palikka-api-net
+    external: true

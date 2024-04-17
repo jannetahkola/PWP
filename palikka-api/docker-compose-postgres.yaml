@@ -1,0 +1,26 @@
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:16.2
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=palikka_users
+    volumes:
+      - postgres:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
+      # anything inside this folder will be executed on start up
+      - ./conf/data/sonar:/docker-entrypoint-initdb.d
+    ports:
+      # expose ports for local debugging
+      - 5432:5432
+    networks:
+      - palikka-api-net
+
+volumes:
+  postgres:
+  postgres_data:
+
+networks:
+  palikka-api-net:
+    name: palikka-api-net

@@ -17,7 +17,6 @@
         <module>palikka-users-api</module>
         <module>palikka-game-api</module>
         <module>palikka-mock-file-server</module>
-        <module>coverage-reporting</module>
     </modules>
 
     <groupId>fi.jannetahkola.palikka</groupId>
@@ -42,19 +41,6 @@
         <testcontainers.version>1.19.7</testcontainers.version>
         <embedded-redis.version>1.4.3</embedded-redis.version>
         <jacoco-plugin.version>0.8.11</jacoco-plugin.version>
-
-        <!-- Sonar -->
-        <sonar.coverage.jacoco.xmlReportPaths>
-            ${maven.multiModuleProjectDirectory}/coverage-reporting/target/site/jacoco-aggregate/jacoco.xml
-        </sonar.coverage.jacoco.xmlReportPaths>
-        <sonar.junit.reportPaths>
-            <!-- Include both UTs and ITs in the Sonar unit test count -->
-            <!-- todo these should be configured as aggregates instead of like this -->
-            ${maven.multiModuleProjectDirectory}/palikka-users-api/target/surefire-reports/,
-            ${maven.multiModuleProjectDirectory}/palikka-users-api/target/failsafe-reports/,
-            ${maven.multiModuleProjectDirectory}/palikka-game-api/target/surefire-reports/,
-            ${maven.multiModuleProjectDirectory}/palikka-game-api/target/failsafe-reports/
-        </sonar.junit.reportPaths>
 
         <!-- SpringDoc -->
         <springdoc-openapi-starter.version>2.4.0</springdoc-openapi-starter.version>
@@ -127,69 +113,4 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <argLine>
-                        ${argLine}
-                        <!--
-                        Remove warnings produced by Mockito on JDK 21. See
-                         * https://github.com/mockito/mockito/issues/3037
-                         * https://openjdk.org/jeps/451
-                        -->
-                        -XX:+EnableDynamicAgentLoading
-                    </argLine>
-                    <includes>
-                        <include>**/*Tests.java</include>
-                    </includes>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-failsafe-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>integration-test</goal>
-                            <goal>verify</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <includes>
-                        <include>**/*IT.java</include>
-                    </includes>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-
-    <profiles>
-        <profile>
-            <id>coverage</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.jacoco</groupId>
-                        <artifactId>jacoco-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>prepare-agent</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
 </project>

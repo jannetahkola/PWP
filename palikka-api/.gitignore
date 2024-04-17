@@ -34,3 +34,6 @@ build/
 ### Other ###
 /conf/public/server.jar
 sonar.txt
+palikka-core.Dockerfile
+palikka-game-api.Dockerfile
+palikka-users-api.Dockerfile

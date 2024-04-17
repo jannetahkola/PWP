@@ -3,8 +3,8 @@
 ## Dependencies
 - Docker 25.0+
 - Docker Compose 2.24+
-- Java 21
 - (Optional) Make 3.81+
+  - Requires also some common Linux shell such as Bash or Zsh
 
 ## Project structure
 The multi-module project consists of the following submodules:
@@ -20,20 +20,10 @@ The multi-module project consists of the following submodules:
   - Serves a manually downloaded game executable (.jar) for local testing
   - Avoids constant calls to Mojang's servers
   - **Not a production service**
-- [coverage-reporting](coverage-reporting)
-  - Utility module for aggregating coverage reports as described in the [SonarSource multimodule example](https://github.com/SonarSource/sonar-scanning-examples/tree/master/sonar-scanner-maven/maven-multimodule)
-
-**The current project structure presents a problem with the Docker deployment model**: each service is run from its 
-own Dockerfile that resides in the corresponding submodule. Because they depend on code that's not inside submodule itself, 
-such as the core library, the whole project has to be built on the host before the Docker containers are started. 
-The individual Dockerfiles cannot copy resources from parent directories for security reasons. This is the reason why 
-the Java dependency is present at all.
-
-One way to solve this would be to serve the core library from a remote package repository.
 
 ## Local deployment
 If you don't use Make, you can run the commands from [Makefile](Makefile) individually. Note that some of them utilise 
-shell commands.
+shell commands. Run `make` to get descriptions of available Make targets.
 
 > All implementation has been done on Ubuntu or macOS targeting Linux based hosts -> no guarantees on compatibility 
 > with other platforms.
@@ -42,9 +32,9 @@ shell commands.
     ```shell
     make init-data
     ```
-2. Build the services (use `build-test` to also run tests and create code quality reports)
-    ```shell
-    make build
+2. Setup local environment for development. Provides faster deployments by skipping tests and code quality analysis
+    ```shell 
+    make env-dev
     ```
 3. Create and run the service containers
     ```shell
@@ -58,7 +48,7 @@ Once the containers are up, see:
 ## Testing
 Unit and integration tests for each module are under `/{module_name}/src/test/`. Run the whole test suite from the root directory ([palikka-api](./)) with
 ```shell
-make build-test
+./mvnw clean verify
 ```
 
 Database and test data are handled automatically. External libraries used in testing:
@@ -74,22 +64,27 @@ Database and test data are handled automatically. External libraries used in tes
 ## Code analysis
 
 [SonarQube](https://www.sonarsource.com/products/sonarqube/) is available as an additional Docker service for 
-code quality analysis.
+code quality analysis. It is enabled only in "production environment".
 
-1. Create and run the PostgreSQL and SonarQube containers
+1. Create and run the PostgresSQL container
     ```shell
-    make docker-run-sonar
+    make init-data
     ```
-    This does a few additional things on the first run
+2. Create and run the SonarQube container
+    ```shell
+    make init-sonar
+    ```
+   This does a few additional things on the first run via the SonarQube Web API
     - Changes the default password to avoid SonarQube prompting it on login
     - Generates a user token and stores it into a new file called `sonar.txt`
-2. Run tests and create reports. Optional if you used `build-test` during deployment
-    ```shell
-   make build-test
+3. Setup local environment for production. Runs all tests and uploads code quality reports to SonarQube
+   using `sonar.txt` from the previous step
+    ```shell 
+    make env-prod
     ```
-3. Upload the reports to SonarQube using the user token from `sonar.txt`
+4. Run the service containers
     ```shell
-    make sonar-report
+    make run-docker
     ```
-4. Go to [http://localhost:9000](http://localhost:9000) and login using `admin/pass`
-5. Navigate to Projects to see the full report
+5. Go to [http://localhost:9000](http://localhost:9000) and login using `admin/pass`
+6. Navigate to Projects to see the reports

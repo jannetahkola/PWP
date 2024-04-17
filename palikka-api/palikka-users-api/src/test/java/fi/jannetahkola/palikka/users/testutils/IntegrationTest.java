@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.util.TestSocketUtils;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -64,7 +65,7 @@ public abstract class IntegrationTest {
     static {
         RedisProperties redisProperties = new RedisProperties();
         redisProperties.setHost("localhost");
-        redisProperties.setPort(6379);
+        redisProperties.setPort(TestSocketUtils.findAvailableTcpPort());
         embeddedRedisServer = new EmbeddedRedisServer(redisProperties);
     }
 
