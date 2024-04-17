@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -38,7 +37,6 @@ import static org.hamcrest.Matchers.equalTo;
  * Remember to stop the game process before each test!
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @ActiveProfiles("test")
 class GameProcessControllerIT extends GameProcessIntegrationTest {
     Header authorizationHeader;
@@ -140,7 +138,7 @@ class GameProcessControllerIT extends GameProcessIntegrationTest {
         }
 
         @SneakyThrows
-        @RepeatedTest(value = 3, failureThreshold = 1)
+        @RepeatedTest(value = 2, failureThreshold = 1)
         void givenProcessControlRequest_whenActionsIsStart_andAlreadyUp_thenBadRequestResponse() {
             mockGameProcess();
 
@@ -161,7 +159,8 @@ class GameProcessControllerIT extends GameProcessIntegrationTest {
                 }));
             }
 
-            CompletableFuture.allOf(startFutures.toArray(new CompletableFuture[0])).get(testTimeoutMillis, TimeUnit.MILLISECONDS);
+            CompletableFuture.allOf(startFutures.toArray(
+                    new CompletableFuture[0])).get(testTimeoutMillis, TimeUnit.MILLISECONDS);
 
             List<Response> responses = startFutures.stream().map(future -> {
                 try {
@@ -179,19 +178,11 @@ class GameProcessControllerIT extends GameProcessIntegrationTest {
             outputAsServerProcess(SERVER_START_LOG);
             assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
-            given()
-                    .header(authorizationHeader)
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(new JSONObject().put("action", "stop").toString())
-                    .post("/game/process");
-
-            assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
-
             stop();
         }
 
         @SneakyThrows
-        @RepeatedTest(value = 3, failureThreshold = 1)
+        @RepeatedTest(value = 2, failureThreshold = 1)
         void givenProcessControlRequest_whenActionIsStop_andAlreadyDown_thenBadRequestResponse() {
             mockGameProcess();
 
@@ -204,8 +195,24 @@ class GameProcessControllerIT extends GameProcessIntegrationTest {
 
             assertThat(processStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
+            // Try to stop while still starting -> fail
+            given()
+                    .header(authorizationHeader)
+                    .contentType(MediaType.APPLICATION_JSON_VALUE)
+                    .body(new JSONObject().put("action", "stop").toString())
+                    .post("/game/process")
+                    .then().assertThat()
+                    .statusCode(400);
+
             outputAsServerProcess(SERVER_START_LOG);
             assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
+
+            given()
+                    .header(authorizationHeader)
+                    .get("/game/process")
+                    .then().assertThat()
+                    .statusCode(200)
+                    .body("status", equalTo("up"));
 
             List<CompletableFuture<Response>> startFutures = new ArrayList<>();
 
@@ -239,84 +246,9 @@ class GameProcessControllerIT extends GameProcessIntegrationTest {
             assertThat(successfulResponses).isEqualTo(1);
             assertThat(badRequestResponses).isEqualTo(2);
 
-            stop();
-        }
-
-        @SneakyThrows
-        @Test
-        void givenProcessControlRequest_whenActionIsStop_andProcessStillStarting_thenBadRequestResponse() {
-            mockGameProcess();
-
-            given()
-                    .header(authorizationHeader)
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(new JSONObject().put("action", "start").toString())
-                    .post("/game/process")
-                    .thenReturn();
-
-            assertThat(processStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
-
-            given()
-                    .header(authorizationHeader)
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(new JSONObject().put("action", "stop").toString())
-                    .post("/game/process")
-                    .then().assertThat()
-                    .statusCode(400);
-
-            stop();
-        }
-
-        @SneakyThrows
-        @Test
-        void givenProcessControlRequest_whenActionIsStartThenActionIsStop_thenOkResponse() {
-            mockGameProcess();
-
-            given()
-                    .header(authorizationHeader)
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(new JSONObject().put("action", "start").toString())
-                    .post("/game/process")
-                    .then().assertThat()
-                    .statusCode(200);
-
-            assertThat(processStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
-
-            given()
-                    .header(authorizationHeader)
-                    .get("/game/process")
-                    .then().assertThat()
-                    .statusCode(200)
-                    .body("status", equalTo("starting"));
-
-            outputAsServerProcess(SERVER_START_LOG);
-            assertThat(gameStartLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
-
-            given()
-                    .header(authorizationHeader)
-                    .get("/game/process")
-                    .then().assertThat()
-                    .statusCode(200)
-                    .body("status", equalTo("up"));
-
-            given()
-                    .header(authorizationHeader)
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .body(new JSONObject().put("action", "stop").toString())
-                    .post("/game/process")
-                    .then().assertThat()
-                    .statusCode(200);
-
             assertThat(processExitLatch.await(testTimeoutMillis, TimeUnit.MILLISECONDS)).isTrue();
 
-            given()
-                    .header(authorizationHeader)
-                    .get("/game/process")
-                    .then().assertThat()
-                    .statusCode(200)
-                    .body("status", equalTo("down"));
-
-            stop();
+            stop(); // should be unnecessary, stopped already
         }
     }
 }

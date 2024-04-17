@@ -1,24 +1,43 @@
 package fi.jannetahkola.palikka.game.testutils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import fi.jannetahkola.palikka.game.process.GameProcess;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
 import fi.jannetahkola.palikka.game.service.factory.ProcessFactory;
 import fi.jannetahkola.palikka.game.service.validator.PathValidator;
 import fi.jannetahkola.palikka.game.websocket.SessionStore;
+import io.restassured.RestAssured;
+import lombok.NonNull;
 import lombok.SneakyThrows;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.messaging.converter.CompositeMessageConverter;
+import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.converter.MessageConverter;
+import org.springframework.messaging.converter.StringMessageConverter;
 import org.springframework.messaging.simp.stomp.StompSession;
+import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.messaging.WebSocketStompClient;
+import org.springframework.web.socket.sockjs.client.SockJsClient;
+import org.springframework.web.socket.sockjs.client.Transport;
+import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,6 +57,10 @@ public abstract class GameProcessIntegrationTest extends IntegrationTest {
     @Value("#{T(java.lang.Long).parseLong('${palikka.test.timeout-in-millis}')}")
     protected Long testTimeoutMillis;
 
+    protected Duration getTestTimeout() {
+        return Duration.ofMillis(testTimeoutMillis);
+    }
+
     @Autowired
     protected GameProcessService gameProcessService;
 
@@ -49,6 +72,35 @@ public abstract class GameProcessIntegrationTest extends IntegrationTest {
 
     @MockBean
     protected PathValidator pathValidator;
+
+    @Autowired
+    protected ObjectMapper objectMapper;
+
+    protected final BlockingQueue<TestStompSessionHandlerAdapter.Frame> userReplyQueue = new LinkedBlockingQueue<>();
+    protected final BlockingQueue<TestStompSessionHandlerAdapter.Frame> logMessageQueue = new LinkedBlockingDeque<>();
+    protected final BlockingQueue<TestStompSessionHandlerAdapter.Frame> lifecycleMessageQueue = new LinkedBlockingDeque<>();
+
+    protected static String webSocketUrl;
+
+    @BeforeEach
+    void beforeEach(@LocalServerPort int localServerPort) {
+        RestAssured.basePath = "/game-api";
+        RestAssured.port = localServerPort;
+        RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+
+        wireMockServer.resetAll();
+
+        userReplyQueue.clear();
+        logMessageQueue.clear();
+        lifecycleMessageQueue.clear();;
+
+        webSocketUrl = "ws://localhost:" + localServerPort + "/game-api/ws";
+    }
+
+    @DynamicPropertySource
+    static void dynamicPropertySource(DynamicPropertyRegistry registry) {
+        registry.add("palikka.integration.users-api.base-uri", () -> wireMockServer.baseUrl());
+    }
 
     @SneakyThrows
     protected void stop(StompSession session) {
@@ -149,5 +201,51 @@ public abstract class GameProcessIntegrationTest extends IntegrationTest {
         });
 
         when(pathValidator.validatePathExistsAndIsAFile(any())).thenReturn(true);
+    }
+
+    @SneakyThrows
+    protected StompSession newSession(@NonNull String token, @NonNull StompSessionHandlerAdapter sessionHandler) {
+        return newStompClient()
+                .connectAsync(webSocketUrl + newAuthQueryParam(token), sessionHandler)
+                .get(testTimeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    protected HttpHeaders newAuthHeader(String token) {
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.setBearerAuth(token);
+        return httpHeaders;
+    }
+
+    protected String newAuthQueryParam(@NonNull String token) {
+        return "?token=" + token;
+    }
+
+    protected WebSocketStompClient newStompClient() {
+        WebSocketStompClient client = new WebSocketStompClient(new StandardWebSocketClient()); // new SockJsClient(transportList)
+        List<MessageConverter> converters = new ArrayList<>();
+        converters.add(new MappingJackson2MessageConverter(objectMapper));
+        converters.add(new StringMessageConverter());
+        client.setMessageConverter(new CompositeMessageConverter(converters));
+        return client;
+    }
+
+    /**
+     * SockJS support is disabled but this is here for reference. Connections with SockJSClient
+     * will fail on missing /ws/info endpoint.
+     * @return {@link WebSocketStompClient}
+     */
+    @SuppressWarnings("unused")
+    WebSocketStompClient newStompWithSockJsClient() {
+        List<Transport> transportList = Collections.singletonList(new WebSocketTransport(new StandardWebSocketClient()));
+        WebSocketStompClient client = new WebSocketStompClient(new SockJsClient(transportList));
+        List<MessageConverter> converters = new ArrayList<>();
+        converters.add(new MappingJackson2MessageConverter(objectMapper));
+        converters.add(new StringMessageConverter());
+        client.setMessageConverter(new CompositeMessageConverter(converters));
+        return client;
+    }
+
+    protected StompSessionHandlerAdapter newStompSessionHandler() {
+        return new TestStompSessionHandlerAdapter(userReplyQueue, logMessageQueue, lifecycleMessageQueue);
     }
 }

@@ -1,16 +1,12 @@
 package fi.jannetahkola.palikka.game.api.game;
 
-import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import fi.jannetahkola.palikka.game.api.game.model.GameLifecycleMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameLogMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameOutputMessage;
 import fi.jannetahkola.palikka.game.api.game.model.GameUserReplyMessage;
 import fi.jannetahkola.palikka.game.service.GameProcessService;
-import fi.jannetahkola.palikka.game.util.GameCommandUtil;
+import fi.jannetahkola.palikka.game.websocket.GameMessageValidator;
 import jakarta.annotation.PostConstruct;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -22,7 +18,6 @@ import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -46,17 +41,9 @@ public class GameController {
      */
     private static final String DEST_GAME_LOGS = "/topic/game/logs";
 
-    private static final Validator VALIDATOR;
-
     private final SimpMessagingTemplate messagingTemplate;
     private final GameProcessService gameProcessService;
-    private final UsersClient usersClient;
-
-    static {
-        try (var validatorFactory = Validation.buildDefaultValidatorFactory()) {
-            VALIDATOR = validatorFactory.getValidator();
-        }
-    }
+    private final GameMessageValidator gameMessageValidator;
 
     @PostConstruct
     void postConstruct() {
@@ -101,41 +88,23 @@ public class GameController {
     @MessageMapping("/game")
     public void handleMessageToGame(@Payload GameOutputMessage msg,
                                     Authentication authentication) {
-        Set<ConstraintViolation<GameOutputMessage>> violations = VALIDATOR.validate(msg);
-        if (!violations.isEmpty()) {
-            log.debug("Failed to process message with constraint violations={}", violations);
+        // For now all messages are treated as commands, but support
+        // for other stuff may come in the future
+        try {
+            gameMessageValidator.validateMessageIsValid(msg);
+            gameMessageValidator.validateGameProcessIsUp();
+            gameMessageValidator.validateUserIsAuthorizedForCommand(msg, authentication);
+        } catch (GameMessageValidator.GameCommandProcessingException e) {
             GameUserReplyMessage reply = GameUserReplyMessage.builder()
                     .typ(GameUserReplyMessage.Type.ERROR)
-                    .data("Invalid message")
+                    .data(e.getMessage())
                     .build();
             messagingTemplate.convertAndSendToUser(authentication.getName(), DEST_USER, reply);
             return;
         }
 
-        if (!gameProcessService.isUp()) {
-            // If process is not up, nothing will happen. Process service will clear the
-            // queue next time the process is started.
-            GameUserReplyMessage reply = GameUserReplyMessage.builder()
-                    .typ(GameUserReplyMessage.Type.ERROR)
-                    .data("Cannot process message - game is not UP")
-                    .build();
-            messagingTemplate.convertAndSendToUser(authentication.getName(), DEST_USER, reply);
-            return;
-        }
-
-        String normalizedCommand = GameCommandUtil.normalizeCommand(msg.getData());
-
-        if (!GameCommandUtil.authorizeCommand(usersClient, authentication, normalizedCommand)) {
-            log.debug("Access denied to command={}", msg.getData());
-            GameUserReplyMessage reply = GameUserReplyMessage.builder()
-                    .typ(GameUserReplyMessage.Type.ERROR)
-                    .data("Access denied to command='" + msg.getData() + "'")
-                    .build();
-            messagingTemplate.convertAndSendToUser(authentication.getName(), DEST_USER, reply);
-            return;
-        }
-
-        log.info("Outputting to game as principal '{}'", authentication.getName());
+        log.info("Game message validated successfully, outputting " +
+                "to game as principal '{}'", authentication.getName());
         CompletableFuture.runAsync(() -> {
             log.debug("Passing output message to game process");
             gameProcessService.addOutput(msg.getData());

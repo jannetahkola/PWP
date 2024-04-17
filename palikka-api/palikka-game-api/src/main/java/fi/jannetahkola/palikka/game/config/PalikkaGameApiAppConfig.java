@@ -7,7 +7,9 @@ import fi.jannetahkola.palikka.core.auth.jwt.JwtService;
 import fi.jannetahkola.palikka.core.config.meta.EnableAuthenticationSupport;
 import fi.jannetahkola.palikka.core.config.meta.EnableRemoteUsersIntegration;
 import fi.jannetahkola.palikka.core.config.meta.EnableRequestAndResponseLoggingSupport;
+import fi.jannetahkola.palikka.core.integration.users.UsersClient;
 import fi.jannetahkola.palikka.game.config.properties.GameProperties;
+import fi.jannetahkola.palikka.game.service.GameProcessService;
 import fi.jannetahkola.palikka.game.service.factory.ProcessFactory;
 import fi.jannetahkola.palikka.game.service.factory.SocketFactory;
 import fi.jannetahkola.palikka.game.websocket.*;
@@ -86,6 +88,11 @@ public class PalikkaGameApiAppConfig {
     @Bean
     SessionStore webSocketSessionStore(JwtService jwtService) {
         return new SessionStore(jwtService);
+    }
+
+    @Bean
+    GameMessageValidator gameMessageValidator(GameProcessService gameProcessService, UsersClient usersClient) {
+        return new GameMessageValidator(gameProcessService, usersClient);
     }
 
     @Bean
