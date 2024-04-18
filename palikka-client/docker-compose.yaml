@@ -1,0 +1,15 @@
+services:
+  palikka-client:
+    container_name: palikka-client
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 3000:80
+    networks:
+      - palikkanet
+
+networks:
+  palikkanet:
+    name: palikkanet
+    driver: bridge
