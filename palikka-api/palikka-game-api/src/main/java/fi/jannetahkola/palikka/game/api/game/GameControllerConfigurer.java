@@ -82,7 +82,7 @@ public class GameControllerConfigurer implements WebSocketMessageBrokerConfigure
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         AuthorizationManager<Message<?>> authorizationManager = new MessageMatcherDelegatingAuthorizationManager.Builder()
-                .simpDestMatchers("/app/game").hasAnyRole("ADMIN", "USER")
+                .simpDestMatchers("/app/game").hasAnyRole("ADMIN", "USER", "VIEWER")
                 .anyMessage().authenticated()
                 .build();
         AuthorizationChannelInterceptor authorizationChannelInterceptor = new AuthorizationChannelInterceptor(authorizationManager);

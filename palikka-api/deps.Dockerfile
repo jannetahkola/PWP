@@ -5,7 +5,6 @@ COPY palikka-core/pom.xml palikka-core/pom.xml
 COPY palikka-users-api/pom.xml palikka-users-api/pom.xml
 COPY palikka-game-api/pom.xml palikka-game-api/pom.xml
 COPY palikka-mock-file-server/pom.xml palikka-mock-file-server/pom.xml
-COPY coverage-reporting/pom.xml coverage-reporting/pom.xml
 COPY pom.xml .
 
 # -B: Run in non-interactive (batch) mode, i.e. no output colors

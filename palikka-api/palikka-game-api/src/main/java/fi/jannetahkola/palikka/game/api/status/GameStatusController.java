@@ -8,6 +8,7 @@ import fi.jannetahkola.palikka.game.util.VarIntUtil;
 import fi.jannetahkola.palikka.game.service.factory.SocketFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,6 +31,7 @@ public class GameStatusController {
     private final ObjectMapper objectMapper;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'VIEWER')")
     public GameStatusResponse getGameStatus() {
         // See https://wiki.vg/Server_List_Ping
         GameProperties.StatusProperties statusProperties = properties.getStatus();
