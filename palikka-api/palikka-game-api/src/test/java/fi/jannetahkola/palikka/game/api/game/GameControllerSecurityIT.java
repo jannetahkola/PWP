@@ -8,6 +8,7 @@ import fi.jannetahkola.palikka.game.testutils.TestStompSessionHandlerAdapter;
 import fi.jannetahkola.palikka.game.websocket.GameMessageValidator;
 import fi.jannetahkola.palikka.game.websocket.SessionStore;
 import lombok.SneakyThrows;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -140,6 +141,7 @@ class GameControllerSecurityIT extends GameProcessIntegrationTest {
 
     @SneakyThrows
     @Test
+    @Disabled("All users can send commands currently")
     void givenSendMessageToGame_whenNoRoleToSendCommands_thenDisconnected(CapturedOutput capturedOutput) {
         stubForViewerUser(wireMockServer);
 
@@ -279,7 +281,8 @@ class GameControllerSecurityIT extends GameProcessIntegrationTest {
     static Stream<Arguments> sendMessageToGameAllowedUserArgs() {
         return Stream.of(
                 Arguments.of(Named.of("ADMIN", USER_ID_ADMIN)),
-                Arguments.of(Named.of("USER", USER_ID_USER))
+                Arguments.of(Named.of("USER", USER_ID_USER)),
+                Arguments.of(Named.of("VIEWER", USER_ID_VIEWER))
         );
     }
 

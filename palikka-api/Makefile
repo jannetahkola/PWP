@@ -22,7 +22,7 @@ docker-run: ##@ Start all API service containers. Images are built if needed, bu
 docker-rebuild: ##@ Rebuild all API service images from scratch without cache.
 				##@ Existing volume data is kept. Does not start the containers
 	docker-compose down
-	$(MAKE) docker-run-socat
+	- $(MAKE) docker-run-socat
 	# Uncomment below to also refresh dependencies
 	#docker build --no-cache -f deps.Dockerfile -t deps .
 	docker build \
@@ -112,9 +112,9 @@ env-dev: ##@ Setup the local environment for development. Rebuilds the Docker im
 
 env-prod: ##@ Setup the local environment for production. Rebuilds the Docker images. Requires SonarQube to be up
 	$(MAKE) docker-down
-	@cp ./conf/dockerfiles/palikka-core.dev.Dockerfile .
-	@cp ./conf/dockerfiles/palikka-game-api.dev.Dockerfile .
-	@cp ./conf/dockerfiles/palikka-users-api.dev.Dockerfile .
+	@cp ./conf/dockerfiles/palikka-core.Dockerfile .
+	@cp ./conf/dockerfiles/palikka-game-api.Dockerfile .
+	@cp ./conf/dockerfiles/palikka-users-api.Dockerfile .
 	$(MAKE) docker-rebuild
 
 docker-up: ##@ Start all stopped containers
