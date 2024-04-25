@@ -1,27 +1,25 @@
+import React, {FormEvent, useEffect, useState} from "react";
 import {
-    Button, Checkbox,
-    Dialog,
-    DialogActions,
+    Button,
+    Checkbox,
+    Dialog, DialogActions,
     DialogContent,
-    DialogTitle, FormControl, FormControlLabel,
+    DialogTitle,
+    FormControl,
+    FormControlLabel,
     Grid,
     TextField
 } from "@mui/material";
-import React, {FormEvent, useState} from "react";
+import User from "../../model/User";
 
-export interface NewUser {
-    username?: string,
-    active?: boolean,
-    password?: string
-}
-
-export interface NewUserDialogProps {
+export interface EditUserDialogProps {
     open: boolean;
-    onClose?: (user?: NewUser) => void;
+    user: null | User;
+    onClose?: (user?: User) => void;
 }
 
-export function NewUserDialog(props: Readonly<NewUserDialogProps>) {
-    const { open, onClose } = props;
+export function EditUserDialog(props: Readonly<EditUserDialogProps>) {
+    const { open, user, onClose } = props;
     const [ username, setUsername ] = useState<string>('');
     const [ password, setPassword ] = useState<string>('');
     const [ isActive, setIsActive] = useState<boolean>(true);
@@ -43,14 +41,12 @@ export function NewUserDialog(props: Readonly<NewUserDialogProps>) {
     }
 
     const validatePassword = (): boolean => {
-        if (!password) {
-            setPasswordError('Must have a value');
-            return false;
-        }
-        let trim = password.trim();
-        if (trim.length < 6 || trim.length > 24) {
-            setPasswordError('Must be 6 to 24 characters');
-            return false;
+        if (password) {
+            let trim = password.trim();
+            if (trim.length < 6 || trim.length > 24) {
+                setPasswordError('Must be 6 to 24 characters');
+                return false;
+            }
         }
         setPasswordError('');
         return true;
@@ -60,12 +56,13 @@ export function NewUserDialog(props: Readonly<NewUserDialogProps>) {
         if (onClose) {
             if (submit) {
                 if (validateUsername() && validatePassword()) {
-                    const user: NewUser = {
+                    const editedUser: User = {
+                        ...user,
                         username: username.trim(),
-                        password: password.trim(),
+                        password: password ? password.trim() : undefined,
                         active: isActive
                     }
-                    onClose(user);
+                    onClose(editedUser);
                 }
             } else {
                 onClose(undefined);
@@ -78,6 +75,14 @@ export function NewUserDialog(props: Readonly<NewUserDialogProps>) {
         handleClose(true);
     }
 
+    useEffect(() => {
+        setUsername(user?.username ?? '');
+    }, [user]);
+
+    useEffect(() => {
+        setIsActive(user?.active ?? true);
+    }, [user]);
+
     return (
         <Dialog
             open={open}
@@ -86,7 +91,7 @@ export function NewUserDialog(props: Readonly<NewUserDialogProps>) {
             aria-describedby="alert-dialog-description"
         >
             <DialogTitle id="alert-dialog-title">
-                {"Create a new user"}
+                {"Edit user"}
             </DialogTitle>
             <DialogContent>
                 <form
@@ -118,7 +123,7 @@ export function NewUserDialog(props: Readonly<NewUserDialogProps>) {
                             <FormControl>
                                 <TextField
                                     type="text"
-                                    placeholder="Password*"
+                                    placeholder="Password (Optional)"
                                     value={password}
                                     onChange={e => {
                                         setPassword(e.target.value);

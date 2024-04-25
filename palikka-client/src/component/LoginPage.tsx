@@ -48,6 +48,11 @@ async function authenticateWithStoredToken(setToken: (token: string) => void,
                 return false;
             }
             const user = await res.json() as User;
+            if (!user.id || !user._links) {
+                console.error('Server responded with an invalid user - missing required fields');
+                localStorage.clear(); // Clear expired token
+                return false;
+            }
             setToken(token!);
             setTokenExpiresAt(loadStoredExpiresAtDate());
             setUser(user);

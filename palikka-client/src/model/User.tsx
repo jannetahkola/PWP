@@ -7,14 +7,15 @@ type UserLinks = {
 }
 
 type User = {
-    id: number,
+    id?: number,
     username: string,
+    password?: string,
     roles?: string[],
     active: boolean,
-    root: boolean,
-    created_at: Date,
-    last_updated_at: Date,
-    _links: UserLinks,
+    root?: boolean,
+    created_at?: Date,
+    last_updated_at?: Date,
+    _links?: UserLinks,
     mappedRoles?: Role[]
 }
 

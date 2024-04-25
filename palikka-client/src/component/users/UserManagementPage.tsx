@@ -19,9 +19,10 @@ import {Add, AdminPanelSettings, ArrowDropDown, Edit} from "@mui/icons-material"
 import Role from "../../model/Role";
 import {HalLink} from "../../model/HalLink";
 import Privilege from "../../model/Privilege";
-import {AlertDialog, AlertDialogProps} from "./AlertDialog";
+import {AlertDialogProps} from "./AlertDialog";
 import {ListDialog, ListDialogProps} from "./ListDialog";
 import {NewUser, NewUserDialog, NewUserDialogProps} from "./NewUserDialog";
+import {EditUserDialog, EditUserDialogProps} from "./EditUserDialog";
 
 const mapPrivilegesFromRole = (role: Role): [string, Privilege[]][] => {
     let privilegesByDomain = new Map<string, Privilege[]>();
@@ -95,16 +96,15 @@ type PrivilegesCollection = {
 }
 
 async function getUsers(token: string): Promise<UsersCollection> {
-    // todo errors
     return await PalikkaAPI.users.getUsers(token)
         .then(async (res) => {
             if (res.ok) {
                 let json = await res.json();
                 return json as UsersCollection
             }
-            return Promise.reject();
+            return Promise.reject(Error('Failed to get users, status ' + res.status));
         })
-        .catch(_ => Promise.reject());
+        .catch(e => Promise.reject(e.message));
 }
 
 async function getRoles(token: string): Promise<RolesCollection> {
@@ -124,9 +124,9 @@ async function getPrivileges(token: string): Promise<PrivilegesCollection> {
             if (res.ok) {
                 return await res.json() as PrivilegesCollection;
             }
-            return Promise.reject();
+            return Promise.reject(Error('Failed to get privileges, status ' + res.status));
         })
-        .catch(_ => Promise.reject());
+        .catch(e => Promise.reject(Error(e.message)));
 }
 
 async function createUserRequest(token: string, user: NewUser): Promise<void> {
@@ -146,7 +146,7 @@ async function createUserRequest(token: string, user: NewUser): Promise<void> {
         .catch(e => Promise.reject(Error(e.message)));
 }
 
-async function updateUser(token: string, user: User): Promise<void> {
+async function updateUserRequest(token: string, user: User): Promise<void> {
     return await PalikkaAPI.users.updateUser(token, user)
         .then(res => {
             if (res.ok) return Promise.resolve();
@@ -200,8 +200,9 @@ async function deleteRolePrivilegeAssociationRequest(token: string, roleId: numb
 }
 
 function UserManagementPage() {
-    const { token } = useAuthContext();
+    const { token, user, setUser } = useAuthContext();
 
+    const [ currentUserRoles, setCurrentUserRoles ] = useState<string[]>([]);
     const [errorMessage, setErrorMessage] = useState<string>('');
     const [successMessage, setSuccessMessage] = useState<string>('');
 
@@ -214,12 +215,34 @@ function UserManagementPage() {
     const [dialogProps, setDialogProps] = useState<AlertDialogProps>({ open: false, titleText: '', contentText: '' });
     const [listDialogProps, setListDialogProps] = useState<ListDialogProps>({ open: false, titleText: '', listItems: [] });
     const [newUserDialogProps, setNewUserDialogProps] = useState<NewUserDialogProps>({ open: false });
+    const [editUserDialogProps, setEditUserDialogProps] = useState<EditUserDialogProps>({ open: false, user: null });
 
     const refreshUsers = async (): Promise<void> => {
-        let usersCollection = await getUsers(token!);
+        let usersCollection = await getUsers(token!)
+            .catch(e => {
+                // ignore
+            });
+        if (!usersCollection) {
+            // mock users collection to only include the current user
+            usersCollection = {
+                _embedded: {
+                    users: [
+                        user!
+                    ]
+                },
+                _links: {
+                    self: {
+                        href: ''
+                    },
+                    user: {
+                        href: ''
+                    }
+                }
+            }
+        }
         let usersWithMappedRoles = await Promise.all(
             usersCollection._embedded.users.map(async (user, idx, self) => {
-                return fetch(user._links.roles.href, {
+                return fetch(user._links!.roles.href, {
                     headers: { 'Authorization': 'Bearer ' + token }
                 }).then(async (res) => {
                     if (res.ok) {
@@ -234,12 +257,18 @@ function UserManagementPage() {
 
     const refreshRoles = async (): Promise<void> => {
         return await getRoles(token!)
-            .then(rolesCollection => setRoles(rolesCollection._embedded?.roles ?? []));
+            .then(rolesCollection => setRoles(rolesCollection._embedded?.roles ?? []))
+            .catch(_ => {
+                // ignore
+            });
     }
 
     const refreshPrivileges = async (): Promise<void> => {
         return await getPrivileges(token!)
-            .then(privilegesCollection => setPrivileges(privilegesCollection._embedded.privileges));
+            .then(privilegesCollection => setPrivileges(privilegesCollection._embedded.privileges))
+            .catch(_ => {
+                // ignore
+            });
     }
 
     const createUser = (user: NewUser) => {
@@ -249,6 +278,23 @@ function UserManagementPage() {
                 setSuccessMessage('User created successfully');
             })
             .catch((e) => setErrorMessage(e.message));
+    }
+
+    const updateUser = (updatedUser: User) => {
+        updateUserRequest(token!, updatedUser)
+            .then(async (_) => {
+                await PalikkaAPI.users.getCurrentUser(token!)
+                    .then(async (res) => {
+                        if (res.ok) {
+                            setUser((await res.json()) as User);
+                            // Refresh after current user in case the fallback logic in "refreshUsers" is applied
+                            // todo not updated, fix
+                            await refreshUsers();
+                        }
+                    }).catch(_ => console.error("Failed to fetch current user after update"));
+                setSuccessMessage("User updated successfully");
+            })
+            .catch(e => setErrorMessage(e.message));
     }
 
     const createUserRoleAssociation = (userId: number, roleId: number) => {
@@ -271,9 +317,10 @@ function UserManagementPage() {
 
     const toggleUserActiveStatus = (user: User): Promise<void> => {
         user.active = !user.active;
-        return updateUser(token!, user)
+        return updateUserRequest(token!, user)
             .then(async (_) => {
-                await refreshUsers(); // todo should refresh roles too if it has to refresh something
+                await refreshRoles();
+                await refreshUsers();
                 setSuccessMessage(
                     `User ${ user.active ? "activated" : "deactivated" } successfully`);
             })
@@ -301,6 +348,20 @@ function UserManagementPage() {
             .catch(e => setErrorMessage(e.message));
     }
 
+    const isAdmin = (): boolean => currentUserRoles.includes("ROLE_ADMIN");
+
+    useEffect(() => {
+        fetch(user!._links!.roles.href, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(async (res) => {
+            if (res.ok) {
+                let roles = await res.json() as RolesCollection;
+                let roleNames = roles._embedded?.roles.map(role => role.name);
+                setCurrentUserRoles(roleNames ?? []);
+            }
+        });
+    }, [token, user]);
+
     useEffect(() => {
         refreshUsers();
     }, []);
@@ -325,19 +386,25 @@ function UserManagementPage() {
                     <Typography variant={"h6"}>
                         Users ({ users?.length ?? 0 })
                     </Typography>
-                    <Button endIcon={<Add/>} onClick={_ => {
-                        setNewUserDialogProps({
-                            open: true,
-                            onClose: (user?: NewUser) => {
+                    {
+                        isAdmin() ?? <Button
+                            endIcon={<Add/>}
+                            onClick={_ => {
                                 setNewUserDialogProps({
-                                    open: false
+                                    open: true,
+                                    onClose: (user?: NewUser) => {
+                                        setNewUserDialogProps({
+                                            open: false
+                                        });
+                                        if (user) {
+                                            createUser(user);
+                                        }
+                                    }
                                 });
-                                if (user) {
-                                    createUser(user);
-                                }
-                            }
-                        });
-                    }}>{"New user"}</Button>
+                            }}>
+                            {"New user"}
+                        </Button>
+                    }
                 </Grid>
                 <Grid>
                     {
@@ -351,17 +418,20 @@ function UserManagementPage() {
                                         padding={2}
                                         direction={"row"}
                                         justifyContent={"space-between"}
-                                        alignItems={"center"}>
+                                        alignItems={"center"}
+                                        xs={12}>
                                         <Grid item xs={8}>
                                             <Grid container alignItems={"center"}>
                                                 <Typography variant={"h6"} marginRight={1}>{ user.username }</Typography>
                                                 {
-                                                    user.root &&
-                                                    <Tooltip title={"Root user"} placement={"top"}>
-                                                        <IconButton size={"small"}>
-                                                            <AdminPanelSettings/>
-                                                        </IconButton>
-                                                    </Tooltip>
+                                                    user.root ?
+                                                        <Tooltip title={"Root user"} placement={"top"}>
+                                                            <IconButton size={"small"}>
+                                                                <AdminPanelSettings/>
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        :
+                                                        <div></div>
                                                 }
                                             </Grid>
                                         </Grid>
@@ -371,30 +441,49 @@ function UserManagementPage() {
                                             direction={"row"}
                                             justifyContent={"end"}
                                             xs={4}>
-                                            <Grid item>
-                                                <FormControlLabel
-                                                    control={
-                                                        <Tooltip
-                                                            title={
-                                                                user.active
-                                                                    ? "Deactivate '" + user.username + "'"
-                                                                    : "Activate '" + user.username + "'"
-                                                            }>
-                                                            <Switch
-                                                                size={"medium"}
-                                                                checked={user.active}
-                                                                onChange={e => toggleUserActiveStatus(user)}
-                                                                inputProps={{ 'aria-label': 'controlled' }}
-                                                            />
-                                                        </Tooltip>
-                                                    }
-                                                    disabled={user.root || loading}
-                                                    labelPlacement={"start"}
-                                                    label={ user.active ? "Active" : "Inactive" }/>
-                                            </Grid>
+                                            {
+                                                isAdmin() ?? <Grid item>
+                                                    <FormControlLabel
+                                                        control={
+                                                            <Tooltip
+                                                                title={
+                                                                    user.active
+                                                                        ? "Deactivate '" + user.username + "'"
+                                                                        : "Activate '" + user.username + "'"
+                                                                }>
+                                                                <Switch
+                                                                    size={"medium"}
+                                                                    checked={user.active}
+                                                                    onChange={e => toggleUserActiveStatus(user)}
+                                                                    inputProps={{ 'aria-label': 'controlled' }}
+                                                                />
+                                                            </Tooltip>
+                                                        }
+                                                        disabled={user.root || loading}
+                                                        labelPlacement={"start"}
+                                                        label={ user.active ? "Active" : "Inactive" }/>
+                                                </Grid>
+                                            }
                                             <Grid item paddingLeft={4}>
                                                 <Tooltip title={"Edit '" + user.username + "'"}>
-                                                    <IconButton disabled={user.root || loading}>
+                                                    <IconButton
+                                                        disabled={user.root || loading}
+                                                        onClick={_ => setEditUserDialogProps({
+                                                            open: true,
+                                                            user: user,
+                                                            onClose: (editedUser?: User) => {
+                                                                setEditUserDialogProps((currentProps) => {
+                                                                   const newProps: EditUserDialogProps = {
+                                                                       ...currentProps,
+                                                                       open: false
+                                                                   };
+                                                                   return newProps;
+                                                                });
+                                                                if (editedUser) {
+                                                                    updateUser(editedUser);
+                                                                }
+                                                            }
+                                                        })}>
                                                         <Edit/>
                                                     </IconButton>
                                                 </Tooltip>
@@ -402,8 +491,8 @@ function UserManagementPage() {
                                         </Grid>
                                     </Grid>
                                     <Divider/>
-                                    <Grid>
-                                        <Accordion>
+                                    <Grid xs={12}>
+                                        <Accordion style={{ width: "100%" }}>
                                             <AccordionSummary expandIcon={<ArrowDropDown/>}>
                                                 <Grid
                                                     container
@@ -424,7 +513,11 @@ function UserManagementPage() {
                                                                                         label={ role.name.replace("ROLE_", "") }
                                                                                         disabled={user.root}
                                                                                         // todo confirmation dialog for removing roles
-                                                                                        onDelete={_ => deleteUserRoleAssociation(user.id, role.id)}
+                                                                                        onDelete={
+                                                                                            isAdmin()
+                                                                                                ? _ => deleteUserRoleAssociation(user.id!, role.id)
+                                                                                                : undefined
+                                                                                        }
                                                                                     />
                                                                                 </Tooltip>
                                                                             </Grid>
@@ -459,32 +552,36 @@ function UserManagementPage() {
                                                             </Grid>
                                                         ))
                                                     }
-                                                    <Button startIcon={<Add/>} onClick={() => {
-                                                        setListDialogProps({
-                                                            open: true,
-                                                            titleText: 'Add role',
-                                                            // todo should filter to show only roles that are not yet associated with the user
-                                                            listItems: roles?.map((role, idx, self) => role.name) ?? [],
-                                                            onClose: (value: string | null) => {
-                                                                setListDialogProps((currentProps) => {
-                                                                    const newProps: ListDialogProps = {
-                                                                        ...currentProps,
-                                                                        open: false
-                                                                    };
-                                                                    return newProps;
-                                                                });
-                                                                if (value) {
-                                                                    console.debug('Adding role to user');
-                                                                    const targetRole = roles?.find((role) => role.name === value);
-                                                                    if (targetRole) {
-                                                                        createUserRoleAssociation(user.id, targetRole.id);
-                                                                    } else {
-                                                                        console.error(`No role found for "${value}"`);
+                                                    {
+                                                        isAdmin() ?? <Button startIcon={<Add/>} onClick={() => {
+                                                            setListDialogProps({
+                                                                open: true,
+                                                                titleText: 'Add role',
+                                                                // todo should filter to show only roles that are not yet associated with the user
+                                                                listItems: roles?.map((role, idx, self) => role.name) ?? [],
+                                                                onClose: (value: string | null) => {
+                                                                    setListDialogProps((currentProps) => {
+                                                                        const newProps: ListDialogProps = {
+                                                                            ...currentProps,
+                                                                            open: false
+                                                                        };
+                                                                        return newProps;
+                                                                    });
+                                                                    if (value) {
+                                                                        console.debug('Adding role to user');
+                                                                        const targetRole = roles?.find((role) => role.name === value);
+                                                                        if (targetRole) {
+                                                                            createUserRoleAssociation(user.id!, targetRole.id);
+                                                                        } else {
+                                                                            console.error(`No role found for "${value}"`);
+                                                                        }
                                                                     }
                                                                 }
-                                                            }
-                                                        });
-                                                    }}>Add role</Button>
+                                                            });
+                                                        }}>
+                                                            Add role
+                                                        </Button>
+                                                    }
                                                 </Grid>
                                             </AccordionDetails>
                                         </Accordion>
@@ -577,33 +674,37 @@ function UserManagementPage() {
                                                             </Grid>
                                                         ))
                                                     }
-                                                    <Button startIcon={<Add/>} onClick={() => {
-                                                        setListDialogProps({
-                                                            open: true,
-                                                            titleText: 'Add privilege',
-                                                            // todo should filter to show only privileges that are not yet associated with the role
-                                                            listItems: privileges?.map((privilege, idx, self) => privilege.domain + "_" + privilege.name) ?? [],
-                                                            onClose: (value: string | null) => {
-                                                                setListDialogProps((currentProps) => {
-                                                                   const newProps: ListDialogProps = {
-                                                                       ...currentProps,
-                                                                       open: false
-                                                                   };
-                                                                   return newProps;
-                                                                });
-                                                                if (value) {
-                                                                    console.debug('Adding privilege to role');
-                                                                    const parts = value.split("_");
-                                                                    const targetPrivilege = privileges?.find((privilege) => privilege.domain === parts[0] && privilege.name === parts[1]);
-                                                                    if (targetPrivilege) {
-                                                                        createRolePrivilegeAssociation(role.id, targetPrivilege.id);
-                                                                    } else {
-                                                                        console.error(`No privilege found for "${value}"`);
+                                                    {
+                                                        isAdmin() ?? <Button startIcon={<Add/>} onClick={() => {
+                                                            setListDialogProps({
+                                                                open: true,
+                                                                titleText: 'Add privilege',
+                                                                // todo should filter to show only privileges that are not yet associated with the role
+                                                                listItems: privileges?.map((privilege, idx, self) => privilege.domain + "_" + privilege.name) ?? [],
+                                                                onClose: (value: string | null) => {
+                                                                    setListDialogProps((currentProps) => {
+                                                                        const newProps: ListDialogProps = {
+                                                                            ...currentProps,
+                                                                            open: false
+                                                                        };
+                                                                        return newProps;
+                                                                    });
+                                                                    if (value) {
+                                                                        console.debug('Adding privilege to role');
+                                                                        const parts = value.split("_");
+                                                                        const targetPrivilege = privileges?.find((privilege) => privilege.domain === parts[0] && privilege.name === parts[1]);
+                                                                        if (targetPrivilege) {
+                                                                            createRolePrivilegeAssociation(role.id, targetPrivilege.id);
+                                                                        } else {
+                                                                            console.error(`No privilege found for "${value}"`);
+                                                                        }
                                                                     }
                                                                 }
-                                                            }
-                                                        });
-                                                    }}>Add privilege</Button>
+                                                            });
+                                                        }}>
+                                                            Add privilege
+                                                        </Button>
+                                                    }
                                                 </Grid>
                                             </AccordionDetails>
                                         </Accordion>
@@ -648,6 +749,9 @@ function UserManagementPage() {
                 </Grid>
                 <Grid>
                     <NewUserDialog {...newUserDialogProps}/>
+                </Grid>
+                <Grid>
+                    <EditUserDialog {...editUserDialogProps}/>
                 </Grid>
             </Grid>
         </Container>
