@@ -17,11 +17,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/game/process")
 @Validated
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ROLE_ADMIN')")
 public class GameProcessController {
     private final GameProcessService gameProcessService;
 
     @PostMapping
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public synchronized ResponseEntity<GameProcessStatusResponse> controlProcess(
             @Valid @RequestBody GameProcessControlRequest request) throws GameProcessStartException {
         if (request.getAction().equals(GameProcessControlRequest.Action.START)) {
@@ -43,6 +43,7 @@ public class GameProcessController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER', 'VIEWER')")
     public ResponseEntity<GameProcessStatusResponse> getServerStatus() {
         return ResponseEntity.ok(getStatusResponse());
     }

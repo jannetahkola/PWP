@@ -171,7 +171,7 @@ public class UserController {
             value = "/{id}",
             produces = MediaTypes.HAL_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ROLE_ADMIN') or (hasRole('ROLE_USER') and #userId == authentication.principal.id)")
+    @PreAuthorize("hasRole('ROLE_ADMIN') or (hasAnyRole('ROLE_USER', 'ROLE_VIEWER') and #userId == authentication.principal.id)")
     public ResponseEntity<UserModel> putUser(@PathVariable("id") Integer userId,
                                              @Validated(UserModel.PutGroup.class) @RequestBody UserModel userToPut,
                                              Authentication authentication) {

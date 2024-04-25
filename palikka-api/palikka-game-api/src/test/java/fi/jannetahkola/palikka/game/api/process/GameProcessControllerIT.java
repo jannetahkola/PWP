@@ -8,10 +8,10 @@ import lombok.SneakyThrows;
 import org.apache.http.HttpHeaders;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.RepeatedTest;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
@@ -24,9 +24,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
-import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForAdminUser;
-import static fi.jannetahkola.palikka.game.testutils.Stubs.stubForNormalUser;
+import static fi.jannetahkola.palikka.game.testutils.Stubs.*;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -62,17 +62,32 @@ class GameProcessControllerIT extends GameProcessIntegrationTest {
         }
 
         @Test
-        void givenGetProcessStatusRequest_whenNoTokenOrRoles_thenForbiddenResponse() {
+        void givenGetProcessStatusRequest_whenNoToken_thenForbiddenResponse() {
             given()
                     .get("/game/process")
                     .then().assertThat()
                     .statusCode(403);
+        }
 
+        @ParameterizedTest
+        @MethodSource("allUsers")
+        void givenGetProcessStatusRequest_whenAnyRole_thenOkResponse(Integer user) {
+            stubForAdminUser(wireMockServer);
+            stubForNormalUser(wireMockServer);
+            stubForViewerUser(wireMockServer);
             given()
-                    .header(authorizationHeader)
+                    .header(HttpHeaders.AUTHORIZATION, testTokenGenerator.generateBearerToken(user))
                     .get("/game/process")
                     .then().assertThat()
-                    .statusCode(403);
+                    .statusCode(200);
+        }
+
+        static Stream<Arguments> allUsers() {
+            return Stream.of(
+                    Arguments.of(Named.of("ADMIN", 1)),
+                    Arguments.of(Named.of("USER", 2)),
+                    Arguments.of(Named.of("VIEWER", 3))
+            );
         }
 
         @SneakyThrows

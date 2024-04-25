@@ -1,6 +1,7 @@
 package fi.jannetahkola.palikka.users.api.user;
 
 import fi.jannetahkola.palikka.users.testutils.IntegrationTest;
+import io.restassured.http.Header;
 import lombok.SneakyThrows;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Named;
@@ -204,20 +205,29 @@ class UserControllerSecurityIT extends IntegrationTest {
     }
 
     @SneakyThrows
-    @Test
-    void givenPutUserRequest_whenNoAllowedRoleButRequestedForSelf_thenAcceptedResponse() {
+    @ParameterizedTest
+    @MethodSource("nonAdminUsers") // No root user since they can't be updated
+    void givenPutUserRequest_whenNoAllowedRoleButRequestedForSelf_thenAcceptedResponse(Integer user) {
         String json = new JSONObject()
-                .put("username", "mock-user-updated")
+                .put("username", "mock-user-updated-" + user)
                 .put("active", false) // Cannot update unless admin
                 .toString();
+        Header authHeader = newBearerTokenHeader(user);
         given()
-                .header(newUserToken())
+                .header(authHeader)
                 .contentType(MediaType.APPLICATION_JSON_VALUE)
                 .body(json)
-                .put("/users/" + USER_ID_USER)
+                .put("/users/" + user)
                 .then().assertThat()
                 .statusCode(202)
-                .body("username", equalTo("mock-user-updated"))
+                .body("username", equalTo("mock-user-updated-" + user))
                 .body("active", equalTo(true));
+    }
+
+    static Stream<Arguments> nonAdminUsers() {
+        return Stream.of(
+                Arguments.of(Named.of("USER", 2)),
+                Arguments.of(Named.of("VIEWER", 3))
+        );
     }
 }
