@@ -12,7 +12,7 @@
     "self": {
       "href": "{{request.baseUrl}}/users-api/users/1"
     },
-    "roles": {
+    "user_roles": {
       "href": "{{request.baseUrl}}/users-api/users/1/roles"
     }
   }

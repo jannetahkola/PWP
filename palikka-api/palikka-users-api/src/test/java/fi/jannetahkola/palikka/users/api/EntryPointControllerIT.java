@@ -63,6 +63,8 @@ class EntryPointControllerIT extends IntegrationTest {
                     .body("_links.self.href", endsWith("/users-api/"))
                     .body("_links.login.href", endsWith("/users-api/auth/login"))
                     .body("_links.users.href", endsWith("/users-api/users"))
+                    .body("_links.roles.href", endsWith("/users-api/roles"))
+                    .body("_links.privileges.href", endsWith("/users-api/privileges{?search}"))
                     .body("_links.current_user.href", endsWith("/users-api/current-user"));
         }
     }

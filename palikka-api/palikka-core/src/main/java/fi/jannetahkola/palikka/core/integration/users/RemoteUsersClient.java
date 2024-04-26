@@ -56,7 +56,7 @@ public class RemoteUsersClient implements UsersClient {
             var modelType = new TypeReferences.EntityModelType<User>() {};
             Traverson traverson = new Traverson(baseUri, MediaTypes.HAL_JSON);
             EntityModel<User> userModel = traverson
-                    .follow(rel("user").withParameter("id", userId))
+                    .follow(rel("item").withParameter("id", userId))
                     .withHeaders(httpHeaders)
                     .toObject(modelType);
 
@@ -93,8 +93,8 @@ public class RemoteUsersClient implements UsersClient {
 
             Traverson traverson = new Traverson(baseUri, MediaTypes.HAL_JSON);
             CollectionModel<Role> roleCollectionModel = traverson
-                    .follow(rel("user").withParameter("id", userId))
-                    .follow("roles")
+                    .follow(rel("item").withParameter("id", userId))
+                    .follow("user_roles")
                     .withHeaders(httpHeaders)
                     .toObject(modelType);
 

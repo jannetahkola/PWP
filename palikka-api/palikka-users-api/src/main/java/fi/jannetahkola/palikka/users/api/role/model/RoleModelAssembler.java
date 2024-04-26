@@ -10,6 +10,7 @@ import fi.jannetahkola.palikka.users.data.role.RoleEntity;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.IanaLinkRelations;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
 
@@ -41,6 +42,7 @@ public class RoleModelAssembler implements RepresentationModelAssembler<RoleEnti
                 .build();
 
         roleModel.add(linkTo(methodOn(RoleController.class).getRole(roleModel.getId(), null)).withSelfRel());
+        roleModel.add(linkTo(methodOn(RoleController.class).getRoles(null)).withRel(IanaLinkRelations.COLLECTION));
         roleModel.add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivileges(roleModel.getId(), null)).withRel("privileges"));
 
         return roleModel;
@@ -57,7 +59,7 @@ public class RoleModelAssembler implements RepresentationModelAssembler<RoleEnti
                                         linkTo(methodOn(RoleController.class).getRoles(null))
                                                 .withSelfRel(),
                                         linkTo(methodOn(RoleController.class).getRole(null, null))
-                                                .withRel("role")
+                                                .withRel(IanaLinkRelations.ITEM)
                                 )
                         )
                 );
@@ -87,6 +89,7 @@ public class RoleModelAssembler implements RepresentationModelAssembler<RoleEnti
         return roleModel
                 .add(linkTo(methodOn(UserRoleController.class).getUserRole(userId, roleModel.getId())).withSelfRel()
                         .andAffordance(afford(methodOn(UserRoleController.class).deleteUserRoles(userId, roleModel.getId()))))
+                .add(linkTo(methodOn(UserRoleController.class).getUserRoles(userId)).withRel(IanaLinkRelations.COLLECTION))
                 .add(linkTo(methodOn(RoleController.class).getRole(roleModel.getId(), null)).withRel("role"))
                 .add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivileges(roleModel.getId(), null)).withRel("role_privileges"));
     }

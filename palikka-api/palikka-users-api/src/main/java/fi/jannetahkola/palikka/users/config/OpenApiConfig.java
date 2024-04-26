@@ -42,7 +42,8 @@ public class OpenApiConfig {
                                                 .name("Janne Tahkola")
                                                 .email("janne.tahkola@gmail.com")
                                                 .url("https://github.com/jannetahkola"))
-                                .description("User & access management"))
+                                .description("User & access management")
+                                .version("1.0.0"))
                 .components(
                         new Components()
                                 .addSecuritySchemes(

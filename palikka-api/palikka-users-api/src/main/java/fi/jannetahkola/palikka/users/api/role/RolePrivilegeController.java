@@ -21,6 +21,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.IanaLinkRelations;
 import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -66,13 +67,14 @@ public class RolePrivilegeController {
                 .sorted(Comparator.comparing(PrivilegeModel::getDomain))
                 .sorted(Comparator.comparing(PrivilegeModel::getName))
                 .toList();
+        CollectionModel<PrivilegeModel> collectionModel = CollectionModel.of(rolePrivileges);
+        collectionModel
+                .add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivileges(roleId, null)).withSelfRel()
+                        .andAffordance(afford(methodOn(RolePrivilegeController.class).postRolePrivileges(roleId, null))))
+                .add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivilege(roleId, null, null)).withRel(IanaLinkRelations.ITEM));
         return ResponseEntity
                 .ok()
-                .body(CollectionModel.of(
-                        rolePrivileges,
-                        linkTo(methodOn(RolePrivilegeController.class).getRolePrivileges(roleId, null)).withSelfRel()
-                                .andAffordance(afford(methodOn(RolePrivilegeController.class).postRolePrivileges(roleId, null)))
-        ));
+                .body(collectionModel);
     }
 
     @Operation(summary = "Get a privilege associated with a role")

@@ -92,13 +92,14 @@ public class UserRoleController {
                 .map(roleEntity -> roleModelAssembler.toModel(roleEntity, userId))
                 .sorted(Comparator.comparing(RoleModel::getId))
                 .toList();
+        CollectionModel<RoleModel> collectionModel = CollectionModel.of(userRoles);
+        collectionModel
+                .add(linkTo(methodOn(UserRoleController.class).getUserRoles(userId)).withSelfRel()
+                        .andAffordance(afford(methodOn(UserRoleController.class).postUserRoles(userId, null))))
+                .add(linkTo(methodOn(UserRoleController.class).getUserRole(userId, null)).withRel(IanaLinkRelations.ITEM));
         return ResponseEntity
                 .ok()
-                .body(CollectionModel.of(
-                        userRoles,
-                        linkTo(methodOn(UserRoleController.class).getUserRoles(userId)).withSelfRel()
-                                .andAffordance(afford(methodOn(UserRoleController.class).postUserRoles(userId, null)))
-                ));
+                .body(collectionModel);
     }
 
     @Operation(summary = "Get a role associated with a user")

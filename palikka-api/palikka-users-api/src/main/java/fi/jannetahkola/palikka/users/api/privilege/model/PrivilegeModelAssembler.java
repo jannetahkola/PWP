@@ -5,6 +5,7 @@ import fi.jannetahkola.palikka.users.api.role.RolePrivilegeController;
 import fi.jannetahkola.palikka.users.data.privilege.PrivilegeEntity;
 import jakarta.annotation.Nonnull;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.IanaLinkRelations;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
 
@@ -46,7 +47,10 @@ public class PrivilegeModelAssembler implements RepresentationModelAssembler<Pri
                 .name(entity.getName())
                 .domainDescription(entity.getDomainDescription())
                 .build();
-        return model.add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivilege(roleId, model.getId(), null)).withSelfRel()
-                .andAffordance(afford(methodOn(RolePrivilegeController.class).deleteRolePrivileges(roleId, model.getId()))));
+        return model
+                .add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivilege(roleId, model.getId(), null)).withSelfRel()
+                        .andAffordance(afford(methodOn(RolePrivilegeController.class).deleteRolePrivileges(roleId, model.getId()))))
+                .add(linkTo(methodOn(RolePrivilegeController.class).getRolePrivileges(roleId, null)).withRel(IanaLinkRelations.COLLECTION))
+                .add(linkTo(methodOn(PrivilegeController.class).getPrivileges(null, null)).withRel("privileges"));
     }
 }

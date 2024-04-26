@@ -1,0 +1,1491 @@
+openapi: 3.0.1
+info:
+  contact:
+    email: janne.tahkola@gmail.com
+    name: Janne Tahkola
+    url: https://github.com/jannetahkola
+  description: User & access management
+  title: Users API
+  version: 1.0.0
+servers:
+- description: Generated server url
+  url: http://localhost:8080/users-api
+security:
+- Authorization: []
+paths:
+  /:
+    get:
+      description: Response contains suggested starting links for navigating the API
+      operationId: getLinks
+      parameters:
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/RepresentationModelObject'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get the entry point for the API
+      tags:
+      - Entry point
+  /auth/login:
+    post:
+      description: Attempts to log in a user with the provided credentials. An access
+        token is granted and returned on successful login
+      operationId: login
+      parameters:
+      - description: JSON content type
+        example: application/json
+        in: header
+        name: Content-Type
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: Log in successful
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Log in failed. No further information is provided for security
+            reasons
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "415":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Unsupported Media Type
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      security: []
+      summary: Log in
+      tags:
+      - Authentication
+  /auth/logout:
+    post:
+      operationId: logout
+      parameters:
+      - in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      - description: JSON content type
+        example: application/json
+        in: header
+        name: Content-Type
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/RepresentationModelObject'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "415":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Unsupported Media Type
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Log out
+      tags:
+      - Authentication
+  /current-user:
+    get:
+      description: Returns the user authenticated with the provided bearer access
+        token
+      operationId: getCurrentUser
+      parameters:
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/UserModel'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get current user
+      tags:
+      - Current user
+  /privileges:
+    get:
+      description: Results may be filtered depending on the user's authorities
+      operationId: getPrivileges
+      parameters:
+      - description: |
+          Results are filtered into those containing the search text either in the privilege's domain or name
+          - Case insensitive
+          - Between 1-6 letters and/or numbers
+        example: ban
+        in: query
+        name: search
+        required: false
+        schema:
+          type: string
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/CollectionModelPrivilegeModel'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get all privileges
+      tags:
+      - Privileges
+  /roles:
+    get:
+      description: Results may be filtered depending on the user's authorities
+      operationId: getRoles
+      parameters:
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/CollectionModelRoleModel'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get all roles
+      tags:
+      - Roles
+  /roles/{id}:
+    get:
+      operationId: getRole
+      parameters:
+      - description: Identifier of the role
+        in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/RoleModel'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get a role
+      tags:
+      - Roles
+  /roles/{role_id}/privileges:
+    get:
+      operationId: getRolePrivileges
+      parameters:
+      - in: path
+        name: role_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/CollectionModelPrivilegeModel'
+            application/prs.hal-forms+json:
+              schema:
+                $ref: '#/components/schemas/CollectionModelPrivilegeModel'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get all privileges associated with a role
+      tags:
+      - Role privileges
+    post:
+      operationId: postRolePrivileges
+      parameters:
+      - description: Identifier of the role
+        example: 1
+        in: path
+        name: role_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      - description: JSON content type
+        example: application/json
+        in: header
+        name: Content-Type
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RolePrivilegePostModel'
+        required: true
+      responses:
+        "201":
+          content:
+            application/hal+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrivilegeModel'
+          description: Created
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Bad Request
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "415":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Unsupported Media Type
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Create a new privilege association for a role
+      tags:
+      - Role privileges
+  /roles/{role_id}/privileges/{privilege_id}:
+    delete:
+      operationId: deleteRolePrivileges
+      parameters:
+      - description: Identifier of the role
+        example: 1
+        in: path
+        name: role_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Identifier of the privilege
+        example: 1
+        in: path
+        name: privilege_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Bad Request
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Delete a privilege association from a role
+      tags:
+      - Role privileges
+    get:
+      operationId: getRolePrivilege
+      parameters:
+      - description: Identifier of the role
+        example: 1
+        in: path
+        name: role_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Identifier of the privilege
+        example: 1
+        in: path
+        name: privilege_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/PrivilegeModel'
+            application/prs.hal-forms+json:
+              schema:
+                $ref: '#/components/schemas/PrivilegeModel'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get a privilege associated with a role
+      tags:
+      - Role privileges
+  /users:
+    get:
+      operationId: getUsers
+      parameters:
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/CollectionModelUserModel'
+            application/prs.hal-forms+json:
+              schema:
+                $ref: '#/components/schemas/CollectionModelUserModel'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get all users
+      tags:
+      - Users
+    post:
+      description: No associations are created here
+      operationId: postUser
+      parameters:
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      - description: JSON content type
+        example: application/json
+        in: header
+        name: Content-Type
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserModel'
+        required: true
+      responses:
+        "201":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/UserModel'
+          description: Created
+          headers:
+            Location:
+              description: Link to the created user
+              style: simple
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Bad Request
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Conflict
+        "415":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Unsupported Media Type
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Create a user
+      tags:
+      - Users
+  /users/{id}:
+    get:
+      operationId: getUser
+      parameters:
+      - description: Identifier of the user
+        in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/UserModel'
+            application/prs.hal-forms+json:
+              schema:
+                $ref: '#/components/schemas/UserModel'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get a user
+      tags:
+      - Users
+    put:
+      operationId: putUser
+      parameters:
+      - description: Identifier of the user
+        in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      - description: JSON content type
+        example: application/json
+        in: header
+        name: Content-Type
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserModel'
+        required: true
+      responses:
+        "202":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/UserModel'
+          description: Accepted
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Bad Request
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "409":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Conflict
+        "415":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Unsupported Media Type
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Update a user
+      tags:
+      - Users
+  /users/{user_id}/roles:
+    get:
+      operationId: getUserRoles
+      parameters:
+      - description: Identifier of the user
+        example: 1
+        in: path
+        name: user_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleModel'
+            application/prs.hal-forms+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleModel'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get all roles associated with a user
+      tags:
+      - User roles
+    post:
+      operationId: postUserRoles
+      parameters:
+      - description: Identifier of the user
+        example: 1
+        in: path
+        name: user_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      - description: JSON content type
+        example: application/json
+        in: header
+        name: Content-Type
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRolePostModel'
+        required: true
+      responses:
+        "201":
+          content:
+            application/hal+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RoleModel'
+          description: Created
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Bad Request
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "415":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Unsupported Media Type
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Create a new role association for a user
+      tags:
+      - User roles
+  /users/{user_id}/roles/{role_id}:
+    delete:
+      operationId: deleteUserRoles
+      parameters:
+      - description: Identifier of the user
+        example: 1
+        in: path
+        name: user_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - in: path
+        name: role_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Bad Request
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Delete a role association from a user
+      tags:
+      - User roles
+    get:
+      operationId: getUserRole
+      parameters:
+      - description: Identifier of the user
+        example: 1
+        in: path
+        name: user_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Identifier of the role
+        example: 1
+        in: path
+        name: role_id
+        required: true
+        schema:
+          type: integer
+          format: int32
+      - description: Bearer access token
+        example: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0...
+        in: header
+        name: Authorization
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/RoleModel'
+            application/prs.hal-forms+json:
+              schema:
+                $ref: '#/components/schemas/RoleModel'
+          description: OK
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Forbidden
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Found
+        "405":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Method Not Allowed
+        "406":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Not Acceptable
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+          description: Internal Server Error
+      summary: Get a role associated with a user
+      tags:
+      - User roles
+components:
+  schemas:
+    CollectionModelPrivilegeModel:
+      type: object
+      properties:
+        _embedded:
+          type: object
+          properties:
+            privileges:
+              type: array
+              items:
+                $ref: '#/components/schemas/PrivilegeModel'
+        _links:
+          $ref: '#/components/schemas/Links'
+    CollectionModelRoleModel:
+      type: object
+      properties:
+        _embedded:
+          type: object
+          properties:
+            roles:
+              type: array
+              items:
+                $ref: '#/components/schemas/RoleModel'
+        _links:
+          $ref: '#/components/schemas/Links'
+    CollectionModelUserModel:
+      type: object
+      properties:
+        _embedded:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserModel'
+        _links:
+          $ref: '#/components/schemas/Links'
+    Link:
+      type: object
+      properties:
+        deprecation:
+          type: string
+        href:
+          type: string
+        hreflang:
+          type: string
+        name:
+          type: string
+        profile:
+          type: string
+        templated:
+          type: boolean
+        title:
+          type: string
+        type:
+          type: string
+    Links:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/Link'
+    LoginRequest:
+      type: object
+      description: Log in parameters
+      properties:
+        password:
+          type: array
+          description: Password of the user
+          items:
+            type: string
+            description: Password of the user
+        username:
+          type: string
+          description: Unique username of the user
+          pattern: "^[a-zA-Z\\d-]{3,20}$"
+      required:
+      - username
+    LoginResponse:
+      type: object
+      description: Successful log in response
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+        expires_at:
+          type: string
+          format: date-time
+          description: Expiry time of the granted access token
+        token:
+          type: string
+          description: Granted access token
+          example: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzUxMiIsInB0eXAiOiJVU0VSIiwia2lkIjoiand0LXVzciJ9.eyJpc3MiOiJwYWxpa2thLWRldi11c3IiLCJzdWIiOiIxIiwiZXhwIjoxNzExMjM5Njk5LCJpYXQiOjE3MTEyMzYwOTksImp0aSI6IjZkZWVlNGFjLTNkZDMtNDAyNS04NTZlLTk5ZmFkYjNlMjcxYiJ9.oT-0UTqbrDDkKypwk-reyOJSIC96XioiveVRq55FFcudzzYY0IP2p_413_7-Omf0HwfHYVq9YslwKjbMRMEB1QLd8WhF16OGJVKT1uA4eaWWSWwzGZwxSermhJtLXcz7gR4129WRDGwgyHocWXT0L_-rWiSoYAEsCeboBOYmN5suOr_a0d1iJOvmWM87AERp6aH22qKYYOh8KHRQxvQc6xOIq8c1NMiRBznEhfv4Tuv9Gk7CgOADY0CcpZjVQx0TJLGU3BZVKES6GUatwWCy9CxhuKYFPDbqb4XqJq7RvORf24HSHFqD0zkIcKPPnS1O5bfHJXgXhL4y0BVPhxVARQ
+      required:
+      - expires_at
+      - token
+    PrivilegeModel:
+      type: object
+      description: Authorizes users with associated roles to perform various actions
+        within APIs
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+        domain:
+          type: string
+          description: Domain of the privilege. References an action inside an API
+            this privilege is applied within
+          example: COMMAND
+        domain_description:
+          type: string
+          description: An optional text to describe the privilege in its domain
+          example: Adds IP address to banlist.
+        id:
+          type: integer
+          format: int32
+          description: Identifier of the privilege
+          example: 1234
+        name:
+          type: string
+          description: Name of the privilege. Provides more fine grained access control
+            within a domain
+          example: weather
+      required:
+      - domain
+      - id
+      - name
+    ProblemDetail:
+      type: object
+      properties:
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        properties:
+          type: object
+          additionalProperties:
+            type: object
+        status:
+          type: integer
+          format: int32
+        title:
+          type: string
+        type:
+          type: string
+          format: uri
+    RepresentationModelObject:
+      type: object
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+    RoleModel:
+      type: object
+      description: Authorizes associated users to access different APIs
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+        description:
+          type: string
+          description: Description of the role
+          example: Access to limited functionality
+        id:
+          type: integer
+          format: int32
+          description: Identifier of the role
+          example: 1234
+        name:
+          type: string
+          description: Unique name of the role
+          example: ROLE_USER
+        privileges:
+          type: array
+          description: Privileges associated with the role
+          items:
+            $ref: '#/components/schemas/PrivilegeModel'
+          readOnly: true
+      required:
+      - id
+      - name
+    RolePrivilegePostModel:
+      type: object
+      description: Request object containing the identifier of the privilege that
+        should be associated with the role
+      properties:
+        privilege_id:
+          type: integer
+          format: int32
+          description: Identifier of the privilege to associate with the role
+          example: 1
+      required:
+      - privilege_id
+    UserModel:
+      type: object
+      description: An end user of the system
+      properties:
+        _links:
+          $ref: '#/components/schemas/Links'
+        active:
+          type: boolean
+          description: "Whether the user is active, i.e. they can log in. Required\
+            \ when creating a user"
+        created_at:
+          type: string
+          format: date-time
+          description: When the user was created
+          readOnly: true
+        id:
+          type: integer
+          format: int32
+          description: Identifier of the user
+          example: 1234
+        last_updated_at:
+          type: string
+          format: date-time
+          description: When the user was last updated
+          readOnly: true
+        password:
+          type: array
+          description: Password of the user. Required when creating a user
+          items:
+            type: string
+            description: Password of the user. Required when creating a user
+          writeOnly: true
+        roles:
+          type: array
+          description: Roles associated with the user
+          items:
+            type: string
+            description: Roles associated with the user
+          readOnly: true
+        root:
+          type: boolean
+          description: "Whether the user is a root user, i.e. not modifiable"
+          readOnly: true
+        username:
+          type: string
+          description: Unique username of the user. Required when creating or updating
+            a user
+          pattern: "^[a-zA-Z\\d-]{3,20}$"
+      required:
+      - active
+      - username
+    UserRolePostModel:
+      type: object
+      description: Request object containing the identifier of the role that should
+        be associated with the user
+      properties:
+        role_id:
+          type: integer
+          format: int32
+          description: Identifier of the role to associate with the user
+          example: 1
+      required:
+      - role_id
+  securitySchemes:
+    Authorization:
+      bearerFormat: JWT
+      description: JWT access token
+      in: header
+      scheme: Bearer
+      type: http

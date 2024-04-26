@@ -130,7 +130,7 @@ class RemoteUsersClientIT {
         Collection<Role> userRoles = usersClient.getUserRoles(1);
         assertThat(userRoles).isEmpty();
         assertThat(capturedOutput.getAll()).contains(
-                "java.lang.IllegalStateException: Expected to find link with rel 'roles' in response");
+                "java.lang.IllegalStateException: Expected to find link with rel 'user_roles' in response");
     }
 
     @Test

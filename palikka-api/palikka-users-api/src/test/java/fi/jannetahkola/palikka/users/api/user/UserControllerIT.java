@@ -75,7 +75,7 @@ class UserControllerIT extends IntegrationTest {
         given()
                 .header(newAdminToken())
                 .get("/users/" + USER_ID_ADMIN)
-                .then().assertThat()
+                .then().log().all().assertThat()
                 .statusCode(200)
                 .body("id", equalTo(1))
                 .body("username", equalTo("admin"))
@@ -84,7 +84,8 @@ class UserControllerIT extends IntegrationTest {
                 .body("root", equalTo(true))
                 .body("roles", hasSize(0))
                 .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN))
-                .body("_links.roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"))
+                .body("_links.collection.href", endsWith("/users"))
+                .body("_links.user_roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
     }
 
@@ -104,11 +105,11 @@ class UserControllerIT extends IntegrationTest {
         given()
                 .header(newAdminToken())
                 .get("/users")
-                .then().assertThat()
+                .then().log().all().assertThat()
                 .statusCode(200)
                 .body("_embedded.users", hasSize(3))
                 .body("_links.self.href", endsWith("/users"))
-                .body("_links.user.href", endsWith("/users/{id}"))
+                .body("_links.item.href", endsWith("/users/{id}"))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
     }
 

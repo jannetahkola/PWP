@@ -41,14 +41,16 @@ class RoleControllerIT extends IntegrationTest {
         given()
                 .header(newAdminToken())
                 .get("/roles")
-                .then().assertThat()
+                .then().log().all().assertThat()
                 .statusCode(200)
                 .body("_embedded.roles", hasSize(3))
                 .body("_embedded.roles[0].privileges", not(empty()))
                 .body("_embedded.roles[0].privileges[0].domain", not(emptyOrNullString()))
                 .body("_embedded.roles[0].privileges[0].name", not(emptyOrNullString()))
                 .body("_embedded.roles[0]._links.self.href", not(emptyOrNullString()))
+                .body("_embedded.roles[0]._links.collection.href", endsWith("/users-api/roles"))
                 .body("_links.self.href", endsWith("/users-api/roles"))
+                .body("_links.item.href", endsWith("/users-api/roles/{id}"))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
     }
 

@@ -242,7 +242,7 @@ function UserManagementPage() {
         }
         let usersWithMappedRoles = await Promise.all(
             usersCollection._embedded.users.map(async (user, idx, self) => {
-                return fetch(user._links!.roles.href, {
+                return fetch(user._links!.user_roles.href, {
                     headers: { 'Authorization': 'Bearer ' + token }
                 }).then(async (res) => {
                     if (res.ok) {
@@ -351,7 +351,7 @@ function UserManagementPage() {
     const isAdmin = (): boolean => currentUserRoles.includes("ROLE_ADMIN");
 
     useEffect(() => {
-        fetch(user!._links!.roles.href, {
+        fetch(user!._links!.user_roles.href, {
             headers: { 'Authorization': 'Bearer ' + token }
         }).then(async (res) => {
             if (res.ok) {

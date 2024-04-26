@@ -5,6 +5,7 @@ import fi.jannetahkola.palikka.users.api.user.UserRoleController;
 import fi.jannetahkola.palikka.users.data.user.UserEntity;
 import jakarta.annotation.Nonnull;
 import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.IanaLinkRelations;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +32,8 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
         userModel.add(
                 linkTo(methodOn(UserController.class).getUser(userModel.getId())).withSelfRel()
                         .andAffordance(afford(methodOn(UserController.class).putUser(userModel.getId(), null, null))));
-        userModel.add(linkTo(methodOn(UserRoleController.class).getUserRoles(userModel.getId())).withRel("roles"));
+        userModel.add(linkTo(methodOn(UserController.class).getUsers()).withRel(IanaLinkRelations.COLLECTION));
+        userModel.add(linkTo(methodOn(UserRoleController.class).getUserRoles(userModel.getId())).withRel("user_roles"));
 
         return userModel;
     }
@@ -47,8 +49,7 @@ public class UserModelAssembler implements RepresentationModelAssembler<UserEnti
                                         linkTo(methodOn(UserController.class).getUsers())
                                                 .withSelfRel()
                                                 .andAffordance(afford(methodOn(UserController.class).postUser(null))),
-                                        linkTo(methodOn(UserController.class).getUser(null))
-                                                .withRel("user")
+                                        linkTo(methodOn(UserController.class).getUser(null)).withRel(IanaLinkRelations.ITEM)
                                 )
                         )
                 );

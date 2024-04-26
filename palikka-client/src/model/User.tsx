@@ -3,7 +3,7 @@ import Role from "./Role";
 
 type UserLinks = {
     self: HalLink,
-    roles: HalLink
+    user_roles: HalLink
 }
 
 type User = {

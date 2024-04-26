@@ -15,7 +15,7 @@
           "self": {
             "href": "{{request.baseUrl}}/users-api/users/1"
           },
-          "roles": {
+          "user_roles": {
             "href": "{{request.baseUrl}}/users-api/users/1/roles"
           }
         }
@@ -34,7 +34,7 @@
           "self": {
             "href": "{{request.baseUrl}}/users-api/users/2"
           },
-          "roles": {
+          "user_roles": {
             "href": "{{request.baseUrl}}/users-api/users/2/roles"
           }
         }
@@ -53,7 +53,7 @@
           "self": {
             "href": "{{request.baseUrl}}/users-api/users/3"
           },
-          "roles": {
+          "user_roles": {
             "href": "{{request.baseUrl}}/users-api/users/3/roles"
           }
         }
@@ -64,25 +64,9 @@
     "self": {
       "href": "{{request.baseUrl}}/users-api/users"
     },
-    "user": [
-      {
-        "href": "{{request.baseUrl}}/users-api/users/{id}",
-        "type": "GET",
-        "templated": true
-      },
-      {
-        "href": "{{request.baseUrl}}/users-api/users",
-        "type": "POST"
-      },
-      {
-        "href": "{{request.baseUrl}}/users-api/users/{id}",
-        "type": "PUT",
-        "templated": true
-      }
-    ],
-    "me": {
-      "href": "{{request.baseUrl}}/users-api/users/me",
-      "type": "GET"
+    "item": {
+      "href": "{{request.baseUrl}}/users-api/users/{id}",
+      "templated": true
     }
   }
 }

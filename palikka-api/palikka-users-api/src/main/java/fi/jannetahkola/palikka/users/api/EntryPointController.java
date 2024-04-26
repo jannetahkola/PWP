@@ -1,6 +1,8 @@
 package fi.jannetahkola.palikka.users.api;
 
 import fi.jannetahkola.palikka.users.api.auth.AuthenticationController;
+import fi.jannetahkola.palikka.users.api.privilege.PrivilegeController;
+import fi.jannetahkola.palikka.users.api.role.RoleController;
 import fi.jannetahkola.palikka.users.api.user.CurrentUserController;
 import fi.jannetahkola.palikka.users.api.user.UserController;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +35,10 @@ public class EntryPointController {
                                 .withRel("login"),
                         linkTo(methodOn(UserController.class).getUsers())
                                 .withRel("users"),
+                        linkTo(methodOn(RoleController.class).getRoles(null))
+                                .withRel("roles"),
+                        linkTo(methodOn(PrivilegeController.class).getPrivileges( null,null))
+                                .withRel("privileges"),
                         linkTo(methodOn(CurrentUserController.class).getCurrentUser(null))
                                 .withRel("current_user")
                 ));
