@@ -1,7 +1,7 @@
 # Palikka Client
 
 React-based SPA client for consuming [Palikka API](../palikka-api). [MUI](https://mui.com) is used as the UI library. The 
-only other external library used is [stompjs][https://github.com/stomp-js/stompjs].
+only other external library used is [stompjs](https://github.com/stomp-js/stompjs).
 
 ## Local deployment
 
