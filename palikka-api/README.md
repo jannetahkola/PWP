@@ -53,7 +53,7 @@ shell commands. Run `make` to get descriptions of available Make targets.
 
 1. Create and run the PostgreSQL container, initialize schema and insert seed data
     ```shell
-    make init-data
+    make init-postgres
     ```
 2. Setup local environment for development. Provides faster deployments by skipping tests and code quality analysis
     ```shell 
@@ -101,7 +101,7 @@ the PostgreSQL container as its database, thus Postgres needs to be up before th
 
 1. Create and run the PostgresSQL container
     ```shell
-    make init-data
+    make init-postgres
     ```
 2. Create and run the SonarQube container
     ```shell

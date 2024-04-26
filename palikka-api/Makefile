@@ -4,8 +4,7 @@ SONAR_BASE_URL=http://localhost:9000/api
 ##@ API services
 ##@
 
-docker-run: ##@ Start all API service containers. Images are built if needed, but
-			##@ cache & existing images are used when available
+docker-run: ##@ Start all API service containers. Cache & existing images are used
 	# Run socat in case this is the first run
 	- $(MAKE) docker-run-socat
 	docker build \
@@ -15,7 +14,7 @@ docker-run: ##@ Start all API service containers. Images are built if needed, bu
 		--network=host \
 		-f palikka-core.Dockerfile \
 		-t build-core-with-deps .
-	docker-compose up -d --build
+	docker-compose up -d
 	- docker stop palikka-socat
 	docker-compose logs -f
 
@@ -104,14 +103,14 @@ init-sonar: ##@ Start the SonarQube container & set it up. Only recreates
 ##@
 
 env-dev: ##@ Setup the local environment for development. Rebuilds the Docker images
-	$(MAKE) docker-down
+	docker-compose down
 	@cp ./conf/dockerfiles/palikka-core.dev.Dockerfile ./palikka-core.Dockerfile
 	@cp ./conf/dockerfiles/palikka-game-api.dev.Dockerfile ./palikka-game-api.Dockerfile
 	@cp ./conf/dockerfiles/palikka-users-api.dev.Dockerfile ./palikka-users-api.Dockerfile
 	$(MAKE) docker-rebuild
 
 env-prod: ##@ Setup the local environment for production. Rebuilds the Docker images. Requires SonarQube to be up
-	$(MAKE) docker-down
+	docker-compose down
 	@cp ./conf/dockerfiles/palikka-core.Dockerfile .
 	@cp ./conf/dockerfiles/palikka-game-api.Dockerfile .
 	@cp ./conf/dockerfiles/palikka-users-api.Dockerfile .
