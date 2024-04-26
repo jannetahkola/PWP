@@ -145,7 +145,7 @@ class UserControllerIT extends IntegrationTest {
                 .body("last_updated_at", nullValue())
                 .body("roles", hasSize(0))
                 .body("_links.self.href", endsWith("/users/" + expectedUserId))
-                .body("_links.roles.href", endsWith("/users/" + expectedUserId + "/roles"))
+                .body("_links.user_roles.href", endsWith("/users/" + expectedUserId + "/roles"))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
 
         UserEntity createdUser = userRepository.findById(expectedUserId).orElseThrow();
@@ -214,7 +214,7 @@ class UserControllerIT extends IntegrationTest {
                 .body("last_updated_at", endsWith("Z"))
                 .body("roles", hasSize(0))
                 .body("_links.self.href", endsWith("/users/" + USER_ID_USER))
-                .body("_links.roles.href", endsWith("/users/" + USER_ID_USER + "/roles"))
+                .body("_links.user_roles.href", endsWith("/users/" + USER_ID_USER + "/roles"))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
 
         UserEntity updatedUser = userRepository.findById(USER_ID_USER).orElseThrow();

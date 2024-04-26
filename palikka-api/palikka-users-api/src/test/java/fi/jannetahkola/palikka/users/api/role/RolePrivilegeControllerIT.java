@@ -138,7 +138,7 @@ class RolePrivilegeControllerIT extends IntegrationTest {
 
         Traverson traverson = new Traverson(baseUri, MediaTypes.HAL_JSON);
         EntityModel<Role> roleCollectionModel = traverson
-                .follow(rel("role").withParameter("id", 2))
+                .follow(rel("item").withParameter("id", 2))
                 .withHeaders(httpHeaders)
                 .toObject(new TypeReferences.EntityModelType<>() {});
         assertThat(roleCollectionModel).isNotNull();

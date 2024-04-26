@@ -39,7 +39,6 @@ class SessionCleanUpSchedulerIT {
         doNothing().when(sessionStoreMock).evictExpiredSessions();
     }
 
-
     @SneakyThrows
     @Test
     void testScheduledJobIsRan() {

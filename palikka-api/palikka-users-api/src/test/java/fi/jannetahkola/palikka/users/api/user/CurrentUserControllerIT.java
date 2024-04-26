@@ -37,7 +37,7 @@ class CurrentUserControllerIT extends IntegrationTest {
                 .body("active", equalTo(true))
                 .body("roles", hasSize(0))
                 .body("_links.self.href", endsWith("/users/" + USER_ID_ADMIN))
-                .body("_links.roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"))
+                .body("_links.user_roles.href", endsWith("/users/" + USER_ID_ADMIN + "/roles"))
                 .header(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE);
     }
 }

@@ -86,7 +86,7 @@ class RoleControllerIT extends IntegrationTest {
         given()
                 .header(newUserToken())
                 .get("/roles")
-                .then().assertThat()
+                .then().log().all().assertThat()
                 .statusCode(200)
                 .body("_embedded.roles", hasSize(1))
                 .body("_embedded.roles[0].id", equalTo(2))
@@ -96,7 +96,7 @@ class RoleControllerIT extends IntegrationTest {
                 .body("_embedded.roles[0].privileges[0].name", not(emptyOrNullString()))
                 .body("_embedded.roles[0]._links.self.href", not(emptyOrNullString()))
                 .body("_links.self.href", endsWith("/users-api/roles"))
-                .body("_links.role.href", endsWith("/users-api/roles/{id}"))
+                .body("_links.item.href", endsWith("/users-api/roles/{id}"))
                 .header(HttpHeaders.CONTENT_TYPE, equalTo(MediaTypes.HAL_JSON_VALUE));
     }
 }
