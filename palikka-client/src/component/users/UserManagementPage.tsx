@@ -348,7 +348,11 @@ function UserManagementPage() {
             .catch(e => setErrorMessage(e.message));
     }
 
-    const isAdmin = (): boolean => currentUserRoles.includes("ROLE_ADMIN");
+    const isAdmin = (): boolean => {
+        const res = currentUserRoles.includes("ROLE_ADMIN");
+        console.debug("isAdmin: ", res);
+        return res;
+    };
 
     useEffect(() => {
         fetch(user!._links!.user_roles.href, {
@@ -387,7 +391,7 @@ function UserManagementPage() {
                         Users ({ users?.length ?? 0 })
                     </Typography>
                     {
-                        isAdmin() ?? <Button
+                        isAdmin() && <Button
                             endIcon={<Add/>}
                             onClick={_ => {
                                 setNewUserDialogProps({
@@ -442,7 +446,7 @@ function UserManagementPage() {
                                             justifyContent={"end"}
                                             xs={4}>
                                             {
-                                                isAdmin() ?? <Grid item>
+                                                isAdmin() && <Grid item>
                                                     <FormControlLabel
                                                         control={
                                                             <Tooltip
@@ -553,7 +557,7 @@ function UserManagementPage() {
                                                         ))
                                                     }
                                                     {
-                                                        isAdmin() ?? <Button startIcon={<Add/>} onClick={() => {
+                                                        isAdmin() && <Button startIcon={<Add/>} onClick={() => {
                                                             setListDialogProps({
                                                                 open: true,
                                                                 titleText: 'Add role',
@@ -675,7 +679,7 @@ function UserManagementPage() {
                                                         ))
                                                     }
                                                     {
-                                                        isAdmin() ?? <Button startIcon={<Add/>} onClick={() => {
+                                                        isAdmin() && <Button startIcon={<Add/>} onClick={() => {
                                                             setListDialogProps({
                                                                 open: true,
                                                                 titleText: 'Add privilege',
