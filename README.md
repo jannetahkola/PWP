@@ -10,3 +10,5 @@ __Remember to include all required documentation and HOWTOs, including how to cr
 ## Deployment
 
 Navigate to [palikka-api/README.md](./palikka-api/README.md) and follow the instructions there.
+
+After deploying the API, you can deploy the client. See [palikka-client/README.md](./palikka-client/README.md).

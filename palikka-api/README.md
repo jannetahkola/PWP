@@ -20,7 +20,7 @@ dependency version management.
 
 ## Local deployment
 
-### General description
+### General
 Local deployments utilize Dockerfiles and Docker Compose. Each API service has its own Dockerfile, and all of these 
 are managed by a single Compose file (see [docker-compose.yaml](docker-compose.yaml)). PostgreSQL and SonarQube 
 have separate Compose files.
@@ -67,6 +67,7 @@ shell commands. Run `make` to get descriptions of available Make targets.
 Once the containers are up, see:
 - OpenAPI documentation at [http://localhost:8080/users-api/swagger-ui/index.html](http://localhost:8080/users-api/swagger-ui/index.html)
 - Entry point at [http://localhost:8080/users-api/](http://localhost:8080/users-api/)
+- [Deploying the Palikka Client](../palikka-client/README.md)
 
 ## Local development
 ### Dependencies
